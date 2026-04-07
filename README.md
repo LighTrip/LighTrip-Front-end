@@ -6,7 +6,7 @@
 
 | <img src="https://github.com/boyoung05.png" width="150" height="150"/> | <img src="https://github.com/Juminjae.png" width="150" height="150"/> | <img src="https://github.com/ahnsyeon.png" width="150" height="150"/> |
 | :--------------------------------------------------------------------: | :-------------------------------------------------------------------: | :-------------------------------------------------------------------: |
-|      Bo-young Nam<br/>[@boyoung05](https://github.com/boyoung05)       |        Min-jae Ju<br/>[@Juminjae](https://github.com/Juminjae)        |       See-yeon Ahn<br/>[@ahnsyeon](https://github.com/ahnsyeon)        |
+|      Bo-young Nam<br/>[@boyoung05](https://github.com/boyoung05)       |        Min-jae Ju<br/>[@Juminjae](https://github.com/Juminjae)        |       Seo-yeon Ahn<br/>[@ahnsyeon](https://github.com/ahnsyeon)        |
 
 <br>
 
