@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 
-export default function MapScreen() {
+export default function PassportScreen() {
   return (
     <View
       style={{
@@ -10,7 +10,7 @@ export default function MapScreen() {
         justifyContent: "center",
       }}
     >
-      <Text style={{ color: "white", fontSize: 18 }}>지도 페이지</Text>
+      <Text style={{ color: "white", fontSize: 18 }}>여권 페이지</Text>
     </View>
   );
 }
