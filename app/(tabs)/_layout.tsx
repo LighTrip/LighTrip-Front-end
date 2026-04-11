@@ -1,4 +1,5 @@
 // app/(tabs)/_layout.tsx
+import colors from "@/src/constant/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { View } from "react-native";
@@ -9,7 +10,7 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: "#1a1a2e",
+          backgroundColor: colors.background.nav,
           borderTopWidth: 0,
           height: 70,
           borderRadius: 30,
@@ -17,8 +18,8 @@ export default function TabLayout() {
           marginBottom: 16,
           position: "absolute",
         },
-        tabBarActiveTintColor: "#ff6b35",
-        tabBarInactiveTintColor: "#666",
+        tabBarActiveTintColor: colors.tab.active,
+        tabBarInactiveTintColor: colors.tab.inactive,
         tabBarShowLabel: true,
         tabBarLabelStyle: {
           fontSize: 11,
@@ -29,6 +30,7 @@ export default function TabLayout() {
         name="passport"
         options={{
           title: "여권",
+          tabBarItemStyle: { marginTop: 10 },
           tabBarIcon: ({ color }) => (
             <Ionicons name="id-card" size={24} color={color} />
           ),
@@ -38,6 +40,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: "프로필",
+          tabBarItemStyle: { marginTop: 10 },
           tabBarIcon: ({ color }) => (
             <Ionicons name="person" size={24} color={color} />
           ),
@@ -47,19 +50,19 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "",
+          tabBarItemStyle: { marginTop: 15 },
           tabBarIcon: () => (
             <View
               style={{
-                width: 60,
-                height: 60,
+                width: 85,
+                height: 55,
                 borderRadius: 30,
-                backgroundColor: "#ff6b35",
+                backgroundColor: colors.brand.primary,
                 alignItems: "center",
                 justifyContent: "center",
-                marginBottom: 20,
               }}
             >
-              <Ionicons name="map" size={28} color="white" />
+              <Ionicons name="map" size={28} color={colors.text.primary} />
             </View>
           ),
         }}
@@ -68,17 +71,19 @@ export default function TabLayout() {
         name="social"
         options={{
           title: "소셜",
+          tabBarItemStyle: { marginTop: 10 },
           tabBarIcon: ({ color }) => (
             <Ionicons name="people" size={24} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="ranking"
+        name="search"
         options={{
-          title: "랭킹",
+          title: "둘러보기",
+          tabBarItemStyle: { marginTop: 10 },
           tabBarIcon: ({ color }) => (
-            <Ionicons name="trophy" size={24} color={color} />
+            <Ionicons name="search" size={24} color={color} />
           ),
         }}
       />

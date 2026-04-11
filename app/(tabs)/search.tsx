@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 
-export default function RankingScreen() {
+export default function SearchScreen() {
   return (
     <View
       style={{
@@ -10,7 +10,7 @@ export default function RankingScreen() {
         justifyContent: "center",
       }}
     >
-      <Text style={{ color: "white", fontSize: 18 }}>랭킹 페이지</Text>
+      <Text style={{ color: "white", fontSize: 18 }}>둘러보기 페이지</Text>
     </View>
   );
 }
