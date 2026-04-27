@@ -1,16 +1,5 @@
-import { Text, View } from "react-native";
+import SocialView from "@/src/features/social/screens/socialScreen";
 
 export default function SocialScreen() {
-  return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: "#1a1a2e",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <Text style={{ color: "white", fontSize: 18 }}>소셜 페이지</Text>
-    </View>
-  );
+  return <SocialView />;
 }
