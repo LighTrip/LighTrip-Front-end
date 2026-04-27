@@ -1,5 +1,16 @@
-import PassportView from "@/src/features/passport/screens/PassportScreen";
+import { Text, View } from "react-native";
 
 export default function PassportScreen() {
-  return <PassportView />
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: "#1a1a2e",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Text style={{ color: "white", fontSize: 18 }}>여권 페이지</Text>
+    </View>
+  );
 }

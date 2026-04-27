@@ -22,8 +22,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.LighTrip"
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "bundler": "metro",
