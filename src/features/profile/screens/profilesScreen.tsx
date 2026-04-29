@@ -1,17 +1,25 @@
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+    Image,
     ScrollView,
     StyleSheet,
-    Switch,
     Text,
     TouchableOpacity,
     View
 } from "react-native";
+import {
+    accountMenuDummy,
+    profileUserDummy,
+    settingMenuDummy
+} from "../data/profileDummy";
 
 export default function ProfileView() {
     const router = useRouter();
     const [isTeam, setIsTeam] = useState(false);
+
+    const user = profileUserDummy;
 
     return(
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -20,25 +28,27 @@ export default function ProfileView() {
             {/*프로필 카드*/}
             <View style={styles.profileCard}>
                 <View style={styles.profileLeft}>
-                    <View style={styles.profileImage}></View>
+                    <Image source={user.profileImage} style={styles.profileImage} />
                     <View>
-                        <Text style={styles.userName}>저희이제하조</Text>
+                        <Text style={styles.userName}>{user.name}</Text>
                         <View style={styles.locationSection}>
-                            <Text style={styles.locationIcon}>아이콘</Text>
-                            <Text style={styles.userLocation}>고양시 덕양구</Text>
+                            <Ionicons name="location-outline" size={16} color="#FFFFFF" />
+                            <Text style={styles.userLocation}>{user.location}</Text>
                         </View>
-                        <Text style={styles.userStatus}>12 | 23 | 320</Text>
+                        <Text style={styles.userStatus}>
+                            {user.lightCount} | {user.locationCount} | {user.totallike}
+                        </Text>
                     </View>
                 </View>
 
                 <View style={styles.idNumberBox}>
-                    <Text style={styles.idNumberText}>#30421</Text>
+                    <Text style={styles.idNumberText}>{user.id}</Text>
                 </View>
             </View>
 
             {/*프리미엄*/}
             <View style={styles.premiumSection}>
-                <Text style={styles.premiumIcon}>아이콘</Text>
+            <MaterialCommunityIcons name="crown-outline" size={16} color="#B38E06" />
                 <Text style={styles.premium}>프리미엄</Text>
             </View>
             <TouchableOpacity style={styles.bannerCard} activeOpacity={0.8}>
@@ -47,176 +57,102 @@ export default function ProfileView() {
                     <Text style={styles.bannerSubtitle}>나만의 탐험 기록을 실물 책으로</Text>
                 </View>
                 <View style={styles.bannerIcon}>
-                    <Text>아이콘</Text>
+                    <MaterialCommunityIcons name="map" size={24} color="#333333" />
                 </View>
             </TouchableOpacity>
 
             {/*설정*/}
             <View style={styles.sectionSet}>
-                <View style={styles.sectionWrap}>
-                    <Text style={styles.sectionIcon}>아이콘</Text>
-                    <Text style={styles.sectionTitle}>설정</Text>
-                </View>
-
                 <View style={styles.menuBox}>
 
                     {/*팀 or 개인 설정*/}
                     <View style={[styles.menuItem, styles.menuItemBorder]}>
                         <View style={styles.menuLeft}>
-                            <View style={styles.iconBox}></View>
+                            <View style={styles.iconBox}>
+                                <Ionicons name="return-down-back" size={22} color="#FFFFFF" />
+                            </View>
                             <View>
                                 <Text style={styles.menuTitle}>팀으로 전환</Text>
-                                <Text style={styles.menuDescription}>현재 접속 모드: 개인</Text>
+                                <Text style={styles.menuDescription}>
+                                    현재 접속 모드: {isTeam ? "팀" : "개인"}
+                                </Text>
                             </View>
                         </View>
-                        <Switch value={isTeam} onValueChange={setIsTeam} />
+                        <TouchableOpacity
+                            activeOpacity={0.8}
+                            style={[
+                                styles.teamToggle,
+                                isTeam ? styles.teamToggleOn : styles.teamToggleOff,
+                            ]}
+                            onPress={() => setIsTeam(!isTeam)}
+                        >
+                            <View
+                                style={[
+                                    styles.teamToggleCircle,
+                                    isTeam ? styles.teamToggleCircleOn : styles.teamToggleCircleOff,
+                                ]}
+                            />
+                        </TouchableOpacity>
                     </View>
 
-                    {/*프로필 수정*/}
-                    <TouchableOpacity
-                        style={[styles.menuItem, styles.menuItemBorder]}
-                    activeOpacity={0.8}
-                    >
-                        <View style={styles.menuLeft}>
-                            <View style={styles.iconBox}>
-                            </View>
-                            <View>
-                                <Text style={styles.menuTitle}>프로필 수정</Text>
-                                <Text style={styles.menuDescription}>프로필 및 프로필 사진 수정</Text>
-                            </View>
-                        </View>
-                    </TouchableOpacity>
+                    {/*나머지*/}
+                    {settingMenuDummy.map((item, index) => (
+                        <TouchableOpacity
+                            key={item.id}
+                            style={[
+                                styles.menuItem,
+                                index !== settingMenuDummy.length -1 && styles.menuItemBorder,
+                            ]}
+                            activeOpacity={0.8}
+                        >
+                            <View style={styles.menuLeft}>
+                                <View style={styles.iconBox}>
+                                <   Ionicons name={item.icon as any} size={22} color="#FFFFFF" />
+                                </View>
 
-                    {/*팀 생성*/}
-                    <TouchableOpacity
-                        style={[styles.menuItem, styles.menuItemBorder]}
-                    activeOpacity={0.8}
-                    >
-                        <View style={styles.menuLeft}>
-                            <View style={styles.iconBox}>
+                                <View>
+                                    <Text style={styles.menuTitle}>{item.title}</Text>
+                                    {item.description && (
+                                        <Text style={styles.menuDescription}>{item.description}</Text>
+                                    )}
+                                </View>
                             </View>
-                            <View>
-                                <Text style={styles.menuTitle}>팀 생성 및 가입하기</Text>
-                                <Text style={styles.menuDescription}>팀에 가입 되어있는 경우 생성 불가합니다</Text>
-                            </View>
-                        </View>
-                    </TouchableOpacity>
-
-                    {/*친구*/}
-                    <TouchableOpacity
-                        style={[styles.menuItem, styles.menuItemBorder]}
-                    activeOpacity={0.8}
-                    >
-                        <View style={styles.menuLeft}>
-                            <View style={styles.iconBox}>
-                            </View>
-                            <View>
-                                <Text style={styles.menuTitle}>친구 추가 및 친구 관리</Text>
-                                <Text style={styles.menuDescription}>친구 요청을 보내고 받을 수 있습니다</Text>
-                            </View>
-                        </View>
-                    </TouchableOpacity>
-
-                    {/*스크랩*/}
-                    <TouchableOpacity
-                        style={[styles.menuItem, styles.menuItemBorder]}
-                    activeOpacity={0.8}
-                    >
-                        <View style={styles.menuLeft}>
-                            <View style={styles.iconBox}>
-                            </View>
-                            <View>
-                                <Text style={styles.menuTitle}>스크랩</Text>
-                                <Text style={styles.menuDescription}>"스크랩" 누른 장소 모아보기</Text>
-                            </View>
-                        </View>
-                    </TouchableOpacity>
-
-                    {/*테마 설정*/}
-                    <TouchableOpacity
-                        style={[styles.menuItem, styles.menuItemBorder]}
-                    activeOpacity={0.8}
-                    >
-                        <View style={styles.menuLeft}>
-                            <View style={styles.iconBox}>
-                            </View>
-                            <View>
-                                <Text style={styles.menuTitle}>테마 설정</Text>
-                                <Text style={styles.menuDescription}>지도 & 도장 테마 변경</Text>
-                            </View>
-                        </View>
-                    </TouchableOpacity>
+                        </TouchableOpacity>
+                    ))}
+                    </View>
                 </View>
-            </View>
 
             {/*계정*/}
             <View style={styles.sectionAccount}>
-                <View style={styles.sectionWrap}>
-                    <Text style={styles.sectionIcon}>아이콘</Text>
-                    <Text style={styles.sectionTitle}>계정</Text>
-                </View>
-
                 <View style={styles.menuBox}>
+                    {/*세부 내용*/}
+                    {accountMenuDummy.map((item, index) => (
+                        <TouchableOpacity
+                            key={item.id}
+                            style={[
+                                styles.menuItem,
+                                index !== accountMenuDummy.length -1 && styles.menuItemBorder,
+                            ]}
+                            activeOpacity={0.8}
+                            onPress={() => {
+                                if(item.route) {
+                                    router.push(item.route as any);
+                                }
+                            }}
+                        >
+                            <View style={styles.menuLeft}>
+                                <View style={styles.iconBox}>
+                                    <Ionicons name={item.icon as any} size={22} color="#FFFFFF" />
+                                </View>
 
-                    {/*개인정보 처리방침*/}
-                    <TouchableOpacity
-                        style={[styles.menuItem, styles.menuItemBorder]}
-                    activeOpacity={0.8}
-                    onPress={() => router.push("/profile/privacy")}
-                    >
-                        <View style={styles.menuLeft}>
-                            <View style={styles.iconBox}>
+                                <View>
+                                    <Text style={styles.menuTitle}>{item.title}</Text>
+                                </View>
                             </View>
-                            <View>
-                                <Text style={styles.menuTitle}>개인정보 처리방침</Text>
-                            </View>
-                        </View>
-                    </TouchableOpacity>
-
-                    {/*이용약관*/}
-                    <TouchableOpacity
-                        style={[styles.menuItem, styles.menuItemBorder]}
-                    activeOpacity={0.8}
-                    onPress={() => router.push("/profile/terms")}
-                    >
-                        <View style={styles.menuLeft}>
-                            <View style={styles.iconBox}>
-                            </View>
-                            <View>
-                                <Text style={styles.menuTitle}>이용약관</Text>
-                            </View>
-                        </View>
-                    </TouchableOpacity>
-
-                    {/*구독하기*/}
-                    <TouchableOpacity
-                        style={[styles.menuItem, styles.menuItemBorder]}
-                    activeOpacity={0.8}
-                    >
-                        <View style={styles.menuLeft}>
-                            <View style={styles.iconBox}>
-                            </View>
-                            <View>
-                                <Text style={styles.menuTitle}>구독하기</Text>
-                            </View>
-                        </View>
-                    </TouchableOpacity>
-
-                    {/*로그아웃*/}
-                    <TouchableOpacity
-                        style={[styles.menuItem, styles.menuItemBorder]}
-                    activeOpacity={0.8}
-                    >
-                        <View style={styles.menuLeft}>
-                            <View style={styles.iconBox}>
-                            </View>
-                            <View>
-                                <Text style={styles.menuTitle}>로그아웃</Text>
-                            </View>
-                        </View>
-                    </TouchableOpacity>
+                        </TouchableOpacity>
+                    ))}
+                    </View>
                 </View>
-            </View>            
         </ScrollView> 
     )
 }
@@ -225,7 +161,7 @@ export default function ProfileView() {
 const styles = StyleSheet.create({
     container: {
         flex: 1, 
-        backgroundColor: "#090D57",
+        backgroundColor: "#F8FAFD",
     },
     content: {
         paddingHorizontal: 20,
@@ -235,14 +171,14 @@ const styles = StyleSheet.create({
 
     /*사용자 정보*/
     headerTitle: {
-        color: "#FFFFFF",
+        color: "#000000",
         fontSize: 24,
         fontWeight: "700",
         marginBottom: 30,
         marginTop: 35,
     },
     profileCard: {
-        backgroundColor: "#FE9A00",
+        backgroundColor: "#1A3A6B",
         borderRadius: 15,
         padding: 16,
         marginBottom: 14,
@@ -262,13 +198,14 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     userName: {
-        color: "#000000",
+        color: "#FFFFFF",
         fontSize: 24,
-        fontWeight: "800",
+        fontWeight: "700",
         marginBottom: 8,
     },
     locationSection: {
         flexDirection: "row",
+        alignItems: "center",
         marginBottom: 8,
     },
     locationIcon: {
@@ -277,42 +214,38 @@ const styles = StyleSheet.create({
         marginTop: -1.5
     },
     userLocation: {
-        color: "rgba(64, 64, 64, 0.8)",
+        color: "#FFFFFF",
         fontSize: 14,
         fontWeight: "500",
     },
     userStatus: {
-        color: "rgba(64, 64, 64, 0.8)",
+        color: "#FFFFFF",
         fontSize: 14,
-        fontWeight: "500",
+        marginLeft: 3,
     },
     idNumberBox: {
         justifyContent: "center",
         alignItems: "center",
     },
     idNumberText: {
-        color: "rgba(64, 64, 64, 0.8)",
+        color: "#FFFFFF",
         fontSize: 14,
-        fontWeight: "500",
-        marginTop: 6,
+        marginTop: 8,
     },
 
     /*프리미엄*/
     premiumSection: {
         flexDirection: "row",
-    },
-    premiumIcon: {
-        color: "#FFFFFF",
-        marginRight: 10,
+        alignItems: "center",
+        gap: 5,
     },
     premium: {
-        color: "#FFD94C",
+        color: "#B38E06",
         fontSize: 14,
         fontWeight: "800",
-        marginBottom: 8,
     },
     bannerCard: {
-        backgroundColor: "#C2AA52",
+        backgroundColor: "#FFE06E",
         borderRadius: 15,
         paddingHorizontal: 16,
         paddingVertical: 16,
@@ -346,25 +279,47 @@ const styles = StyleSheet.create({
     sectionAccount: {
         marginBottom: 130,
     },
-    sectionWrap: {
-        flexDirection: "row",
+    teamToggle: {
+        width: 45,
+        height: 25,
+        borderRadius: 20,
+        padding: 2,
+        justifyContent: "center",
     },
-    sectionIcon: {
-        color: "#FFFFFF",
-        marginRight: 10,
+    teamToggleOn: {
+        backgroundColor: "#FFE06E",
+        alignItems: "flex-end",
     },
-    sectionTitle: {
-        color: "#FFFFFF",
-        fontSize: 14,
-        fontWeight: "800",
-        marginBottom: 4,
+    teamToggleOff: {
+        backgroundColor: "#BCBCBC",
+        alignItems: "flex-start",
+    },
+    teamToggleCircle: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: "#FFFFFF",
+    },
+    teamToggleCircleOff: {
+        backgroundColor: "#494949",
+    },
+    teamToggleCircleOn: {
+        backgroundColor: "#FFFFFF",
     },
     menuBox: {
-        backgroundColor: "#060830",
+        backgroundColor: "#FFFFFF",
         borderRadius: 14,
         borderWidth: 1.2,
-        borderColor: "#262626",
-        overflow: "hidden",
+        borderColor: "#FFFFFF",
+
+        shadowColor: "#4C4C4C",
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
+        shadowOpacity: 0.18,
+        shadowRadius: 10,
+        elevation: 6,
     },
     menuItem: {
         minHeight: 75,
@@ -388,13 +343,13 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 10,
-        backgroundColor: "#262626",
+        backgroundColor: "#1A3A6B",
         justifyContent: "center",
         alignItems: "center",
         marginRight: 12,
     },
     menuTitle: {
-        color: "#FFC277",
+        color: "#000000",
         fontSize: 16,
         fontWeight: "700",
         marginBottom: 2,
