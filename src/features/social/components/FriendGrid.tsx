@@ -1,12 +1,15 @@
 import { FlatList, StyleSheet } from "react-native";
-import { socialDummy } from "../data/socialDummy";
 import type { Friend } from "../types/social.types";
 import FriendCard from "./FriendCard";
 
-export default function FriendGrid() {
+type FriendGridProps = {
+    friends: Friend[];
+};
+
+export default function FriendGrid({friends}: FriendGridProps) {
     return (
     <FlatList<Friend>
-        data={socialDummy}
+        data={friends}
         keyExtractor={(item) => item.id}
         numColumns={2}
         renderItem={({ item }) => <FriendCard friend={item} />}
