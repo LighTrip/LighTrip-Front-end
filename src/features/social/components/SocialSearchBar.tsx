@@ -1,13 +1,21 @@
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, TextInput, View } from "react-native";
 
-export default function SocialSearchBar() {
+type SocialSearchBarProps = {
+    value: string;
+    onChangeText: (text: string) => void;
+}
+
+export default function SocialSearchBar(
+    {value, onChangeText}: SocialSearchBarProps) {
     return(
         <View style={styles.container}>
             <TextInput
                 style={styles.input}
                 placeholder="사용자를 검색하세요."
                 placeholderTextColor= "#FFFFFF"
+                value={value}
+                onChangeText={onChangeText}
             />
         <Ionicons name="search" size={24} color="#FFFFFF" />
         </View>

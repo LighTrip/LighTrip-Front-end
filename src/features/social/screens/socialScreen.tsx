@@ -1,10 +1,25 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useMemo, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import FriendGrid from "../components/FriendGrid";
 import SocialSearchBar from "../components/SocialSearchBar";
+import { socialDummy } from "../data/socialDummy";
 
 export default function SocialView() {
+    const [keyword, setKeyword] = useState("");
+    const filteredFriends = useMemo(() => {
+        const trimmedKeyword = keyword.trim();
+
+        if (trimmedKeyword.length === 0) {
+            return socialDummy;
+        }
+
+        return socialDummy.filter((friend) =>
+            friend.name.includes(trimmedKeyword)
+        );
+    }, [keyword])
+
     return(
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
@@ -15,9 +30,9 @@ export default function SocialView() {
                 </TouchableOpacity>
             </View>
 
-            <SocialSearchBar />
+            <SocialSearchBar value={keyword} onChangeText={setKeyword}/>
 
-            <FriendGrid />
+            <FriendGrid friends={filteredFriends}/>
         </SafeAreaView>
     );
 };
