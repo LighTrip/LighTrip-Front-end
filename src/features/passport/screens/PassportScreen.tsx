@@ -4,23 +4,32 @@ import { useRouter } from "expo-router";
 import React, { useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  Dimensions,
-  StatusBar,
-  FlatList,
+    View,
+    Text,
+    StyleSheet,
+    Image,
+    TouchableOpacity,
+    TextInput,
+    Dimensions,
+    StatusBar,
+    FlatList,
+    ScrollView,
 } from 'react-native';
 
- const PLACES: { id: string; name: string; color: [string, string]; district: string; date: string }[] = [
-    { id: '1', name: '렉터스라운지 홍대',      color: ['#E8B4B8', '#FFFFFF'], district: '마포구', date: '2026-03-30' },
-    { id: '2', name: '다운타우너',   color: ['#B4C8E8', '#FFFFFF'], district: '용산구', date: '2026-03-16' },
-    { id: '3', name: '포셋 연희', color: ['#B4E8C8', '#FFFFFF'], district: '성동구', date: '2026-02-24' },
-    { id: '4', name: '명동 쇼핑 거리',    color: ['#E8D9B4', '#FFFFFF'], district: '중구', date: '2026-04-12' },
-    { id: '5', name: '초이다이닝 강남',   color: ['#ebc9eb', '#FFFFFF'], district: '강남구', date: '2026-01-30' },
-    { id: '6', name: '카페 드 파리',   color: ['#c9ebeb', '#FFFFFF'], district: '서초구', date: '2026-02-15' },
+const chunkArray = <T,>(array: T[], size: number): T[][] => {
+    return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
+        array.slice(i * size, i * size + size)
+    );
+};
+
+ const PLACES: { id: string; name: string; image: any; district: string; date: string }[] = [
+    { id: '1', name: '렉터스라운지 홍대', image: require('../../../../assets/images/mapo.png'), district: '마포', date: '2026-03-30' },
+    { id: '2', name: '다운타우너', image: require('../../../../assets/images/yongsan.png'), district: '용산', date: '2026-03-16' },
+    { id: '3', name: '포셋 연희', image: require('../../../../assets/images/seodaemun.png'), district: '서대문', date: '2026-02-24' },
+    { id: '4', name: '명동 쇼핑 거리', image: require('../../../../assets/images/mapo.png'), district: '중구', date: '2026-04-12' },
+    { id: '5', name: '초이다이닝 강남', image: require('../../../../assets/images/yongsan.png'), district: '강남', date: '2026-01-30' },
+    { id: '6', name: '카페 드 파리', image: require('../../../../assets/images/seodaemun.png'), district: '서초', date: '2026-02-15' },
+    { id: '7', name: '가게', image: require('../../../../assets/images/mapo.png'), district: '일산동구', date: '2026-03-05' },
 ];
 
 export default function PassportView() {
@@ -33,31 +42,36 @@ export default function PassportView() {
     return (
         
         <View style={styles.container}>
-            {/* 빛 효과 */}
-            <View style={styles.outerWrapper}>
-                {/* 나의 여권 박스 */}
-                <View style={styles.myContainer}>
-                    <Text style={styles.myText}>나의 여권</Text>
-                    <Text style={styles.recordText}>탐험 기록 3개</Text>
-                    {/* 기록 컨테이너 */}
-                    <View style={styles.recordContainer}>
-                        {[
-                            {label: '총 도장', value: 28},
-                            {label: '방문한 곳', value: 28},
-                            {label: '방문한 구', value: 5},
-                        ].map((stat, i) => (
-                            <React.Fragment key={i}>
-                                {i !== 0 && <View style={styles.divider}/>}
-                                <View style={styles.statItem}>
-                                    <Text style={styles.myText}>{stat.value}</Text>
-                                    <Text style={styles.statLabel}>{stat.label}</Text>
-                                </View>
-                            </React.Fragment>
-                        ))}
-                    </View>
-                </View>
-            </View> 
             
+            <Text style={styles.title}>나의 여권</Text>
+
+            <View style={styles.tabRow}>
+                <View style={styles.statCard}>
+                    <Text style={styles.numText}>
+                    26
+                    </Text>
+                    <Text style={styles.statText}>
+                    총 도장
+                    </Text>
+                </View>
+                <View style={styles.statCard}>
+                    <Text style={styles.numText}>
+                    18
+                    </Text>
+                    <Text style={styles.statText}>
+                    방문한 곳
+                    </Text>
+                </View>
+                <View style={styles.statCard}>
+                    <Text style={styles.numText}>
+                    7
+                    </Text>
+                    <Text style={styles.statText}>
+                    방문한 구
+                    </Text>
+                </View>
+            </View>
+
             {/* 탭 행 */}
             <View style={styles.tabRow}>
             {searchSelected ? (
@@ -101,7 +115,7 @@ export default function PassportView() {
 
                 {/* 정렬 버튼 */}
                 <TouchableOpacity style={styles.iconButton}>
-                    <Text style={{ color: '#FFFFFF', fontSize: 23 }}>☰</Text>
+                    <Text style={{ color: '#1A3A6B', fontSize: 23 }}>☰</Text>
                 </TouchableOpacity> 
                 
                 {/* 검색 버튼 */}
@@ -109,7 +123,7 @@ export default function PassportView() {
                     style={[styles.iconButton, searchSelected && styles.iconButtonActive] }
                     onPress={() => setSearchSelected(true)}
                 >
-                    <Ionicons name="search" size={25} color={colors.text.primary} />
+                    <Ionicons name="search" size={25} color={colors.text.muted} />
                 </TouchableOpacity> 
                 </>
             )}
@@ -117,27 +131,48 @@ export default function PassportView() {
 
             {/* 각 탭별 내용 */}
             {selected === 'cover' ? (
-            <FlatList
-                data={PLACES}
-                keyExtractor={(item) => item.id}
-                numColumns={2}
+            <ScrollView
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.gridContainer}
-                columnWrapperStyle={styles.gridRow}
-                renderItem={({ item }) => (
-                    <TouchableOpacity onPress={() => console.log(item.name)}>
-                        <LinearGradient
-                            colors={item.color}
-                            start={{ x: 0, y: 0.5 }}
-                            end={{ x: 0, y: 1 }}
-                            style={styles.passportCover}
-                        >
-                        <Text style={styles.placeName}>{item.district}</Text>
-                        </LinearGradient>
-                    </TouchableOpacity>
-                )}
-            />
+            >
+                {chunkArray(PLACES, 2).map((row, rowIndex) => (  // 2 → 3으로 바꾸면 3x3
+                    <View key={rowIndex} style={styles.gridColumn}>
+                        {row.map((item) => (
+                            <TouchableOpacity
+                                key={item.id}
+                                style={styles.passportCover}
+                                onPress={() => console.log(item.name)}
+                            >
+                                <Image
+                                    source={item.image}
+                                    style={StyleSheet.absoluteFillObject}
+                                    resizeMode="cover"
+                                />
+                                <Text style={styles.placeName}>{item.district}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                ))}
+            </ScrollView>
             ) : (
-            <Text>목록형 여권 화면 (개발 중)</Text>
+            <FlatList
+            data={PLACES}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContainer}
+            renderItem={({ item }) => (
+                <TouchableOpacity style={styles.listCard} onPress={() => console.log(item.name)}>
+                <Text style={styles.stamp}>도장</Text>
+                <View style={styles.textArea}>
+                    <Text style={styles.listName}>{item.name}</Text>
+                    <View style={styles.metaRow}>
+                    <Text style={styles.meta}>📍 {item.district}</Text>
+                    <Text style={styles.meta}>📅 {item.date}</Text>
+                    </View>
+                </View>
+                </TouchableOpacity>
+            )}
+            />
             )}
         </View>
     );
@@ -147,100 +182,68 @@ export default function PassportView() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#090D57',
-        alignItems: 'center',
+        backgroundColor: '#F8FAFD',
         justifyContent: 'flex-start',
         paddingTop: StatusBar.currentHeight || 65,
     },
 
-    outerWrapper: {
-        width: '90%',
-        borderRadius: 20,
-        alignItems: 'center',
-        shadowColor: '#FDA162',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.7,
-        shadowRadius: 10,
-        elevation: 10,
-    },  
-
-    myContainer: {
-        width: '100%',
-        height: 195,
-        backgroundColor: '#060830',
-        borderColor: '#FDA16270',
-        borderWidth: 2,
-        borderRadius: 20,
-        padding: 20,
-        alignItems: 'center',
-        justifyContent: 'flex-start',
-    },
-
-    myText: {
-        color: '#FDA162',
+    title: {
+        color: '#000000',
         fontSize: 24,
+        textAlign: 'left',
         fontWeight: 'bold',
-    },
-
-    recordText: {
-        color: '#FDA162',
-        fontSize: 13,
-        marginTop: 10,
-    },
-
-    recordContainer: {
-        width: '100%',
-        height: 80,
-        backgroundColor: '#F1E9E220',
-        borderRadius: 15,
-        marginTop: 15,
-        flexDirection: 'row',
-        paddingVertical: 14,
-        paddingHorizontal: 8,
-    },
-
-    statItem: {
-        flex: 1,
-        alignItems: 'center',
-    },
-
-    statLabel: {
-        color: '#8888BB',
-        fontSize: 11,
-        marginTop: 4,
-    },
-
-    divider: {
-        width: 1,
-        backgroundColor: '#4A4B80',
-        marginVertical: 4,
+        marginBottom: 10,
+        marginLeft: 20,
+        marginTop: 20,
     },
 
     tabRow: {
         flexDirection: 'row',
         alignItems: 'center',
         marginHorizontal: 16,
-        marginBottom: 16,
+        marginBottom: 10,
         gap: 8,
         paddingTop: 0,
-        marginTop: 20,
+        marginTop: 10,
     },
     
+    statCard: {
+        width: 110,
+        height: 80,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 10,
+        borderWidth: 2,
+        borderColor: '#1A3A6B',
+        alignItems: 'center',
+        justifyContent: 'center',
+        
+
+        marginRight: 16,
+
+        shadowColor: '#1A3A6B',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.4,
+        shadowRadius: 5,
+        elevation: 4,
+    },
+
     tabButton: {
         width: 130,
         height: 39,
         alignItems: 'center',
         justifyContent: 'center',
 
+        marginRight: 5,
+
         paddingVertical: 0,
         paddingHorizontal: 16,
 
         borderRadius: 10,
-        backgroundColor: '#060830',
+        backgroundColor: '#FFFFFF',
         borderWidth: 2,
-        borderColor: '#FDA16270',
+        borderColor: '#1A3A6B',
 
-        shadowColor: '#FDA162',
+        shadowColor: '#1A3A6B',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.4,
         shadowRadius: 5,
@@ -248,10 +251,10 @@ const styles = StyleSheet.create({
     },
 
     tabButtonActive: {
-        backgroundColor: '#FDA162',
-        borderColor: '#FDA16270',
+        backgroundColor: '#1A3A6B',
+        borderColor: '#1A3A6B',
 
-        shadowColor: '#FDA162',
+        shadowColor: '#1A3A6B',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.4,
         shadowRadius: 5,
@@ -259,7 +262,7 @@ const styles = StyleSheet.create({
     },
 
     tabText: {
-        color: '#8888BB',
+        color: '#4c4c4c90',
         fontSize: 16,
         fontWeight: 'bold',
 
@@ -268,8 +271,21 @@ const styles = StyleSheet.create({
         textAlignVertical: 'center'
     },
 
-    tabTextActive: {
+    numText: {
         color: '#000000',
+        fontSize: 20,
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
+
+    statText: {
+        color: '#000000',
+        fontSize: 14,
+        textAlign: 'center',
+    },
+
+    tabTextActive: {
+        color: '#ffffff',
         fontWeight: 'bold',
 
         // 안드로이드 폰트 패딩 문제 해결
@@ -281,12 +297,15 @@ const styles = StyleSheet.create({
         width: 39,
         height: 39,
         borderRadius: 10,
-        backgroundColor: '#060830',
+        backgroundColor: '#ffffff',
         borderWidth: 2,
-        borderColor: '#FDA16270',
+        borderColor: '#1A3A6B',
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#FDA162',
+
+        marginRight: 5,
+
+        shadowColor: '#1A3A6B',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.4,
         shadowRadius: 5,
@@ -296,8 +315,8 @@ const styles = StyleSheet.create({
     iconButtonActive: {
         width: 39,
         height: 39,
-        backgroundColor: '#FDA162',
-        shadowColor: '#FDA162',
+        backgroundColor: '#1A3A6B',
+        shadowColor: '#1A3A6B',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.4,
         shadowRadius: 5,
@@ -305,20 +324,19 @@ const styles = StyleSheet.create({
     },
 
     searchInput: {
-        width: Dimensions.get('window').width - 90,
+        width: Dimensions.get('window').width - 80,
         height: 39,
-        backgroundColor: '#FDA162',
+        backgroundColor: '#ffffff',
 
         borderRadius: 10,
         borderWidth: 2,
-        borderColor: '#FDA16270',
-
+        borderColor: '#1A3A6B',
         paddingVertical: 8,
         paddingHorizontal: 16,
         fontSize: 14,
         fontWeight: 'bold',
 
-        shadowColor: '#FDA162',
+        shadowColor: '#1A3A6B',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.4,
         shadowRadius: 5,
@@ -326,25 +344,31 @@ const styles = StyleSheet.create({
     },
 
     gridContainer: {
-        paddingHorizontal: 16,
-        paddingBottom: 16,
+        flexDirection: 'row',
+        marginLeft: 10,
+        gap: 8,
+        paddingRight: 10,
     },
 
-    gridRow: {
-        justifyContent: 'space-between',
-        marginBottom: 16,
-        gap: 16,
+    gridColumn: {
+        flexDirection: 'column',
+        gap: 8,
     },
 
     passportCover: {
-        width: (Dimensions.get('window').width - 16 * 2 - 36) / 2,
-        height: (Dimensions.get('window').width - 16 * 2 - 36) / 2 * 1.29,
+        width: Dimensions.get('window').width - 216,
+        height: 250,
         borderTopRightRadius: 15,
         borderBottomRightRadius: 15,
+
         justifyContent: 'flex-start',
         alignItems: 'center',
+
         padding: 30,
+
         overflow: 'hidden',
+
+        marginTop: 8,
     },
 
     placeName: {
@@ -352,6 +376,59 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontStyle: 'italic',
         fontWeight: '600',
+    },
+
+    listContainer: {
+        paddingHorizontal: 16,
+        paddingBottom: 100,
+    },
+
+    listCard: {
+        width: Dimensions.get('window').width - 32,
+        height: 85,
+        flexDirection: 'row',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 16,
+        marginTop: 10,
+        marginBottom: 10,
+        alignItems: 'center',
+
+        shadowColor: '#1A3A6B',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.4,
+        shadowRadius: 5,
+        elevation: 4,
+        },
+
+    listName: {
+        color: '#000000',
+        fontSize: 18,
+        fontWeight: '600',
+        marginBottom: 4,
+    },
+
+    stamp: {
+        color: '#000000',
+        fontSize: 14,
+        fontWeight: 'bold',
+        marginRight: 12,
+        padding: 15,
+    },
+
+    textArea: {
+        flex: 1,                   
+    },
+
+    metaRow: {
+        flexDirection: 'row',
+        gap: 24,
+    },
+
+    meta: {
+        color: '#000000',
+        fontSize: 14,
+        fontWeight: '500',
     },
 
 });
