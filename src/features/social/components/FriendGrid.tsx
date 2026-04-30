@@ -4,15 +4,20 @@ import FriendCard from "./FriendCard";
 
 type FriendGridProps = {
     friends: Friend[];
+    onPressFriend: (friend: Friend) => void;
 };
 
-export default function FriendGrid({friends}: FriendGridProps) {
+export default function FriendGrid({friends, onPressFriend}: FriendGridProps) {
     return (
     <FlatList<Friend>
         data={friends}
         keyExtractor={(item) => item.id}
         numColumns={2}
-        renderItem={({ item }) => <FriendCard friend={item} />}
+        renderItem={({ item }) => 
+        <FriendCard 
+            friend={item} 
+            onPress={() => onPressFriend(item)}
+        />}
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
