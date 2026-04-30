@@ -3,9 +3,10 @@ import { Friend } from "../types/social.types";
 
 type FriendCardProps = {
     friend: Friend;
+    onPress: () => void;
 };
 
-export default function FriendCard({friend}: FriendCardProps) {
+export default function FriendCard({friend, onPress}: FriendCardProps) {
     return(
         <TouchableOpacity
             activeOpacity={0.8}
@@ -13,6 +14,7 @@ export default function FriendCard({friend}: FriendCardProps) {
                 styles.card,
                 friend.isSelected && styles.selectedCard,
             ]}
+            onPress={onPress}
         >
             <Image source={friend.image} style={styles.profileImage} />
             <Text style={styles.name}>{friend.name}</Text>
