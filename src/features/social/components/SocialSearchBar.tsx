@@ -25,7 +25,7 @@ export default function SocialSearchBar(
 const styles = StyleSheet.create({
     container: {
         height: 52,
-        backgroundColor: "#171717",
+        backgroundColor: "#1A3A6B",
         borderRadius: 14,
         paddingHorizontal: 16,
         marginTop: 18,
