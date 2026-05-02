@@ -4,10 +4,11 @@ import FriendCard from "./FriendCard";
 
 type FriendGridProps = {
     friends: Friend[];
+    selectedFriendId: string | null;
     onPressFriend: (friend: Friend) => void;
 };
 
-export default function FriendGrid({friends, onPressFriend}: FriendGridProps) {
+export default function FriendGrid({friends, selectedFriendId, onPressFriend}: FriendGridProps) {
     return (
     <FlatList<Friend>
         data={friends}
@@ -16,6 +17,7 @@ export default function FriendGrid({friends, onPressFriend}: FriendGridProps) {
         renderItem={({ item }) => 
         <FriendCard 
             friend={item} 
+            isSelected={item.id === selectedFriendId}
             onPress={() => onPressFriend(item)}
         />}
         columnWrapperStyle={styles.row}

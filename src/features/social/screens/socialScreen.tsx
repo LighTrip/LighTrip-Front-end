@@ -38,6 +38,7 @@ export default function SocialView() {
 
             <FriendGrid 
                 friends={filteredFriends}
+                selectedFriendId={selectedFriend?.id ?? null}
                 onPressFriend={setSelectedFriend}
             />
 
@@ -71,7 +72,7 @@ const styles = StyleSheet.create({
         width: 34,
         height: 34,
         borderRadius: 17,
-        backgroundColor: "#FDA162",
+        backgroundColor: "#1A3A6B",
         alignItems: "center",
         justifyContent: "center",
     },
