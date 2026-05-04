@@ -2,9 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import FriendDetailModal from "../components/FriendDetailModal";
 import FriendGrid from "../components/FriendGrid";
 import SocialSearchBar from "../components/SocialSearchBar";
 import { socialDummy } from "../data/socialDummy";
+import { Friend } from "../types/social.types";
 
 export default function SocialView() {
     const [keyword, setKeyword] = useState("");
@@ -20,6 +22,8 @@ export default function SocialView() {
         );
     }, [keyword])
 
+    const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
+
     return(
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
@@ -32,7 +36,17 @@ export default function SocialView() {
 
             <SocialSearchBar value={keyword} onChangeText={setKeyword}/>
 
-            <FriendGrid friends={filteredFriends}/>
+            <FriendGrid 
+                friends={filteredFriends}
+                selectedFriendId={selectedFriend?.id ?? null}
+                onPressFriend={setSelectedFriend}
+            />
+
+            <FriendDetailModal
+                visible={selectedFriend !== null}
+                friend={selectedFriend}
+                onClose={()=>setSelectedFriend(null)}
+            />
         </SafeAreaView>
     );
 };
@@ -58,7 +72,7 @@ const styles = StyleSheet.create({
         width: 34,
         height: 34,
         borderRadius: 17,
-        backgroundColor: "#FDA162",
+        backgroundColor: "#1A3A6B",
         alignItems: "center",
         justifyContent: "center",
     },
