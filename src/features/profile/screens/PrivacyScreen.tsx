@@ -3,11 +3,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { profilePolicyLinks } from "../data/profilePolicyLinks";
 
-export default function TermsScreen() {
+export default function PrivacyScreen() {
     return(
         <SafeAreaView style={styles.container}>
             <WebView
-                source={{ uri: profilePolicyLinks.terms}}
+                source={{ uri: profilePolicyLinks.privacy}}
                 style={styles.webview}
             />
         </SafeAreaView>
