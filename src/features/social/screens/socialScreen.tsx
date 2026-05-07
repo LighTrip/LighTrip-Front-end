@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AddFriendModal from "../components/AddFriendModal";
 import FriendDetailModal from "../components/FriendDetailModal";
 import FriendGrid from "../components/FriendGrid";
 import SocialSearchBar from "../components/SocialSearchBar";
@@ -22,30 +23,47 @@ export default function SocialView() {
         );
     }, [keyword])
 
+    // 소셜 메인화면에서 사용자 선택
     const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
+    // 친구 추가에서 선택
+    const [isAddFriendOpen, setIsAddFriendOpen] = useState(false);
 
     return(
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>소셜</Text>
 
-                <TouchableOpacity activeOpacity={0.8} style={styles.addButton}>
+                {/*친구 추가*/}
+                <TouchableOpacity 
+                    activeOpacity={0.8} 
+                    style={styles.addButton}
+                    onPress={() => setIsAddFriendOpen(true)}
+                >
                     <Ionicons name="person-add" size={20} color="#FFFFFF" />
                 </TouchableOpacity>
             </View>
 
+            {/*검색 바*/}
             <SocialSearchBar value={keyword} onChangeText={setKeyword}/>
 
+            {/*소셜 메인 화면*/}
             <FriendGrid 
                 friends={filteredFriends}
                 selectedFriendId={selectedFriend?.id ?? null}
-                onPressFriend={setSelectedFriend}
+                onPressFriend={(friend) => setSelectedFriend(friend)}
             />
 
+            {/*다른 사용자 여권 열람 바텀 시트*/}
             <FriendDetailModal
                 visible={selectedFriend !== null}
                 friend={selectedFriend}
                 onClose={()=>setSelectedFriend(null)}
+            />
+
+            {/*친구 추가 바텀시트*/}
+            <AddFriendModal
+                visible={isAddFriendOpen}
+                onClose={() => setIsAddFriendOpen(false)}
             />
         </SafeAreaView>
     );
