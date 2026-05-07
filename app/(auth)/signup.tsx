@@ -1,15 +1,17 @@
+import LighTripLogo from "@/src/constant/LighTrip.svg";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StatusBar,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -37,44 +39,31 @@ export default function SignupScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50">
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <KeyboardAvoidingView
-        className="flex-1"
+        style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
-          className="flex-1"
-          contentContainerStyle={{ flexGrow: 1 }}
+          style={styles.flex}
+          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View className="flex-1 px-6 pt-10 pb-8">
-            <View className="mb-10">
-              <Text
-                className="text-4xl font-bold text-[#1B2D6B]"
-                style={{ fontStyle: "italic", letterSpacing: -1 }}
-              ></Text>
+          <View style={styles.inner}>
+            {/* 로고 */}
+            <View style={styles.logoContainer}>
+              <LighTripLogo width={185} height={51} />
             </View>
 
-            <View className="gap-y-3">
-              <View
-                className="bg-white rounded-2xl px-4 py-3 border border-transparent"
-                style={{
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.06,
-                  shadowRadius: 4,
-                  elevation: 2,
-                }}
-              >
-                <View className="flex-row justify-between items-center mb-1">
-                  <Text className="text-xs text-gray-400 font-medium tracking-wide">
-                    닉네임
-                  </Text>
-                  <Text className="text-xs text-gray-300">
-                    {nickname.length}/10
-                  </Text>
+            {/* 폼 */}
+            <View style={styles.formContainer}>
+              {/* 닉네임 */}
+              <View style={styles.inputCard}>
+                <View style={styles.inputHeader}>
+                  <Text style={styles.inputLabel}>닉네임</Text>
+                  <Text style={styles.inputCounter}>{nickname.length}/10</Text>
                 </View>
                 <TextInput
                   value={nickname}
@@ -83,7 +72,7 @@ export default function SignupScreen() {
                   }}
                   placeholder="ex. 홍길동"
                   placeholderTextColor="#C5C9D6"
-                  className="text-[#1B2D6B] text-base"
+                  style={styles.textInput}
                   maxLength={10}
                   returnKeyType="next"
                   autoCapitalize="none"
@@ -91,82 +80,57 @@ export default function SignupScreen() {
               </View>
 
               {/* 활동 지역 */}
-              <View
-                className="bg-white rounded-2xl px-4 py-3"
-                style={{
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.06,
-                  shadowRadius: 4,
-                  elevation: 2,
-                }}
-              >
-                <Text className="text-xs text-gray-400 font-medium tracking-wide mb-1">
-                  활동 지역
-                </Text>
+              <View style={styles.inputCard}>
+                <Text style={styles.inputLabel}>활동 지역</Text>
                 <TextInput
                   value={region}
                   onChangeText={setRegion}
                   placeholder="서울시 용산구"
                   placeholderTextColor="#C5C9D6"
-                  className="text-[#1B2D6B] text-base"
+                  style={styles.textInput}
                   returnKeyType="next"
                   autoCapitalize="none"
                 />
               </View>
 
-              <View
-                className="bg-white rounded-2xl px-4 pt-3 pb-2"
-                style={{
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.06,
-                  shadowRadius: 4,
-                  elevation: 2,
-                }}
-              >
-                <Text className="text-xs text-gray-400 font-medium tracking-wide mb-1">
-                  한 줄 소개
-                </Text>
+              {/* 한 줄 소개 */}
+              <View style={styles.inputCard}>
+                <Text style={styles.inputLabel}>한 줄 소개</Text>
                 <TextInput
                   value={bio}
                   onChangeText={setBio}
                   placeholder="자신을 소개하는 문구를 입력하세요."
                   placeholderTextColor="#C5C9D6"
-                  className="text-[#1B2D6B] text-base"
+                  style={[styles.textInput, styles.textArea]}
                   multiline
                   numberOfLines={4}
                   textAlignVertical="top"
-                  style={{ minHeight: 80 }}
                   returnKeyType="done"
                 />
               </View>
             </View>
 
-            <View className="flex-1" />
+            <View style={styles.spacer} />
+
+            {/* 시작하기 버튼 */}
             <TouchableOpacity
               onPress={handleSubmit}
               disabled={!isFormValid || loading}
               activeOpacity={0.85}
-              className={`rounded-2xl py-4 items-center justify-center mt-6 ${
-                isFormValid ? "bg-[#FEE500]" : "bg-gray-200"
-              }`}
-              style={
+              style={[
+                styles.submitButton,
                 isFormValid
-                  ? {
-                      shadowColor: "#FEE500",
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.4,
-                      shadowRadius: 8,
-                      elevation: 4,
-                    }
-                  : {}
-              }
+                  ? styles.submitButtonActive
+                  : styles.submitButtonDisabled,
+              ]}
             >
               <Text
-                className={`text-base font-bold tracking-wide ${
-                  isFormValid ? "text-[#1B2D6B]" : "text-gray-400"
-                }`}
+                style={[
+                  styles.submitButtonText,
+                  isFormValid
+                    ? styles.submitButtonTextActive
+                    : styles.submitButtonTextDisabled,
+                ]}
               >
                 {loading ? "저장 중..." : "시작하기"}
               </Text>
@@ -177,3 +141,102 @@ export default function SignupScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+  },
+  flex: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  inner: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 32,
+  },
+  logoContainer: {
+    marginBottom: 40,
+  },
+  logoText: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#1B2D6B",
+    fontStyle: "italic",
+    letterSpacing: -1,
+  },
+  formContainer: {
+    gap: 12,
+  },
+  inputCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  inputHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  inputLabel: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    fontWeight: "500",
+    letterSpacing: 0.3,
+    marginBottom: 4,
+  },
+  inputCounter: {
+    fontSize: 12,
+    color: "#D1D5DB",
+  },
+  textInput: {
+    fontSize: 15,
+    color: "#1B2D6B",
+  },
+  textArea: {
+    minHeight: 80,
+  },
+  spacer: {
+    flex: 1,
+  },
+  submitButton: {
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 24,
+  },
+  submitButtonActive: {
+    backgroundColor: "#FEE500",
+    shadowColor: "#FEE500",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  submitButtonDisabled: {
+    backgroundColor: "#E5E7EB",
+  },
+  submitButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  submitButtonTextActive: {
+    color: "#1B2D6B",
+  },
+  submitButtonTextDisabled: {
+    color: "#9CA3AF",
+  },
+});
