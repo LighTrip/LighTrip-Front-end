@@ -14,23 +14,29 @@ import { useRouter } from 'expo-router';
 import colors from '@/src/constant/colors';
 import Ionicons from '@expo/vector-icons/build/Ionicons';
 
+import PassportDetail from "../screens/PassportDetail";
+
 const chunkArray = <T,>(array: T[], size: number): T[][] => {
     return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
         array.slice(i * size, i * size + size)
     );
 };
 
-const PLACES: { id: string; name: string; image: any; district: string; date: string }[] = [
-    { id: '1', name: '렉터스라운지 홍대', image: require('../../../../assets/images/mapo.png'), district: '마포', date: '2026-03-30' },
-    { id: '2', name: '다운타우너', image: require('../../../../assets/images/yongsan.png'), district: '용산', date: '2026-03-16' },
-    { id: '3', name: '포셋 연희', image: require('../../../../assets/images/seodaemun.png'), district: '서대문', date: '2026-02-24' },
-    { id: '4', name: '명동 쇼핑 거리', image: require('../../../../assets/images/mapo.png'), district: '중구', date: '2026-04-12' },
-    { id: '5', name: '초이다이닝 강남', image: require('../../../../assets/images/yongsan.png'), district: '강남', date: '2026-01-30' },
-    { id: '6', name: '카페 드 파리', image: require('../../../../assets/images/seodaemun.png'), district: '서초', date: '2026-02-15' },
-    { id: '7', name: '가게', image: require('../../../../assets/images/mapo.png'), district: '일산동구', date: '2026-03-05' },
+const PLACES: { id: string; name: string; image: any; district: string; date: string; category: string }[] = [
+    { id: '1', name: '렉터스라운지 홍대', image: require('../../../../assets/images/mapo.png'), district: '마포', date: '2026-03-30', category: '카페' },
+    { id: '2', name: '다운타우너', image: require('../../../../assets/images/yongsan.png'), district: '용산', date: '2026-03-16', category: '식당' },
+    { id: '3', name: '포셋 연희', image: require('../../../../assets/images/seodaemun.png'), district: '서대문', date: '2026-02-24', category: '카페' },
+    { id: '4', name: '명동 쇼핑 거리', image: require('../../../../assets/images/mapo.png'), district: '중구', date: '2026-04-12', category: '쇼핑' },
+    { id: '5', name: '초이다이닝 강남', image: require('../../../../assets/images/yongsan.png'), district: '강남', date: '2026-01-30', category: '음식점' },
+    { id: '6', name: '카페 드 파리', image: require('../../../../assets/images/seodaemun.png'), district: '서초', date: '2026-02-15', category: '카페' },
+    { id: '7', name: '가게', image: require('../../../../assets/images/mapo.png'), district: '일산동구', date: '2026-03-05', category: '카페' },
 ];
 
-const PassportList = () => {
+type Props = {
+    onSelectPlace: (item: typeof PLACES[0]) => void;
+}
+
+const PassportList = ({ onSelectPlace }: Props) => {
 
     const router = useRouter();
     // 장소별/위치별 탭 선택 상태
@@ -41,8 +47,8 @@ const PassportList = () => {
     const [sortVisible, setSortVisible] = useState(false);
     const [sortOption, setSortOption] = useState('최근 방문순');
 
-        
     return (
+    
     <View style={{flex: 1}}> 
             {/* 탭 행 */}
             <View style={styles.tabRow} >
@@ -169,7 +175,7 @@ const PassportList = () => {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContainer}
             renderItem={({ item }) => (
-                <TouchableOpacity style={styles.listCard} onPress={() => console.log(item.name)}>
+                <TouchableOpacity style={styles.listCard} onPress={() => onSelectPlace(item)}>
                 <Text style={styles.stamp}>도장</Text>
                 <View style={styles.textArea}>
                     <Text style={styles.listName}>{item.name}</Text>
