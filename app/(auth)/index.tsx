@@ -2,7 +2,7 @@ import LighTripLogo from "@/src/constant/LighTrip.svg";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import {
   StatusBar,
   StyleSheet,
@@ -30,31 +30,28 @@ export default function LoginScreen() {
     return () => subscription.remove();
   }, []);
 
-  const isHandling = useRef(false);
-
   const handleDeepLink = async (event: { url: string }) => {
-    if (isHandling.current) return;
-    isHandling.current = true;
-
-    console.log("Received deep link:", event.url);
+    console.log("딥링크 수신:", event.url);
 
     const parsed = Linking.parse(event.url);
-    if (!parsed.path?.includes("auth/callback")) return;
+    console.log("path:", parsed.path);
+    console.log("queryParams:", parsed.queryParams);
+
+    if (!parsed.path?.includes("callback")) {
+      console.log("path 불일치로 return");
+      return;
+    }
 
     const accessToken = parsed.queryParams?.accessToken as string | undefined;
-    const refreshToken = parsed.queryParams?.refreshToken as string | undefined;
-    const isNewUser = parsed.queryParams?.isNewUser === "true";
+    console.log("accessToken:", accessToken);
 
-    if (!accessToken) return;
-
-    await SecureStore.setItemAsync("accessToken", accessToken);
-    await SecureStore.setItemAsync("refreshToken", refreshToken ?? "");
-
-    if (isNewUser) {
-      router.navigate("/(auth)/signup");
-    } else {
-      router.navigate("/(tabs)");
+    if (!accessToken) {
+      console.log("accessToken 없어서 return");
+      return;
     }
+    await SecureStore.setItemAsync("accessToken", accessToken);
+
+    router.replace("/(tabs)");
   };
 
   const handleKakaoLogin = async () => {
