@@ -1,5 +1,3 @@
-import colors from "@/src/constant/colors";
-import Ionicons from "@expo/vector-icons/build/Ionicons";
 import { useRouter } from "expo-router";
 import React, { useState } from 'react';
 
@@ -15,50 +13,45 @@ import {
 import PassportList from "../components/PassportList";
 import LikeList from "../components/LikeList";
 import ScrapList from "../components/ScrapList";
+import PassportDetail from "./PassportDetail";
 
 export default function PassportView() {
     const router = useRouter();
 
+    const [selectedPlace, setSelectedPlace] = useState<any>(null);
+    
     const [activeTab, setActiveTab] = useState<'passport' | 'like' | 'scrap'>('passport');
 
 
     return (
-        
         <View style={styles.container}>
             
-            <Text style={styles.title}>나의 여권</Text>
+            {selectedPlace ? (
+                <PassportDetail item={selectedPlace} onBack={() => setSelectedPlace(null)} />
+            ) : (
+                <>
+                    <Text style={styles.title}>나의 여권</Text>
 
-            <View style={styles.tabRow}>
-                <TouchableOpacity style={[styles.statCard, activeTab === 'passport' && styles.statCardActive]} onPress={() => setActiveTab('passport')}>
-                    <Text style={[styles.numText, activeTab === 'passport' && styles.numTextActive]}>
-                    26
-                    </Text>
-                    <Text style={[styles.statText, activeTab === 'passport' && styles.statTextActive]}>
-                    여권
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.statCard, activeTab === 'like' && styles.statCardActive]} onPress={() => setActiveTab('like')}>
-                    <Text style={[styles.numText, activeTab === 'like' && styles.numTextActive]}>
-                    18
-                    </Text>
-                    <Text style={[styles.statText, activeTab === 'like' && styles.statTextActive]}>
-                    좋아요
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.statCard, activeTab === 'scrap' && styles.statCardActive]} onPress={() => setActiveTab('scrap')}>
-                    <Text style={[styles.numText, activeTab === 'scrap' && styles.numTextActive]}>
-                    7
-                    </Text>
-                    <Text style={[styles.statText, activeTab === 'scrap' && styles.statTextActive]}>
-                    스크랩
-                    </Text>
-                </TouchableOpacity>
-            </View>
+                    <View style={styles.tabRow}>
+                        <TouchableOpacity style={[styles.statCard, activeTab === 'passport' && styles.statCardActive]} onPress={() => setActiveTab('passport')}>
+                            <Text style={[styles.numText, activeTab === 'passport' && styles.numTextActive]}>26</Text>
+                            <Text style={[styles.statText, activeTab === 'passport' && styles.statTextActive]}>여권</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.statCard, activeTab === 'like' && styles.statCardActive]} onPress={() => setActiveTab('like')}>
+                            <Text style={[styles.numText, activeTab === 'like' && styles.numTextActive]}>18</Text>
+                            <Text style={[styles.statText, activeTab === 'like' && styles.statTextActive]}>좋아요</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.statCard, activeTab === 'scrap' && styles.statCardActive]} onPress={() => setActiveTab('scrap')}>
+                            <Text style={[styles.numText, activeTab === 'scrap' && styles.numTextActive]}>7</Text>
+                            <Text style={[styles.statText, activeTab === 'scrap' && styles.statTextActive]}>스크랩</Text>
+                        </TouchableOpacity>
+                    </View>
 
-            {activeTab === 'passport' && <PassportList />}
-            {activeTab === 'like' && <LikeList />}
-            {activeTab === 'scrap' && <ScrapList />}
-            
+                    {activeTab === 'passport' && <PassportList onSelectPlace={setSelectedPlace} />}
+                    {activeTab === 'like' && <LikeList />}
+                    {activeTab === 'scrap' && <ScrapList />}
+                </>
+            )}
         </View>
     );
 }
