@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {
+    Dimensions,
+    FlatList,
     Image,
     ScrollView,
     StyleSheet,
@@ -14,16 +16,21 @@ import SearchToggle from "../components/SearchToggle";
 import { rankingDummy, searchUserDummy } from "../data/searchDummy";
 import { RankingUser, SearchTab } from "../types/search.types";
 
+type Place = {
+    id: string;
+    name: string;
+    image: any;
+    district: string;
+    date: string;
+    category: string;
+}
+
 export default function SearchView() {
 
     const [selectedTab, setSelectedTab] = useState<SearchTab>("all")
 
     return(
         <SafeAreaView style={styles.container}>
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-            >
                 {/*헤더*/}
                 <View style={styles.header}>
                     <Text style={styles.title}>
@@ -39,51 +46,184 @@ export default function SearchView() {
                 {selectedTab === "all" ? (
                     <AllSearchContent />
                 ) : (
-                    <RankingContent />
+                    <ScrollView 
+                        contentContainerStyle={styles.scrollContent}
+                        showsVerticalScrollIndicator={false}
+                    >
+                        <RankingContent />
+                    </ScrollView>
                 )}         
-            </ScrollView>
         </SafeAreaView>   
     )
 }
 
 {/*둘러보기 메인 화면*/}
+const {height} = Dimensions.get("window");
+
+// 임시 더미 데이터
+const passportDummy: Place[] = [
+    {
+        id: "1",
+        name: "렉터스라운지 홍대",
+        image: require("@/assets/images/profile1.jpg"),
+        district: "마포구",
+        date: "2026-03-30",
+        category: "카페",
+    },
+    {
+        id: "2",
+        name: "다운타우너",
+        image: require("@/assets/images/profile2.jpg"),
+        district: "용산구",
+        date: "2026-03-16",
+        category: "식당",
+    },
+    {
+        id: "3",
+        name: "포셋 연희",
+        image: require("@/assets/images/profile1.jpg"),
+        district: "서대문구",
+        date: "2026-02-24",
+        category: "카페",
+    },
+    {
+        id: "4",
+        name: "명동 쇼핑 거리",
+        image: require("@/assets/images/profile2.jpg"),
+        district: "중구",
+        date: "2026-04-12",
+        category: "쇼핑",
+    },
+    {
+        id: "5",
+        name: "초이다이닝 강남",
+        image: require("@/assets/images/profile1.jpg"),
+        district: "강남구",
+        date: "2026-01-30",
+        category: "음식점",
+    },
+    {
+        id: "6",
+        name: "카페 드 파리",
+        image: require("@/assets/images/profile2.jpg"),
+        district: "서초구",
+        date: "2026-02-15",
+        category: "카페",
+    },
+]
+
 function AllSearchContent() {
+
+    // 친구 추가 메시지
+    const [showAddMessage, setShowAddMessage] = useState(false);
+
+    const handleAddFriend = () => {
+        setShowAddMessage(true);
+
+        setTimeout(() => {
+            setShowAddMessage(false);
+        }, 2000);
+    };
+
+    // 좋아요 및 스크랩
+    const [likeIds, setLikeIds] = useState<string[]>([]);
+    const [scrappedIds, setScrapped] = useState<string[]>([]);
+
+    const toggleLike = (id: string) => {
+        setLikeIds((prev) =>
+            prev.includes(id)
+                ? prev.filter((likeId) => likeId !== id)
+                : [...prev, id]
+        );
+    };
+
+    const toggleScrap = (id: string) => {
+        setScrapped((prev) => 
+            prev.includes(id)
+                ? prev.filter((scrappedId) => scrappedId !== id)
+                : [...prev, id]
+        );
+    };
+
     return(
-        <View style={styles.card}>
-            <Image 
-                source={require("@/assets/images/noise.png")}
-                style={styles.noiseBackground}
-                resizeMode="cover"
-            />
+        <View style={styles.reelsContainer}>
+            <FlatList
+                data={passportDummy}
+                keyExtractor= {(item) => item.id}
+                renderItem= {({item}) => (
+                    <View style={styles.reelsPage}>
+                        <View style={styles.card}>
+                            <Image 
+                                source={require("@/assets/images/noise.png")}
+                                style={styles.noiseBackground}
+                                resizeMode="cover"
+                            />
 
-            <View style={styles.cardContent}>
-                <View style={styles.userRow}>
-                    <Image
-                        source={require("@/assets/images/profile1.jpg")}
-                        style={styles.profileImage}
-                    />
+                            <View style={styles.cardContent}>
+                                {/*사용자 정보*/}
+                                <View style={styles.userInfoBox}>
+                                    <View style={styles.userRow}>
+                                        <Image
+                                            source={require("@/assets/images/profile1.jpg")}
+                                            style={styles.profileImage}
+                                        />
 
-                    <View style={styles.userTextArea}>
-                        <View style={styles.nameRow}>
-                            <Text style={styles.userName}>{searchUserDummy.name}</Text>
-                            <Text style={styles.userId}>#{searchUserDummy.id}</Text>
-                        </View>
+                                        <View style={styles.userTextArea}>
+                                            <View style={styles.nameRow}>
+                                                <Text style={styles.userName}>{searchUserDummy.name}</Text>
+                                                <Text style={styles.userId}>#{searchUserDummy.id}</Text>
+                                            </View>
 
-                        <View style={styles.locationRow}>
-                            <Ionicons name="location-outline" size={12} color="#666667" />
-                            <Text style={styles.locationText}>{searchUserDummy.location}</Text>
+                                        <View style={styles.locationRow}>
+                                            <Ionicons name="location-outline" size={12} color="#666667" />
+                                            <Text style={styles.locationText}>{searchUserDummy.location}</Text>
+                                        </View>
+                                    </View>
+
+                                    <TouchableOpacity style={styles.addButton} onPress={handleAddFriend}>
+                                        <Ionicons name="person-add-outline" size={20} color="#000000" />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+
+                            {/*여권 상세*/}
+                            <View style={styles.passportDetailArea}>
+                                <PassportFrame item={item} />
+
+                                <View style={styles.actionButtonArea}>
+                                    <TouchableOpacity onPress={() => toggleLike(item.id)}>
+                                        <Ionicons 
+                                            name={likeIds.includes(item.id) ? "heart" : "heart-outline"}
+                                            size={24}
+                                            color={likeIds.includes(item.id) ? "#ED3838" : "#333333"}
+                                        />
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity onPress={() => toggleScrap(item.id)}>
+                                        <Ionicons 
+                                            name={scrappedIds.includes(item.id) ? "bookmark" : "bookmark-outline"}
+                                            size={24}
+                                            color={scrappedIds.includes(item.id) ? "#FFD233" : "#333333"}
+                                        />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
                         </View>
                     </View>
-
-                    <TouchableOpacity style={styles.addButton}>
-                        <Ionicons name="person-add-outline" size={20} color="#000000" />
-                    </TouchableOpacity>
                 </View>
-                
-                <PassportFrame />
+            )}
+            pagingEnabled
+            showsVerticalScrollIndicator={false}
+            decelerationRate="fast"
+        /> 
+
+        {showAddMessage && (
+            <View style={styles.addMessageBox}>
+                <Text style={styles.addMessageText}>친구 추가 요청을 보냈습니다.</Text>
             </View>
-        </View>
-    )
+        )}
+    </View>
+    );
 }
 
 {/*랭킹 메인화면*/}
@@ -182,6 +322,33 @@ function getTrophyBackgroundColor(rank: number) {
 
 const styles = StyleSheet.create({
     // 둘러보기
+    reelsContainer: {
+        flex: 1,
+        position: "relative",
+    },
+    reelsPage: {
+        height: Dimensions.get("window").height - 150,
+        paddingHorizontal: 20,
+        paddingBottom: 24,
+    },
+    passportDetailArea: {
+        flex: 1,
+        position: "relative",
+        width: "100%",
+        marginTop: -8,
+        borderRadius: 16,
+        overflow: "hidden",
+
+        shadowColor: "#000000",
+        shadowOffset: {
+            width: 0,
+            height: -2,
+        },
+        shadowOpacity: 0.14,
+        shadowRadius: 5,
+        elevation: 6,
+        zIndex: 10,
+    },
     container: {
         flex: 1,
         backgroundColor: "#F8FAFD",
@@ -196,6 +363,8 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "space-between",
         marginBottom: 20,
+        paddingHorizontal: 20,
+        paddingTop: 22,
     },
     title: {
         fontWeight: "700",
@@ -203,12 +372,13 @@ const styles = StyleSheet.create({
         fontSize: 24
     },
     card: {
+        flex: 1,
         position: "relative",
+        width: "100%",
         backgroundColor: "#F8FAFD",
         borderRadius: 16,
-        padding: 22,
         shadowColor: "#000000",
-        shadowOpacity: 0.13,
+        shadowOpacity: 0.3,
         shadowRadius: 6,
         elevation: 5,
         overflow: "hidden",
@@ -222,7 +392,20 @@ const styles = StyleSheet.create({
         opacity: 1,
         zIndex: 0,
     },
+    actionButtonArea: {
+        position: "absolute",
+        top: 16,
+        right: 14,
+        zIndex: 20,
+        gap: 10,
+    },
+    userInfoBox: {
+        paddingLeft: 22,
+        paddingRight: 22,
+        paddingTop: 22,
+    },
     cardContent: {
+        flex: 1,
         position: "relative",
         zIndex: 1,
     },
@@ -268,6 +451,22 @@ const styles = StyleSheet.create({
     },
     addButton: {
         marginTop: 35,
+        marginRight: -5,
+    },
+    addMessageBox: {
+        position: "absolute",
+        left: 40,
+        right: 40,
+        top: "45%",
+        backgroundColor: "#1A3A6B",
+        borderRadius: 12,
+        paddingVertical: 12,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    addMessageText: {
+        color: "#FFFFFF",
+        fontSize: 14,
     },
 
     // 랭킹
