@@ -7,23 +7,17 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import PassportActionButtons from "../components/PassportActionButtons";
 import PassportFrame from "../components/PassportFrame";
 import SearchToggle from "../components/SearchToggle";
-import { rankingDummy, searchUserDummy } from "../data/searchDummy";
-import { RankingUser, SearchTab } from "../types/search.types";
+import SearchUserCard from "../components/SearchUserCard";
 
-type Place = {
-    id: string;
-    name: string;
-    image: any;
-    district: string;
-    date: string;
-    category: string;
-}
+import { passportDummy } from "../data/passportDummy";
+import { rankingDummy } from "../data/searchDummy";
+import { RankingUser, SearchTab } from "../types/search.types";
 
 export default function SearchView() {
 
@@ -57,61 +51,7 @@ export default function SearchView() {
     )
 }
 
-{/*둘러보기 메인 화면*/}
-const {height} = Dimensions.get("window");
-
-// 임시 더미 데이터
-const passportDummy: Place[] = [
-    {
-        id: "1",
-        name: "렉터스라운지 홍대",
-        image: require("@/assets/images/profile1.jpg"),
-        district: "마포구",
-        date: "2026-03-30",
-        category: "카페",
-    },
-    {
-        id: "2",
-        name: "다운타우너",
-        image: require("@/assets/images/profile2.jpg"),
-        district: "용산구",
-        date: "2026-03-16",
-        category: "식당",
-    },
-    {
-        id: "3",
-        name: "포셋 연희",
-        image: require("@/assets/images/profile1.jpg"),
-        district: "서대문구",
-        date: "2026-02-24",
-        category: "카페",
-    },
-    {
-        id: "4",
-        name: "명동 쇼핑 거리",
-        image: require("@/assets/images/profile2.jpg"),
-        district: "중구",
-        date: "2026-04-12",
-        category: "쇼핑",
-    },
-    {
-        id: "5",
-        name: "초이다이닝 강남",
-        image: require("@/assets/images/profile1.jpg"),
-        district: "강남구",
-        date: "2026-01-30",
-        category: "음식점",
-    },
-    {
-        id: "6",
-        name: "카페 드 파리",
-        image: require("@/assets/images/profile2.jpg"),
-        district: "서초구",
-        date: "2026-02-15",
-        category: "카페",
-    },
-]
-
+/*둘러보기 메인 화면*/
 function AllSearchContent() {
 
     // 친구 추가 메시지
@@ -153,7 +93,7 @@ function AllSearchContent() {
                 renderItem= {({item}) => (
                     <View style={styles.reelsPage}>
                         <View style={styles.card}>
-                            <Image 
+                        <Image 
                                 source={require("@/assets/images/noise.png")}
                                 style={styles.noiseBackground}
                                 resizeMode="cover"
@@ -161,56 +101,22 @@ function AllSearchContent() {
 
                             <View style={styles.cardContent}>
                                 {/*사용자 정보*/}
-                                <View style={styles.userInfoBox}>
-                                    <View style={styles.userRow}>
-                                        <Image
-                                            source={require("@/assets/images/profile1.jpg")}
-                                            style={styles.profileImage}
-                                        />
+                                <SearchUserCard onAddFriend={handleAddFriend} />
+                            
+                                {/*여권 상세*/}
+                                <View style={styles.passportDetailArea}>
+                                    <PassportFrame item={item} />
 
-                                        <View style={styles.userTextArea}>
-                                            <View style={styles.nameRow}>
-                                                <Text style={styles.userName}>{searchUserDummy.name}</Text>
-                                                <Text style={styles.userId}>#{searchUserDummy.id}</Text>
-                                            </View>
-
-                                        <View style={styles.locationRow}>
-                                            <Ionicons name="location-outline" size={12} color="#666667" />
-                                            <Text style={styles.locationText}>{searchUserDummy.location}</Text>
-                                        </View>
-                                    </View>
-
-                                    <TouchableOpacity style={styles.addButton} onPress={handleAddFriend}>
-                                        <Ionicons name="person-add-outline" size={20} color="#000000" />
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-
-                            {/*여권 상세*/}
-                            <View style={styles.passportDetailArea}>
-                                <PassportFrame item={item} />
-
-                                <View style={styles.actionButtonArea}>
-                                    <TouchableOpacity onPress={() => toggleLike(item.id)}>
-                                        <Ionicons 
-                                            name={likeIds.includes(item.id) ? "heart" : "heart-outline"}
-                                            size={24}
-                                            color={likeIds.includes(item.id) ? "#ED3838" : "#333333"}
-                                        />
-                                    </TouchableOpacity>
-
-                                    <TouchableOpacity onPress={() => toggleScrap(item.id)}>
-                                        <Ionicons 
-                                            name={scrappedIds.includes(item.id) ? "bookmark" : "bookmark-outline"}
-                                            size={24}
-                                            color={scrappedIds.includes(item.id) ? "#FFD233" : "#333333"}
-                                        />
-                                    </TouchableOpacity>
+                                    <PassportActionButtons
+                                        isLiked={likeIds.includes(item.id)}
+                                        isScrapped={scrappedIds.includes(item.id)}
+                                        onPressLike={() => toggleLike(item.id)}
+                                        onPressScrap={() => toggleScrap(item.id)}
+                                    />
                                 </View>
                             </View>
                         </View>
                     </View>
-                </View>
             )}
             pagingEnabled
             showsVerticalScrollIndicator={false}
@@ -226,7 +132,7 @@ function AllSearchContent() {
     );
 }
 
-{/*랭킹 메인화면*/}
+/*랭킹 메인화면*/
 function RankingContent() {
 
     const topThree = rankingDummy.slice(0, 3);
@@ -249,7 +155,7 @@ function RankingContent() {
     )
 }
 
-{/*랭킹 Top3*/}
+/*랭킹 Top3*/
 function TopRankingCard({user}: {user: RankingUser}) {
     return(
         <View style={styles.topRankingCard}>
@@ -264,7 +170,7 @@ function TopRankingCard({user}: {user: RankingUser}) {
     )
 }
 
-{/*나머지 리스트*/}
+/*나머지 리스트*/
 function RankingItem({user}: {user: RankingUser}) {
     return(
         <View style={styles.rankingItem}>
@@ -297,7 +203,7 @@ function RankingItem({user}: {user: RankingUser}) {
     )
 }
 
-{/*메달 얻는 함수*/}
+/*메달 얻는 함수*/
 function getMedal(rank: number) {
     if (rank === 1) return "🥇";
     if (rank === 2) return "🥈";
@@ -305,7 +211,7 @@ function getMedal(rank: number) {
     return "";
 }
 
-{/*트로피 얻는 함수*/}
+/*트로피 얻는 함수*/
 function getTrophy(rank: number) {
     if (rank === 1) return "🏆";
     if (rank === 2) return "🏆";
@@ -313,7 +219,7 @@ function getTrophy(rank: number) {
     return "";
 }
 
-{/*등수별 트로피 배경 색 얻는 함수*/}
+/*등수별 트로피 배경 색 얻는 함수*/
 function getTrophyBackgroundColor(rank: number) {
     if (rank === 1) return "#FFD700"; 
     if (rank === 2) return "#C0C0C0";
@@ -383,6 +289,11 @@ const styles = StyleSheet.create({
         elevation: 5,
         overflow: "hidden",
     },
+    cardContent: {
+        flex: 1,
+        position: "relative",
+        zIndex: 1,
+    },
     noiseBackground: {
         position: "absolute",
         top: 0,
@@ -391,67 +302,6 @@ const styles = StyleSheet.create({
         left: 0,
         opacity: 1,
         zIndex: 0,
-    },
-    actionButtonArea: {
-        position: "absolute",
-        top: 16,
-        right: 14,
-        zIndex: 20,
-        gap: 10,
-    },
-    userInfoBox: {
-        paddingLeft: 22,
-        paddingRight: 22,
-        paddingTop: 22,
-    },
-    cardContent: {
-        flex: 1,
-        position: "relative",
-        zIndex: 1,
-    },
-    userRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 22,
-    },
-    profileImage: {
-        height: 48,
-        width: 48,
-        borderRadius: 24,
-    },
-    userTextArea: {
-        flex: 1,
-        marginLeft: 12,
-    },
-    nameRow: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    userName: {
-        fontSize: 20,
-        fontWeight: "700",
-        color: "#000000",
-    },
-    userId: {
-        marginLeft: 5,
-        fontSize: 14,
-        color: "#666667",
-        fontWeight: "500",
-        marginTop: 5,
-    },
-    locationRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginTop: 4,
-    },
-    locationText: {
-        marginLeft: 2,
-        fontSize: 10,
-        color: "#666667",
-    },
-    addButton: {
-        marginTop: 35,
-        marginRight: -5,
     },
     addMessageBox: {
         position: "absolute",

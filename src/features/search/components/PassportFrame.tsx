@@ -1,13 +1,5 @@
 import { Image, StyleSheet, Text, View } from "react-native";
-
-type Place = {
-  id: string;
-  name: string;
-  image: any;
-  district: string;
-  date: string;
-  category: string;
-};
+import type { Place } from "../types/passport.types";
 
 type SearchPassportCardProps = {
   item: Place;
