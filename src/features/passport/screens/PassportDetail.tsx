@@ -28,7 +28,6 @@ type Place = {
 type Props = {
     item: Place
     onBack: () => void
-    showHeader?: boolean
     onNext?: () => void
     onPrev?: () => void
 }
