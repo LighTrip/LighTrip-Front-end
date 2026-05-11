@@ -5,10 +5,16 @@ import {
     View, 
     TouchableOpacity, 
     Image, 
-    ScrollView,
-    Dimensions
+    Dimensions,
+    TextInput,
+    Modal,
+    FlatList,
+    Switch,
+    Platform,
 } from 'react-native'
-import React from 'react'
+import React, { useState } from 'react'
+import { Ionicons } from '@expo/vector-icons'
+import DateTimePicker from '@react-native-community/datetimepicker'
 
 type Place = {
     id: string;
@@ -20,102 +26,313 @@ type Place = {
 }
 
 type Props = {
-    item: Place;
-    onBack: () => void;
+    item: Place
+    onBack: () => void
+    showHeader?: boolean
+    onNext?: () => void
+    onPrev?: () => void
 }
 
 const DUMMY = {
     visitCount: 1,
     review: '마포구에서 맛있는 커피를 파는 카페를 찾았다! 케이크도 있었는데 다음에 가면 케이크도 꼭 먹어 봐야겠다는 생각이 들었다. 🍰',
-    nickname: '멍냥',
-    handle: 'KiiiKiii',
+    musicTitle: '멍냥',
+    artist: 'KiiiKiii',
     placeImage: require('../../../../assets/images/profile1.jpg'),
 }
 
+const PLACE_TYPES = ['☕ 카페', '🍽️ 식당', '🍶 술집', '🏞️ 공원', '🎬 문화', '🏋️ 운동', '🛍️ 쇼핑', '📦 기타']
+
 const { width } = Dimensions.get('window')
 
-const PassportDetail = ({ item, onBack }: Props) => {
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+const NoiseOverlay = () => (
+    <>
+        <Image source={require('../../../../assets/images/noise.png')} style={[styles.noiseOverlay, { top: 0 }]} />
+        <Image source={require('../../../../assets/images/noise.png')} style={[styles.noiseOverlay, { top: 400 }]} />
+    </>
+)
 
-        {/* 상단 헤더 */}
-        <View style={styles.headerCard}>
-            <Text style={styles.districtTitle}>{item.district}구</Text>
-            <Text style={styles.visitText}>{item.district}구를 {DUMMY.visitCount}번 탐험했어요 ♪</Text>
-        </View>
+const PassportDetail = ({ item, onBack, onNext, onPrev }: Props) => {
 
-        {/* 여권 카드 (위아래 통합) */}
-        <View style={styles.passportCard}>
+    const [isEditing, setIsEditing] = useState(false)
+    const [editReview, setEditReview] = useState(DUMMY.review)
+    const [editCategory, setEditCategory] = useState(item.category)
+    const [editDate, setEditDate] = useState(new Date(item.date))
+    const [editMusic, setEditMusic] = useState<{ title: string, artist: string, artwork: string } | null>(null)
+    const [isCover, setIsCover] = useState(false)
 
-            {/* 윗부분 */}
-            <View style={styles.topHalf}>
-                {/* X 버튼 */}
-                <TouchableOpacity onPress={onBack} style={styles.closeButton}>
-                    <Text style={styles.closeText}>✕</Text>
-                </TouchableOpacity>
+    const [musicSearch, setMusicSearch] = useState('')
+    const [musicResults, setMusicResults] = useState<any[]>([])
+    const [musicModalOpen, setMusicModalOpen] = useState(false)
+    const [categoryOpen, setCategoryOpen] = useState(false)
+    const [showDatePicker, setShowDatePicker] = useState(false)
 
-                {/* 테이프 */}
-                <Image 
-                    source={require('../../../../assets/images/pinktape.png')} 
-                    style={styles.tape} 
-                    resizeMode="contain" 
-                />
+    const formatDate = (date: Date) => {
+        return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`
+    }
 
-                {/* 사진 */}
-                <Image source={item.image} style={styles.placeImage} resizeMode="cover" />
+    const searchMusic = async (query: string) => {
+        if (!query.trim()) return
+        const response = await fetch(
+            `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=10`
+        )
+        const data = await response.json()
+        setMusicResults(data.results)
+    }
 
-                {/* 도장 */}
-                <Image 
-                    source={require('../../../../assets/images/StampSeal.png')} 
-                    style={styles.stampImage} 
-                    resizeMode="contain" 
-                />
+    return (
+        <View style={[styles.container, styles.scrollContent]}>
 
-                {/* 정보 */}
-                <View style={styles.infoArea}>
-                    <Text style={styles.infoRow}>🏷 {item.category}</Text>
-                    <Text style={styles.infoRow}>📍 {item.name}</Text>
-                    <Text style={styles.infoRow}>🗓 {item.date}</Text>
-                </View>
+            {/* 상단 헤더 */}
+            <View style={styles.headerCard}>
+                <NoiseOverlay />
+                <Text style={styles.districtTitle}>{item.district}구</Text>
+                <Text style={styles.visitText}>{item.district}구를 {DUMMY.visitCount}번 탐험했어요 ♪</Text>
             </View>
 
-            {/* 구분선 */}
-            <View style={styles.dividerRow}>
-                <View style={styles.dividerCircleLeft} />
-                <View style={styles.dividerLine} />
-                <View style={styles.dividerCircleRight} />
-            </View>
+            {/* 여권 카드 */}
+            <View style={styles.passportCard}>
+                <NoiseOverlay />
 
-            {/* 아랫부분 */}
-            <View style={styles.bottomHalf}>
-                <View style={styles.reviewBox}>
-                    <Text style={styles.reviewText}>{DUMMY.review}</Text>
-                </View>
+                {/* 윗부분 */}
+                <View style={styles.topHalf}>
+                    <TouchableOpacity onPress={onBack} style={styles.closeButton}>
+                        <Text style={styles.closeText}>✕</Text>
+                    </TouchableOpacity>
 
-                <View style={styles.detailRow}>
-                    <Image source={DUMMY.placeImage} style={styles.musicImage} />
+                    <Image source={require('../../../../assets/images/pinktape.png')} style={styles.tape} resizeMode="contain" />
+                    
                     <View>
-                        <Text style={styles.nickname}>{DUMMY.nickname}</Text>
-                        <Text style={styles.handle}>{DUMMY.handle}</Text>
+                        <Image source={item.image} style={styles.placeImage} resizeMode="cover" />
+                        {isEditing && (
+                            <TouchableOpacity 
+                                style={styles.coverBadge}
+                                onPress={() => setIsCover(!isCover)}
+                            >
+                                <Ionicons 
+                                    name={isCover ? 'bookmark' : 'bookmark-outline'} 
+                                    size={14} 
+                                    color="#ffffff" 
+                                />
+                                <Text style={styles.coverBadgeText}>
+                                    {isCover ? '대표 사진' : '대표 사진으로 설정'}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+
+                    <Image source={require('../../../../assets/images/StampSeal.png')} style={styles.stampImage} resizeMode="contain" />
+
+                    {/* 정보 */}
+                    <View style={styles.infoArea}>
+                        {/* 카테고리 */}
+                        <View style={styles.infoRow}>
+                            <Image source={require('../../../../assets/icons/category.png')} style={styles.icon} resizeMode="contain"/>
+                            {isEditing ? (
+                                <TouchableOpacity onPress={() => setCategoryOpen(true)} style={styles.infoEditButton}>
+                                    <Text style={styles.infoText}>{editCategory}</Text>
+                                </TouchableOpacity>
+                            ) : (
+                                <Text style={styles.infoText}>{editCategory}</Text>
+                            )}
+                        </View>
+
+                        {/* 위치 */}
+                        <View style={styles.infoRow}>
+                            <Image source={require('../../../../assets/icons/location.png')} style={styles.icon} resizeMode="contain"/>
+                            <Text style={styles.infoText}>{item.name}</Text>
+                        </View>
+
+                        {/* 날짜 */}
+                        <View style={styles.infoRow}>
+                            <Image source={require('../../../../assets/icons/calendar.png')} style={styles.icon} resizeMode="contain"/>
+                            {isEditing ? (
+                                <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.infoEditButton}>
+                                    <Text style={styles.infoText}>{formatDate(editDate)}</Text>
+                                </TouchableOpacity>
+                            ) : (
+                                    <Text style={styles.infoText}>{formatDate(editDate)}</Text>
+                            )}
+                        </View>
+
+                        {showDatePicker && (
+                            <DateTimePicker
+                                value={editDate}
+                                mode="date"
+                                display={Platform.OS === 'ios' ? 'compact' : 'calendar'}
+                                onChange={(event, selectedDate) => {
+                                    setShowDatePicker(false)
+                                    if (selectedDate) setEditDate(selectedDate)
+                                }}
+                            />
+                        )}
                     </View>
                 </View>
 
-                <View style={styles.editBox}>
-                    <Text style={styles.editText}>{'<<<<<<<<<<<<<< edit my passport >>>>>>>>>>>>>>'}</Text>
+                {/* 구분선 */}
+                <View style={styles.dividerRow}>
+                    <View style={styles.dividerLine} />
+                </View>
+
+                {/* 아랫부분 */}
+                <View style={styles.bottomHalf}>
+
+                    {/* 리뷰 */}
+                    <View style={styles.reviewBox}>
+                        {isEditing ? (
+                            <TextInput
+                                style={styles.editReviewInput}
+                                multiline
+                                value={editReview}
+                                onChangeText={setEditReview}
+                                placeholderTextColor="#aaa"
+                            />
+                        ) : (
+                            <Text style={styles.reviewText}>{editReview}</Text>
+                        )}
+                    </View>
+
+                    {/* 음악 */}
+                    {isEditing ? (
+                        <TouchableOpacity style={styles.musicBox} onPress={() => setMusicModalOpen(true)}>
+                            {editMusic ? (
+                                <>
+                                    <Image source={{ uri: editMusic.artwork }} style={styles.musicImage} />
+                                    <View>
+                                        <Text style={styles.musicTitle}>{editMusic.title}</Text>
+                                        <Text style={styles.artist}>{editMusic.artist}</Text>
+                                    </View>
+                                </>
+                            ) : (
+                                <>
+                                    <Image source={DUMMY.placeImage} style={styles.musicImage} />
+                                    <View>
+                                        <Text style={styles.musicTitle}>{DUMMY.musicTitle}</Text>
+                                        <Text style={styles.artist}>{DUMMY.artist}</Text>
+                                    </View>
+                                    <Image source={require('../../../../assets/icons/edit.png')} style={{ marginLeft: 'auto', marginRight: 12 }} />
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    ) : (
+                        <View style={styles.musicBox}>
+                            {editMusic ? (
+                                <>
+                                    <Image source={{ uri: editMusic.artwork }} style={styles.musicImage} />
+                                    <View>
+                                        <Text style={styles.musicTitle}>{editMusic.title}</Text>
+                                        <Text style={styles.artist}>{editMusic.artist}</Text>
+                                    </View>
+                                </>
+                            ) : (
+                                <>
+                                    <Image source={DUMMY.placeImage} style={styles.musicImage} />
+                                    <View>
+                                        <Text style={styles.musicTitle}>{DUMMY.musicTitle}</Text>
+                                        <Text style={styles.artist}>{DUMMY.artist}</Text>
+                                    </View>
+                                </>
+                            )}
+                        </View>
+                    )}
+
+                    {/* edit / save 버튼 */}
+                    <View style={styles.editBox}>
+                        <TouchableOpacity onPress={onPrev}>
+                            <Text style={styles.editText}>{'<<<<<<<<<<<<<<<<'}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setIsEditing(!isEditing)}>
+                            <Text style={styles.editText}>{isEditing ? 'save passport' : 'edit my passport'}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={onNext}>
+                            <Text style={styles.editText}>{'>>>>>>>>>>>>>>>>'}</Text>
+                        </TouchableOpacity>
+                    </View>
+
                 </View>
             </View>
-        </View>
 
-    </ScrollView>
-  )
+            {/* 카테고리 모달 */}
+            <Modal visible={categoryOpen} transparent animationType="fade" onRequestClose={() => setCategoryOpen(false)}>
+                <TouchableOpacity style={styles.modalBackdrop} onPress={() => setCategoryOpen(false)} activeOpacity={1}>
+                    <View style={styles.modalBox}>
+                        <FlatList
+                            data={PLACE_TYPES}
+                            keyExtractor={(i) => i}
+                            renderItem={({ item: option }) => (
+                                <TouchableOpacity
+                                    style={[styles.modalItem, option === editCategory && styles.modalItemSelected]}
+                                    onPress={() => { setEditCategory(option); setCategoryOpen(false) }}
+                                >
+                                    <Text style={[styles.modalItemText, option === editCategory && styles.modalItemTextSelected]}>{option}</Text>
+                                    {option === editCategory && <Ionicons name="checkmark" size={16} color="#1A3A6B" />}
+                                </TouchableOpacity>
+                            )}
+                        />
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+
+            {/* 음악 검색 모달 */}
+            <Modal visible={musicModalOpen} transparent animationType="slide" onRequestClose={() => setMusicModalOpen(false)}>
+                <TouchableOpacity style={styles.modalBackdrop} onPress={() => setMusicModalOpen(false)} activeOpacity={1}>
+                    <View style={styles.musicModalBox}>
+                        <View style={styles.musicSearchBox}>
+                            <Image source={require('../../../../assets/icons/edit.png')}/>
+                            <TextInput
+                                style={styles.musicSearchInput}
+                                placeholder="곡 제목이나 아티스트 검색"
+                                placeholderTextColor="#aaa"
+                                value={musicSearch}
+                                onChangeText={(text) => { setMusicSearch(text); searchMusic(text) }}
+                                autoFocus
+                            />
+                        </View>
+                        <FlatList
+                            data={musicResults}
+                            keyExtractor={(i) => i.trackId.toString()}
+                            renderItem={({ item: track }) => (
+                                <TouchableOpacity
+                                    style={styles.musicResultItem}
+                                    onPress={() => {
+                                        setEditMusic({ title: track.trackName, artist: track.artistName, artwork: track.artworkUrl100 })
+                                        setMusicModalOpen(false)
+                                        setMusicSearch('')
+                                        setMusicResults([])
+                                    }}
+                                >
+                                    <Image source={{ uri: track.artworkUrl100 }} style={styles.musicResultArt} />
+                                    <View style={styles.musicResultInfo}>
+                                        <Text style={styles.musicResultTitle} numberOfLines={1}>{track.trackName}</Text>
+                                        <Text style={styles.musicResultArtist} numberOfLines={1}>{track.artistName}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+                        />
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+
+        </View>
+    )
 }
 
 export default PassportDetail
 
 const styles = StyleSheet.create({
     container: {
+        width: Dimensions.get('window').width,
         flex: 1,
         backgroundColor: '#F8FAFD',
+    },
+
+    noiseOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        opacity: 1,
     },
 
     scrollContent: {
@@ -129,9 +346,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
         padding: 20,
-
         marginTop: -20,
-
+        overflow: 'hidden',
         alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
@@ -153,7 +369,7 @@ const styles = StyleSheet.create({
     },
 
     passportCard: {
-        height: 650,
+        height: 655,
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
         overflow: 'hidden',
@@ -162,6 +378,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.08,
         shadowRadius: 4,
         elevation: 2,
+        paddingBottom: 20,
     },
 
     topHalf: {
@@ -173,9 +390,8 @@ const styles = StyleSheet.create({
 
     bottomHalf: {
         padding: 20,
-        minHeight: 325,
+        minHeight: 200,
         justifyContent: 'space-between',
-        gap: 0,
     },
 
     closeButton: {
@@ -193,8 +409,8 @@ const styles = StyleSheet.create({
 
     tape: {
         position: 'absolute',
-        top: 24,
-        left: width * 0.27,
+        top: 40,
+        left: width * 0.3,
         width: 100,
         height: 50,
         zIndex: 5,
@@ -203,31 +419,74 @@ const styles = StyleSheet.create({
     placeImage: {
         width: 170,
         height: 260,
+        left: 5,
         borderRadius: 4,
         transform: [{ rotate: '-4deg' }],
         marginBottom: 10,
         marginTop: 10,
+        top: 10,
+    },
+
+    coverBadge: {
+        position: 'absolute',
+        bottom: 275,
+        left: -10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#1A3A6B',
+        borderRadius: 12,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        gap: 4,
+    },
+
+    coverBadgeText: {
+        fontSize: 11,
+        color: '#ffffff',
+        fontWeight: '600',
     },
 
     stampImage: {
         position: 'absolute',
         top: 30,
-        right: 15,
+        right: 10,
         width: 170,
         height: 170,
     },
 
     infoArea: {
         position: 'absolute',
-        bottom: 50,
-        right: 30,
-        gap: 8,
+        bottom: 30,
+        left: 120,
+        gap: 2,
     },
 
     infoRow: {
-        fontSize: 15,
-        color: '#444',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        left: 110,
+    },
+
+    infoEditButton: {
+        width: 110,
+        borderRadius: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+
+    infoText: {
+        fontSize: 16,
+        color: '#333',
+        textAlign: 'left',
+        lineHeight: 28,
         fontFamily: 'Griun_Gellyroll',
+    },
+
+    icon: {
+        width: 16,
+        height: 16,
     },
 
     dividerRow: {
@@ -235,35 +494,21 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
 
-    dividerCircleLeft: {
-        width: 2,
-        height: 2,
-        borderRadius: 12,
-        backgroundColor: '#FAF7F4',
-        marginLeft: -12,
-    },
-
-    dividerCircleRight: {
-        width: 2,
-        height: 2,
-        borderRadius: 12,
-        backgroundColor: '#FAF7F4',
-        marginRight: -12,
-    },
-
     dividerLine: {
         flex: 1,
         borderWidth: 1,
         borderColor: '#E0E0E0',
-        borderStyle: 'solid',
     },
 
     reviewBox: {
+        position: 'absolute',
+        width: '100%',
         borderRadius: 12,
         padding: 5,
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 30,
+        marginTop: 55,
+        marginLeft: 20,
     },
 
     reviewText: {
@@ -275,18 +520,32 @@ const styles = StyleSheet.create({
         fontFamily: 'Griun_Gellyroll',
     },
 
-    detailRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        marginBottom: 0,    
+    editReviewInput: {
+        position: 'absolute',
+        width: '100%',
+        height: 120,
+        borderRadius: 16,
+        padding: 20,
+        fontSize: 16,
+        lineHeight: 28,
+        alignContent: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#ffffff',
+        fontFamily: 'Griun_Gellyroll',
+        marginTop: 90,
     },
 
-    profileImage: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        marginLeft: 50,
+    musicBox: {
+        position: 'absolute',
+        flexDirection: 'row',
+        height: 80,
+        width: '100%',
+        borderRadius: 16,
+        alignItems: 'center',
+        gap: 12,
+        backgroundColor: '#ffffff',
+        marginTop: 200,
+        marginLeft: 20,
     },
 
     musicImage: {
@@ -296,30 +555,157 @@ const styles = StyleSheet.create({
         marginLeft: 20,
     },
 
-    nickname: {
+    musicTitle: {
         fontSize: 15,
         fontWeight: 'bold',
         color: '#000',
         marginLeft: 10,
     },
 
-    handle: {
+    artist: {
         fontSize: 13,
         color: '#888',
         marginLeft: 10,
     },
 
+    coverRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 16,
+        paddingHorizontal: 4,
+    },
+
+    coverTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#222',
+    },
+
+    coverSub: {
+        fontSize: 12,
+        color: '#888',
+        marginTop: 2,
+    },
+
     editBox: {
-        flexDirection: 'column',
+        position: 'absolute',
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 0,   
+        marginTop: 296,
+        marginLeft: 27,
+        gap: 5,
     },
 
     editText: {
+        width: 110,
         textAlign: 'center',
         fontSize: 13,
-        color: '#bbb',
+        color: '#757575',
         fontFamily: 'SpaceMono',
+    },
+
+    modalBackdrop: {
+        flex: 1,
+        backgroundColor: '#00000040',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+
+    modalBox: {
+        width: 220,
+        maxHeight: 350,
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        paddingVertical: 8,
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+    },
+
+    modalItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+    },
+
+    modalItemSelected: {
+        backgroundColor: '#F0F4FF',
+    },
+
+    modalItemText: {
+        fontSize: 14,
+        color: '#333',
+    },
+
+    modalItemTextSelected: {
+        color: '#1A3A6B',
+        fontWeight: '600',
+    },
+
+    musicModalBox: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '70%',
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 16,
+    },
+
+    musicSearchBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F0F0F0',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        gap: 8,
+        marginBottom: 12,
+    },
+
+    musicSearchInput: {
+        flex: 1,
+        fontSize: 14,
+        color: '#222',
+    },
+
+    musicResultItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        gap: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+
+    musicResultArt: {
+        width: 48,
+        height: 48,
+        borderRadius: 8,
+        backgroundColor: '#ddd',
+    },
+
+    musicResultInfo: {
+        flex: 1,
+        gap: 4,
+    },
+
+    musicResultTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#222',
+    },
+
+    musicResultArtist: {
+        fontSize: 12,
+        color: '#888',
     },
 })
