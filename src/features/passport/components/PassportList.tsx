@@ -176,14 +176,14 @@ const PassportList = ({ onSelectPlace }: Props) => {
             contentContainerStyle={styles.listContainer}
             renderItem={({ item }) => (
                 <TouchableOpacity style={styles.listCard} onPress={() => onSelectPlace(item)}>
-                <Text style={styles.stamp}>도장</Text>
-                <View style={styles.textArea}>
-                    <Text style={styles.listName}>{item.name}</Text>
-                    <View style={styles.metaRow}>
-                    <Text style={styles.meta}>📍 {item.district}</Text>
-                    <Text style={styles.meta}>📅 {item.date}</Text>
+                    <Text style={styles.stamp}>도장</Text>
+                    <View style={styles.textArea}>
+                        <Text style={styles.listName}>{item.name}</Text>
+                        <View style={styles.metaRow}>
+                        <Text style={styles.meta}>📍 {item.district}</Text>
+                        <Text style={styles.meta}>📅 {item.date}</Text>
+                        </View>
                     </View>
-                </View>
                 </TouchableOpacity>
             )}
             />
