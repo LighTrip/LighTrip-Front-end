@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "lightrip",
+    "scheme": ["lightrip", "com.anonymous.LighTrip"],
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -32,8 +32,16 @@
     },
     "plugins": [
       "expo-router",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "사진 촬영을 위해 카메라 접근이 필요해요."
+        }
+      ],
+      "@react-native-community/datetimepicker"
     ],
+    "plugins": ["expo-router", "expo-web-browser", "expo-secure-store"],
     "experiments": {
       "typedRoutes": true
     }
