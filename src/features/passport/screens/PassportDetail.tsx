@@ -9,12 +9,13 @@ import {
     TextInput,
     Modal,
     FlatList,
-    Switch,
     Platform,
 } from 'react-native'
 import React, { useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import DateTimePicker from '@react-native-community/datetimepicker'
+
+import NoiseOverlay from '@/src/components/common/NoiseOverlay'
 
 type Place = {
     id: string;
@@ -43,13 +44,6 @@ const DUMMY = {
 const PLACE_TYPES = ['☕ 카페', '🍽️ 식당', '🍶 술집', '🏞️ 공원', '🎬 문화', '🏋️ 운동', '🛍️ 쇼핑', '📦 기타']
 
 const { width } = Dimensions.get('window')
-
-const NoiseOverlay = () => (
-    <>
-        <Image source={require('../../../../assets/images/noise.png')} style={[styles.noiseOverlay, { top: 0 }]} />
-        <Image source={require('../../../../assets/images/noise.png')} style={[styles.noiseOverlay, { top: 400 }]} />
-    </>
-)
 
 const PassportDetail = ({ item, onBack, onNext, onPrev }: Props) => {
 
