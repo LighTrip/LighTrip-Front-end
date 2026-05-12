@@ -1,17 +1,22 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {
+    Dimensions,
+    FlatList,
     Image,
     ScrollView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import PassportActionButtons from "../components/PassportActionButtons";
 import PassportFrame from "../components/PassportFrame";
 import SearchToggle from "../components/SearchToggle";
-import { rankingDummy, searchUserDummy } from "../data/searchDummy";
+import SearchUserCard from "../components/SearchUserCard";
+
+import { passportDummy } from "../data/passportDummy";
+import { rankingDummy } from "../data/searchDummy";
 import { RankingUser, SearchTab } from "../types/search.types";
 
 export default function SearchView() {
@@ -20,10 +25,6 @@ export default function SearchView() {
 
     return(
         <SafeAreaView style={styles.container}>
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-            >
                 {/*헤더*/}
                 <View style={styles.header}>
                     <Text style={styles.title}>
@@ -39,54 +40,99 @@ export default function SearchView() {
                 {selectedTab === "all" ? (
                     <AllSearchContent />
                 ) : (
-                    <RankingContent />
+                    <ScrollView 
+                        contentContainerStyle={styles.scrollContent}
+                        showsVerticalScrollIndicator={false}
+                    >
+                        <RankingContent />
+                    </ScrollView>
                 )}         
-            </ScrollView>
         </SafeAreaView>   
     )
 }
 
-{/*둘러보기 메인 화면*/}
+/*둘러보기 메인 화면*/
 function AllSearchContent() {
+
+    // 친구 추가 메시지
+    const [showAddMessage, setShowAddMessage] = useState(false);
+
+    const handleAddFriend = () => {
+        setShowAddMessage(true);
+
+        setTimeout(() => {
+            setShowAddMessage(false);
+        }, 2000);
+    };
+
+    // 좋아요 및 스크랩
+    const [likeIds, setLikeIds] = useState<string[]>([]);
+    const [scrappedIds, setScrapped] = useState<string[]>([]);
+
+    const toggleLike = (id: string) => {
+        setLikeIds((prev) =>
+            prev.includes(id)
+                ? prev.filter((likeId) => likeId !== id)
+                : [...prev, id]
+        );
+    };
+
+    const toggleScrap = (id: string) => {
+        setScrapped((prev) => 
+            prev.includes(id)
+                ? prev.filter((scrappedId) => scrappedId !== id)
+                : [...prev, id]
+        );
+    };
+
     return(
-        <View style={styles.card}>
-            <Image 
-                source={require("@/assets/images/noise.png")}
-                style={styles.noiseBackground}
-                resizeMode="cover"
-            />
+        <View style={styles.reelsContainer}>
+            <FlatList
+                data={passportDummy}
+                keyExtractor= {(item) => item.id}
+                renderItem= {({item}) => (
+                    <View style={styles.reelsPage}>
+                        <View style={styles.card}>
+                        <Image 
+                                source={require("@/assets/images/noise.png")}
+                                style={styles.noiseBackground}
+                                resizeMode="cover"
+                            />
 
-            <View style={styles.cardContent}>
-                <View style={styles.userRow}>
-                    <Image
-                        source={require("@/assets/images/profile1.jpg")}
-                        style={styles.profileImage}
-                    />
+                            <View style={styles.cardContent}>
+                                {/*사용자 정보*/}
+                                <SearchUserCard onAddFriend={handleAddFriend} />
+                            
+                                {/*여권 상세*/}
+                                <View style={styles.passportDetailArea}>
+                                    <PassportFrame item={item} />
 
-                    <View style={styles.userTextArea}>
-                        <View style={styles.nameRow}>
-                            <Text style={styles.userName}>{searchUserDummy.name}</Text>
-                            <Text style={styles.userId}>#{searchUserDummy.id}</Text>
-                        </View>
-
-                        <View style={styles.locationRow}>
-                            <Ionicons name="location-outline" size={12} color="#666667" />
-                            <Text style={styles.locationText}>{searchUserDummy.location}</Text>
+                                    <PassportActionButtons
+                                        isLiked={likeIds.includes(item.id)}
+                                        isScrapped={scrappedIds.includes(item.id)}
+                                        onPressLike={() => toggleLike(item.id)}
+                                        onPressScrap={() => toggleScrap(item.id)}
+                                    />
+                                </View>
+                            </View>
                         </View>
                     </View>
+            )}
+            pagingEnabled
+            showsVerticalScrollIndicator={false}
+            decelerationRate="fast"
+        /> 
 
-                    <TouchableOpacity style={styles.addButton}>
-                        <Ionicons name="person-add-outline" size={20} color="#000000" />
-                    </TouchableOpacity>
-                </View>
-                
-                <PassportFrame />
+        {showAddMessage && (
+            <View style={styles.addMessageBox}>
+                <Text style={styles.addMessageText}>친구 추가 요청을 보냈습니다.</Text>
             </View>
-        </View>
-    )
+        )}
+    </View>
+    );
 }
 
-{/*랭킹 메인화면*/}
+/*랭킹 메인화면*/
 function RankingContent() {
 
     const topThree = rankingDummy.slice(0, 3);
@@ -109,7 +155,7 @@ function RankingContent() {
     )
 }
 
-{/*랭킹 Top3*/}
+/*랭킹 Top3*/
 function TopRankingCard({user}: {user: RankingUser}) {
     return(
         <View style={styles.topRankingCard}>
@@ -124,7 +170,7 @@ function TopRankingCard({user}: {user: RankingUser}) {
     )
 }
 
-{/*나머지 리스트*/}
+/*나머지 리스트*/
 function RankingItem({user}: {user: RankingUser}) {
     return(
         <View style={styles.rankingItem}>
@@ -157,7 +203,7 @@ function RankingItem({user}: {user: RankingUser}) {
     )
 }
 
-{/*메달 얻는 함수*/}
+/*메달 얻는 함수*/
 function getMedal(rank: number) {
     if (rank === 1) return "🥇";
     if (rank === 2) return "🥈";
@@ -165,7 +211,7 @@ function getMedal(rank: number) {
     return "";
 }
 
-{/*트로피 얻는 함수*/}
+/*트로피 얻는 함수*/
 function getTrophy(rank: number) {
     if (rank === 1) return "🏆";
     if (rank === 2) return "🏆";
@@ -173,7 +219,7 @@ function getTrophy(rank: number) {
     return "";
 }
 
-{/*등수별 트로피 배경 색 얻는 함수*/}
+/*등수별 트로피 배경 색 얻는 함수*/
 function getTrophyBackgroundColor(rank: number) {
     if (rank === 1) return "#FFD700"; 
     if (rank === 2) return "#C0C0C0";
@@ -182,6 +228,33 @@ function getTrophyBackgroundColor(rank: number) {
 
 const styles = StyleSheet.create({
     // 둘러보기
+    reelsContainer: {
+        flex: 1,
+        position: "relative",
+    },
+    reelsPage: {
+        height: Dimensions.get("window").height - 150,
+        paddingHorizontal: 20,
+        paddingBottom: 24,
+    },
+    passportDetailArea: {
+        flex: 1,
+        position: "relative",
+        width: "100%",
+        marginTop: -8,
+        borderRadius: 16,
+        overflow: "hidden",
+
+        shadowColor: "#000000",
+        shadowOffset: {
+            width: 0,
+            height: -2,
+        },
+        shadowOpacity: 0.14,
+        shadowRadius: 5,
+        elevation: 6,
+        zIndex: 10,
+    },
     container: {
         flex: 1,
         backgroundColor: "#F8FAFD",
@@ -196,6 +269,8 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "space-between",
         marginBottom: 20,
+        paddingHorizontal: 20,
+        paddingTop: 22,
     },
     title: {
         fontWeight: "700",
@@ -203,15 +278,21 @@ const styles = StyleSheet.create({
         fontSize: 24
     },
     card: {
+        flex: 1,
         position: "relative",
+        width: "100%",
         backgroundColor: "#F8FAFD",
         borderRadius: 16,
-        padding: 22,
         shadowColor: "#000000",
-        shadowOpacity: 0.13,
+        shadowOpacity: 0.3,
         shadowRadius: 6,
         elevation: 5,
         overflow: "hidden",
+    },
+    cardContent: {
+        flex: 1,
+        position: "relative",
+        zIndex: 1,
     },
     noiseBackground: {
         position: "absolute",
@@ -222,52 +303,20 @@ const styles = StyleSheet.create({
         opacity: 1,
         zIndex: 0,
     },
-    cardContent: {
-        position: "relative",
-        zIndex: 1,
-    },
-    userRow: {
-        flexDirection: "row",
+    addMessageBox: {
+        position: "absolute",
+        left: 40,
+        right: 40,
+        top: "45%",
+        backgroundColor: "#1A3A6B",
+        borderRadius: 12,
+        paddingVertical: 12,
         alignItems: "center",
-        marginBottom: 22,
+        justifyContent: "center",
     },
-    profileImage: {
-        height: 48,
-        width: 48,
-        borderRadius: 24,
-    },
-    userTextArea: {
-        flex: 1,
-        marginLeft: 12,
-    },
-    nameRow: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    userName: {
-        fontSize: 20,
-        fontWeight: "700",
-        color: "#000000",
-    },
-    userId: {
-        marginLeft: 5,
+    addMessageText: {
+        color: "#FFFFFF",
         fontSize: 14,
-        color: "#666667",
-        fontWeight: "500",
-        marginTop: 5,
-    },
-    locationRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginTop: 4,
-    },
-    locationText: {
-        marginLeft: 2,
-        fontSize: 10,
-        color: "#666667",
-    },
-    addButton: {
-        marginTop: 35,
     },
 
     // 랭킹
