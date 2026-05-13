@@ -21,6 +21,7 @@ const AddPlaceScreen = () => {
 
     const [showEdit, setShowEdit] = useState(false)
     const [photo, setPhoto] = useState<string | null>(null)
+    const [description, setDescription] = useState('')
 
     const openAlbum = async () => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -61,7 +62,11 @@ const AddPlaceScreen = () => {
     }
 
     if (showEdit) {
-        return <EditPlaceScreen onBack={() => setShowEdit(false)} photo={photo}/>
+        return <EditPlaceScreen 
+            onBack={() => setShowEdit(false)} 
+            photo={photo}
+            description={description}
+        />
     }
 
     return (
@@ -111,6 +116,8 @@ const AddPlaceScreen = () => {
                             style={styles.infoTypeText} 
                             placeholder='카페에 가서 커피를 마셨다!'
                             placeholderTextColor="#666666"
+                            value={description} 
+                            onChangeText={setDescription}
                         />
                     </View>
                 </View>
