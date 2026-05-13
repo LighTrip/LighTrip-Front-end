@@ -10,6 +10,7 @@ import {
 import React, { useState } from 'react'
 import { Shadow } from 'react-native-shadow-2'
 import * as ImagePicker from 'expo-image-picker'
+import * as Location from 'expo-location'
 
 import NoiseOverlay from '@/src/components/common/NoiseOverlay'
 import EditPlaceScreen from './EditPlaceScreen'
@@ -17,11 +18,96 @@ import EditPlaceScreen from './EditPlaceScreen'
 const { width } = Dimensions.get('window')
 export const CARD_WIDTH = width * 0.91
 
+const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY
+
+const REGIONS = [
+    '강남구', '강동구', '강북구', '강서구', '관악구',
+    '광진구', '구로구', '금천구', '노원구', '도봉구',
+    '동대문구', '동작구', '마포구', '서대문구', '서초구',
+    '성동구', '성북구', '송파구', '양천구', '영등포구',
+    '용산구', '은평구', '종로구', '중구', '중랑구'
+]
+
 const AddPlaceScreen = () => {
 
     const [showEdit, setShowEdit] = useState(false)
     const [photo, setPhoto] = useState<string | null>(null)
     const [description, setDescription] = useState('')
+
+    const [visitDate, setVisitDate] = useState<Date | null>(null)
+    const [locationAddress, setLocationAddress] = useState<string | null>(null)
+    const [locationRegion, setLocationRegion] = useState<string | null>(null)
+    const [locationName, setLocationName] = useState<string | null>(null)
+
+    // 카카오 좌표 → 장소 이름 검색
+    const fetchPlaceNameFromCoords = async (latitude: number, longitude: number) => {
+        try {
+            const response = await fetch(
+                `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${longitude}&y=${latitude}`,
+                {
+                    headers: {
+                        Authorization: `KakaoAK ${KAKAO_REST_API_KEY}`,
+                    },
+                }
+            )
+            const data = await response.json()
+
+            // 도로명 주소 or 지번 주소
+            if (data.documents && data.documents.length > 0) {
+                const doc = data.documents[0]
+                const roadAddress = doc.road_address?.address_name
+                const jibunAddress = doc.address?.address_name
+                setLocationName(roadAddress ?? jibunAddress ?? null)
+            }
+        } catch (err) {
+            console.error('카카오 장소 검색 실패:', err)
+        }
+    }
+
+    const extractFromExif = async (exif: any) => {
+        try {
+            // 날짜 추출
+            if (exif?.DateTimeOriginal) {
+                const raw = exif.DateTimeOriginal as string
+                const [datePart, timePart] = raw.split(' ')
+                const [year, month, day] = datePart.split(':')
+                const parsed = new Date(`${year}-${month}-${day}T${timePart}`)
+                if (!isNaN(parsed.getTime())) setVisitDate(parsed)
+            }
+
+            // GPS 추출
+            if (exif?.GPSLatitude && exif?.GPSLongitude) {
+                const toDegrees = (val: number | number[]) => {
+                    if (Array.isArray(val)) return val[0] + val[1] / 60 + val[2] / 3600
+                    return val
+                }
+
+                let latitude = toDegrees(exif.GPSLatitude)
+                let longitude = toDegrees(exif.GPSLongitude)
+                if (exif.GPSLatitudeRef === 'S') latitude = -latitude
+                if (exif.GPSLongitudeRef === 'W') longitude = -longitude
+
+                // expo-location으로 구 정보 추출
+                const [place] = await Location.reverseGeocodeAsync({ latitude, longitude })
+                if (place) {
+                    const fullAddress = [place.city, place.district, place.street]
+                        .filter(Boolean)
+                        .join(' ')
+                    setLocationAddress(fullAddress)
+
+                    if (place.district) {
+                        const matched = REGIONS.find(r => place.district!.includes(r))
+                        if (matched) setLocationRegion(matched)
+                    }
+                }
+
+                // 카카오로 장소 이름 가져오기
+                await fetchPlaceNameFromCoords(latitude, longitude)
+            }
+        } catch (err) {
+            console.error('EXIF 추출 실패:', err)
+        }
+    }
 
     const openAlbum = async () => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -35,13 +121,15 @@ const AddPlaceScreen = () => {
             allowsEditing: false,
             aspect: [4, 3],
             quality: 1,
+            exif: true,
         })
 
         if (!result.canceled) {
-            setPhoto(result.assets[0].uri)
+            const asset = result.assets[0]
+            setPhoto(asset.uri)
+            if (asset.exif) await extractFromExif(asset.exif)
         }
     }
-
 
     const openCamera = async () => {
         const permission = await ImagePicker.requestCameraPermissionsAsync()
@@ -54,10 +142,13 @@ const AddPlaceScreen = () => {
             allowsEditing: false,
             aspect: [4, 3],
             quality: 1,
+            exif: true,
         })
         
         if (!result.canceled) {
-            setPhoto(result.assets[0].uri)
+            const asset = result.assets[0]
+            setPhoto(asset.uri)
+            if (asset.exif) await extractFromExif(asset.exif)
         }
     }
 
@@ -66,6 +157,10 @@ const AddPlaceScreen = () => {
             onBack={() => setShowEdit(false)} 
             photo={photo}
             description={description}
+            visitDate={visitDate}
+            locationAddress={locationAddress}
+            locationRegion={locationRegion}
+            locationName={locationName}    
         />
     }
 
@@ -189,7 +284,6 @@ export const styles = StyleSheet.create({
     },
 
     infoContainer: {
-        // width: '91%',
         height: 180,
         borderRadius: 16,
         backgroundColor: '#F8FAFD',
@@ -239,5 +333,4 @@ export const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontWeight: 'bold',
     }
-
 })
