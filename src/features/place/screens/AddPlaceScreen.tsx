@@ -11,18 +11,11 @@ import React, { useState } from 'react'
 import { Shadow } from 'react-native-shadow-2'
 import * as ImagePicker from 'expo-image-picker'
 
-
+import NoiseOverlay from '@/src/components/common/NoiseOverlay'
 import EditPlaceScreen from './EditPlaceScreen'
 
 const { width } = Dimensions.get('window')
 export const CARD_WIDTH = width * 0.91
-
-export const NoiseOverlay = () => (
-    <Image
-        source={require('../../../../assets/images/noise.png')}
-        style={styles.noiseOverlay}
-    />
-)
 
 const AddPlaceScreen = () => {
 
@@ -143,16 +136,7 @@ export const styles = StyleSheet.create({
             alignItems: 'center',
             paddingTop: StatusBar.currentHeight || 65,
             marginTop: 20, 
-        },
-
-    noiseOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        opacity: 0.7,
-    },    
+        },   
 
     photoContainer: {
         height: 500,
