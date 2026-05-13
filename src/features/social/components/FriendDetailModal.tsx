@@ -49,18 +49,18 @@ export default function FriendDetailModal({
             handleIndicatorStyle={styles.handleIndicator}
             backgroundStyle={styles.sheetBackground}
         >
-            <TouchableOpacity
-                activeOpacity={0.8}
-                style={styles.closeButton}
-                onPress={() => bottomSheetRef.current?.close()}
-            >
-                <Ionicons name="close" size={28} color="#FFFFFF" />
-            </TouchableOpacity>
 
             <BottomSheetScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.contentContainer}
             >
+                <TouchableOpacity
+                    activeOpacity={0.8}
+                    style={styles.closeButton}
+                    onPress={() => bottomSheetRef.current?.close()}
+                >
+                    <Ionicons name="close" size={28} color="#FFFFFF" />
+                </TouchableOpacity>
                 <View style={styles.profileArea}>
                     <Image source={friend.image} style={styles.profileImage} />
 
