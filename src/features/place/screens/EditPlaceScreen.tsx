@@ -11,8 +11,9 @@ import {
     FlatList,
     Switch,
     Platform,
+    ActivityIndicator,
 } from 'react-native'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Shadow } from 'react-native-shadow-2'
 import { Ionicons } from '@expo/vector-icons'
 import DateTimePicker from '@react-native-community/datetimepicker'
@@ -44,9 +45,10 @@ const InfoRow = ({ iconName, text }: { iconName: string, text: string }) => (
 type Props = {
     onBack: () => void
     photo: string | null
+    description: string  
 }
 
-const EditPlaceScreen = ({ onBack, photo }: Props) => {
+const EditPlaceScreen = ({ onBack, photo, description }: Props) => {
 
     const [date, setDate] = useState(new Date())
     const [showDatePicker, setShowDatePicker] = useState(false)
@@ -59,6 +61,8 @@ const EditPlaceScreen = ({ onBack, photo }: Props) => {
     const [region, setRegion] = useState('용산구')
 
     const [content, setContent] = useState('')
+    const [category, setCategory] = useState('')       
+    const [isGenerating, setIsGenerating] = useState(false)
     const [isPublic, setIsPublic] = useState(true)
 
     const [music, setMusic] = useState<{ title: string, artist: string, artwork: string } | null>(null)
@@ -66,10 +70,59 @@ const EditPlaceScreen = ({ onBack, photo }: Props) => {
     const [musicResults, setMusicResults] = useState<any[]>([])
     const [musicModalOpen, setMusicModalOpen] = useState(false)
 
+    useEffect(() => {
+        generateWithAI()
+    }, [])
+
+    const generateWithAI = async () => {
+    if (!photo) return
+    setIsGenerating(true)
+    try {
+        const formData = new FormData()
+
+        // 이미지 파일 그대로 첨부
+        formData.append('image', {
+            uri: photo,
+            type: 'image/jpeg',
+            name: 'photo.jpg',
+        } as any)
+
+        // 텍스트 첨부
+        formData.append('text', description)
+
+        const aiResponse = await fetch('https://ai.lightrip.cloud/pipeline/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+            body: formData,
+        })
+
+        if (!aiResponse.ok) {
+            throw new Error(`API 오류: ${aiResponse.status}`)
+        }
+
+        const data = await aiResponse.json()
+        if (data.draft) setContent(data.draft)
+        if (data.category) {
+            const matched = PLACE_TYPES.find(type => type.includes(data.category))
+            if (matched) {
+                setPlaceType(matched) 
+            }
+        }
+
+    } catch (err) {
+        console.error('AI 생성 실패:', err)
+        alert('AI 초안 생성 중 오류가 발생했어요')
+    } finally {
+        setIsGenerating(false)
+    }
+}
+
     const searchMusic = async (query: string) => {
         if (!query.trim()) return
-            const response = await fetch(
-                `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=10`
+        const response = await fetch(
+            `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=10`
         )
         const data = await response.json()
         setMusicResults(data.results)
@@ -149,14 +202,24 @@ const EditPlaceScreen = ({ onBack, photo }: Props) => {
                     </View>
 
                     <View style={styles.contentSection}>
-                        <Text style={styles.contentLabel}>내용</Text>
+                        <View style={styles.contentLabelRow}>
+                            <Text style={styles.contentLabel}>내용</Text>
+                            
+                            {isGenerating && (
+                                <View style={styles.generatingRow}>
+                                    <ActivityIndicator size="small" color="#1A3A6B" />
+                                    <Text style={styles.generatingText}>AI 작성 중...</Text>
+                                </View>
+                            )}
+                        </View>
                         <TextInput
                             style={styles.contentInput}
                             multiline
-                            placeholder="내용을 입력하세요"
+                            placeholder={isGenerating ? 'AI가 초안을 작성 중이에요...' : '내용을 입력하세요'}
                             placeholderTextColor="#aaa"
                             value={content}
                             onChangeText={setContent}
+                            editable={!isGenerating} 
                         />
                     </View>
                     
@@ -191,7 +254,6 @@ const EditPlaceScreen = ({ onBack, photo }: Props) => {
                             activeOpacity={1}
                         >
                             <View style={styles.musicModalBox}>
-                                {/* 검색창 */}
                                 <View style={styles.musicSearchBox}>
                                     <Ionicons name="search-outline" size={18} color="#aaa" />
                                     <TextInput
@@ -207,7 +269,6 @@ const EditPlaceScreen = ({ onBack, photo }: Props) => {
                                     />
                                 </View>
 
-                                {/* 결과 목록 */}
                                 <FlatList
                                     data={musicResults}
                                     keyExtractor={(item) => item.trackId.toString()}
@@ -307,7 +368,7 @@ const styles = StyleSheet.create({
 
     photoBox: {
         width: 340,
-        height: 230,
+        height: 170,
         borderRadius: 16,
         backgroundColor: '#FFFFFF',
         justifyContent: 'center',
@@ -356,17 +417,87 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
 
+    modalBox: {
+        width: 200,
+        maxHeight: 320,
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        paddingVertical: 8,
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+    },
+
+    modalItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+    },
+
+    modalItemSelected: {
+        backgroundColor: '#F0F4FF',
+    },
+
+    modalItemText: {
+        fontSize: 14,
+        color: '#333',
+    },
+
+    modalItemTextSelected: {
+        color: '#1A3A6B',
+        fontWeight: '600',
+    },
+
+    categoryBadge: {
+        alignSelf: 'flex-start',
+        marginLeft: 16,
+        marginTop: 10,
+        backgroundColor: '#E8EEF9',
+        borderRadius: 20,
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+    },
+
+    categoryText: {
+        fontSize: 13,
+        color: '#1A3A6B',
+        fontWeight: '600',
+    },
+
     contentSection: {
         width: '100%',
+        minHeight: 130,
+        maxHeight: 130,
         paddingHorizontal: 16,
         marginTop: 10,
         gap: 8,
+    },
+
+    contentLabelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
     },
 
     contentLabel: {
         fontSize: 13,
         color: '#555',
         fontWeight: '500',
+    },
+
+    generatingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+
+    generatingText: {
+        fontSize: 12,
+        color: '#1A3A6B',
     },
 
     contentInput: {
