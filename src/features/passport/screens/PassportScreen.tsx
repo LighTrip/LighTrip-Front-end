@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 
 import {
     View,
@@ -18,16 +18,40 @@ import PassportDetail from "./PassportDetail";
 export default function PassportView() {
     const router = useRouter();
 
-    const [selectedPlace, setSelectedPlace] = useState<any>(null);
-    
+    const [selectedPlaces, setSelectedPlaces] = useState<any[]>([])
+    const [selectedIndex, setSelectedIndex] = useState(0)
     const [activeTab, setActiveTab] = useState<'passport' | 'like' | 'scrap'>('passport');
 
+    const selectedPlacesRef = useRef<any[]>([])
+    const selectedIndexRef = useRef(0)
+
+    const updateSelectedPlaces = (places: any[]) => {
+        selectedPlacesRef.current = places
+        setSelectedPlaces(places)
+    }
+
+    const changePage = (newIndex: number) => {
+        if (newIndex < 0 || newIndex >= selectedPlacesRef.current.length) return
+        selectedIndexRef.current = newIndex
+        setSelectedIndex(newIndex)
+    }
 
     return (
         <View style={styles.container}>
             
-            {selectedPlace ? (
-                <PassportDetail item={selectedPlace} onBack={() => setSelectedPlace(null)} />
+            {selectedPlaces.length > 0 ? (
+                <View style={{ flex: 1 }}>
+                    <PassportDetail
+                        item={selectedPlaces[selectedIndex]}
+                        onBack={() => {
+                            updateSelectedPlaces([])
+                            setSelectedIndex(0)
+                            selectedIndexRef.current = 0
+                        }}
+                        onPrev={selectedIndex > 0 ? () => changePage(selectedIndex - 1) : undefined}
+                        onNext={selectedIndex < selectedPlaces.length - 1 ? () => changePage(selectedIndex + 1) : undefined}
+                    />
+                </View>
             ) : (
                 <>
                     <Text style={styles.title}>나의 여권</Text>
@@ -47,7 +71,12 @@ export default function PassportView() {
                         </TouchableOpacity>
                     </View>
 
-                    {activeTab === 'passport' && <PassportList onSelectPlace={setSelectedPlace} />}
+                    {activeTab === 'passport' && <PassportList onSelectPlace={(item, group) => {
+                        updateSelectedPlaces(group || [item])
+                        const idx = group ? group.indexOf(item) : 0
+                        selectedIndexRef.current = idx
+                        setSelectedIndex(idx)
+                    }} />}
                     {activeTab === 'like' && <LikeList />}
                     {activeTab === 'scrap' && <ScrapList />}
                 </>
@@ -55,7 +84,6 @@ export default function PassportView() {
         </View>
     );
 }
-
 
 const styles = StyleSheet.create({
     container: {
@@ -89,14 +117,11 @@ const styles = StyleSheet.create({
         width: Dimensions.get('window').width - 297,
         height: 80,
         backgroundColor: '#FFFFFF',
-
         borderRadius: 10,
         borderWidth: 2,
         borderColor: '#1A3A6B',
-
         alignItems: 'center',
         justifyContent: 'center',
-
         shadowColor: '#1A3A6B',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.4,
@@ -113,7 +138,6 @@ const styles = StyleSheet.create({
         borderColor: '#1A3A6B',
         alignItems: 'center',
         justifyContent: 'center',
-        
         shadowColor: '#1A3A6B',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.4,
@@ -126,17 +150,13 @@ const styles = StyleSheet.create({
         height: 39,
         alignItems: 'center',
         justifyContent: 'center',
-
         marginRight: 5,
-
         paddingVertical: 0,
         paddingHorizontal: 16,
-
         borderRadius: 10,
         backgroundColor: '#FFFFFF',
         borderWidth: 2,
         borderColor: '#1A3A6B',
-
         shadowColor: '#1A3A6B',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.4,
@@ -147,7 +167,6 @@ const styles = StyleSheet.create({
     tabButtonActive: {
         backgroundColor: '#1A3A6B',
         borderColor: '#1A3A6B',
-
         shadowColor: '#1A3A6B',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.4,
@@ -159,8 +178,6 @@ const styles = StyleSheet.create({
         color: '#4c4c4c90',
         fontSize: 16,
         fontWeight: 'bold',
-
-        // 안드로이드 폰트 패딩 문제 해결
         includeFontPadding: false,
         textAlignVertical: 'center'
     },
@@ -190,5 +207,4 @@ const styles = StyleSheet.create({
         fontSize: 14,
         textAlign: 'center',
     },
-
 });

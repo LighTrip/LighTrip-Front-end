@@ -11,14 +11,19 @@ import {
     FlatList,
     Switch,
     Platform,
+    ActivityIndicator,
 } from 'react-native'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Shadow } from 'react-native-shadow-2'
 import { Ionicons } from '@expo/vector-icons'
 import DateTimePicker from '@react-native-community/datetimepicker'
+import NoiseOverlay from '@/src/components/common/NoiseOverlay'
+import Dropdown from '@/src/components/common/Dropdown'
 
 const { width } = Dimensions.get('window')
 const CARD_WIDTH = width * 0.91
+
+const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY
 
 const PLACE_TYPES = ['☕ 카페', '🍽️ 식당', '🍶 술집', '🏞️ 공원', '🎬 문화', '🏋️ 운동', '🛍️ 쇼핑', '📦 기타']
 const REGIONS = [
@@ -29,103 +34,31 @@ const REGIONS = [
     '용산구', '은평구', '종로구', '중구', '중랑구'
 ]
 
-const NoiseOverlay = () => (
-    <>
-        <Image
-            source={require('../../../../assets/images/noise.png')}
-            style={[styles.noiseOverlay, { top: 0 }]}
-        />
-        <Image
-            source={require('../../../../assets/images/noise.png')}
-            style={[styles.noiseOverlay, { top: 400 }]}
-        />
-    </>
-)
-
-const InfoRow = ({ iconName, text }: { iconName: string, text: string }) => (
+const InfoRow = ({ iconName, text, onPress }: { iconName: string, text: string, onPress?: () => void }) => (
     <View style={styles.infoRowWrapper}>
-        <View style={styles.infoRow}>
-            <Ionicons name={iconName as any} size={18} color="#4A6FA5" />
-            <Text style={styles.infoText}>{text}</Text>
-        </View>
+        <TouchableOpacity onPress={onPress} disabled={!onPress}>
+            <View style={styles.infoRow}>
+                <Ionicons name={iconName as any} size={18} color="#4A6FA5" />
+                <Text style={styles.infoText}>{text}</Text>
+            </View>
+        </TouchableOpacity>
         <View style={styles.divider} />
     </View>
 )
 
-const Dropdown = ({
-    label,
-    value,
-    options,
-    onSelect
-}: {
-    label: string
-    value: string
-    options: string[]
-    onSelect: (v: string) => void
-}) => {
-    const [open, setOpen] = useState(false)
-
-    return (
-        <View style={styles.dropdownWrapper}>
-            <Text style={styles.dropdownLabel}>{label}</Text>
-            <TouchableOpacity style={styles.dropdown} onPress={() => setOpen(true)}>
-                <Text style={styles.dropdownText}>{value}</Text>
-                <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color="#333" />
-            </TouchableOpacity>
-
-            <Modal
-                visible={open}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setOpen(false)}
-            >
-                <TouchableOpacity
-                    style={styles.modalBackdrop}
-                    onPress={() => setOpen(false)}
-                    activeOpacity={1}
-                >
-                    <View style={styles.modalBox}>
-                        <FlatList
-                            data={options}
-                            keyExtractor={(item) => item}
-                            renderItem={({ item }) => (
-                                <TouchableOpacity
-                                    style={[
-                                        styles.modalItem,
-                                        item === value && styles.modalItemSelected
-                                    ]}
-                                    onPress={() => {
-                                        onSelect(item)
-                                        setOpen(false)
-                                    }}
-                                >
-                                    <Text style={[
-                                        styles.modalItemText,
-                                        item === value && styles.modalItemTextSelected
-                                    ]}>
-                                        {item}
-                                    </Text>
-                                    {item === value && (
-                                        <Ionicons name="checkmark" size={16} color="#1A3A6B" />
-                                    )}
-                                </TouchableOpacity>
-                            )}
-                        />
-                    </View>
-                </TouchableOpacity>
-            </Modal>
-        </View>
-    )
-}
-
 type Props = {
     onBack: () => void
     photo: string | null
+    description: string
+    visitDate: Date | null
+    locationAddress: string | null
+    locationRegion: string | null
+    locationName: string | null 
 }
 
-const EditPlaceScreen = ({ onBack, photo }: Props) => {
+const EditPlaceScreen = ({ onBack, photo, description, visitDate, locationAddress, locationRegion, locationName: initialLocationName }: Props) => {
 
-    const [date, setDate] = useState(new Date())
+    const [date, setDate] = useState(visitDate ?? new Date())
     const [showDatePicker, setShowDatePicker] = useState(false)
 
     const formatDate = (date: Date) => {
@@ -133,9 +66,16 @@ const EditPlaceScreen = ({ onBack, photo }: Props) => {
     }
 
     const [placeType, setPlaceType] = useState('☕ 카페')
-    const [region, setRegion] = useState('용산구')
+    const [region, setRegion] = useState(locationRegion ?? '선택')
+
+    // 장소 이름 (수동 검색으로 변경 가능)
+    const [locationName, setLocationName] = useState(initialLocationName ?? '위치 정보 없음')
+    const [placeSearchOpen, setPlaceSearchOpen] = useState(false)
+    const [placeQuery, setPlaceQuery] = useState('')
+    const [placeResults, setPlaceResults] = useState<any[]>([])
 
     const [content, setContent] = useState('')
+    const [isGenerating, setIsGenerating] = useState(false)
     const [isPublic, setIsPublic] = useState(true)
 
     const [music, setMusic] = useState<{ title: string, artist: string, artwork: string } | null>(null)
@@ -143,10 +83,66 @@ const EditPlaceScreen = ({ onBack, photo }: Props) => {
     const [musicResults, setMusicResults] = useState<any[]>([])
     const [musicModalOpen, setMusicModalOpen] = useState(false)
 
+    useEffect(() => {
+        generateWithAI()
+    }, [])
+
+    const generateWithAI = async () => {
+        if (!photo) return
+        setIsGenerating(true)
+        try {
+            const formData = new FormData()
+            formData.append('image', {
+                uri: photo,
+                type: 'image/jpeg',
+                name: 'photo.jpg',
+            } as any)
+            formData.append('text', description)
+
+            const aiResponse = await fetch('https://ai.lightrip.cloud/pipeline/generate', {
+                method: 'POST',
+                body: formData,
+            })
+
+            if (!aiResponse.ok) throw new Error(`API 오류: ${aiResponse.status}`)
+
+            const data = await aiResponse.json()
+            if (data.draft) setContent(data.draft)
+            if (data.category) {
+                const matched = PLACE_TYPES.find(type => type.includes(data.category))
+                if (matched) setPlaceType(matched)
+            }
+        } catch (err) {
+            console.error('AI 생성 실패:', err)
+            alert('AI 초안 생성 중 오류가 발생했어요')
+        } finally {
+            setIsGenerating(false)
+        }
+    }
+
+    // 카카오 키워드 장소 검색
+    const searchPlace = async (query: string) => {
+        if (!query.trim()) return
+        try {
+            const response = await fetch(
+                `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&size=10`,
+                {
+                    headers: {
+                        Authorization: `KakaoAK ${KAKAO_REST_API_KEY}`,
+                    },
+                }
+            )
+            const data = await response.json()
+            setPlaceResults(data.documents ?? [])
+        } catch (err) {
+            console.error('장소 검색 실패:', err)
+        }
+    }
+
     const searchMusic = async (query: string) => {
         if (!query.trim()) return
-            const response = await fetch(
-                `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=10`
+        const response = await fetch(
+            `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=10`
         )
         const data = await response.json()
         setMusicResults(data.results)
@@ -184,7 +180,12 @@ const EditPlaceScreen = ({ onBack, photo }: Props) => {
                     </View>
 
                     <View style={styles.infoSection}>
-                        <InfoRow iconName="location-outline" text="서울시 여의도 한강공원" />
+                        {/* 장소 이름 — 탭하면 검색 모달 열림 */}
+                        <InfoRow
+                            iconName="location-outline"
+                            text={locationName}
+                            onPress={() => setPlaceSearchOpen(true)}
+                        />
                         
                         <TouchableOpacity onPress={() => setShowDatePicker(true)}>
                             <View style={styles.infoRowWrapper}>
@@ -209,7 +210,6 @@ const EditPlaceScreen = ({ onBack, photo }: Props) => {
                         )}
                     </View>
 
-                    {/* 드롭다운 2개 */}
                     <View style={styles.dropdownRow}>
                         <Dropdown
                             label="장소 유형"
@@ -226,14 +226,23 @@ const EditPlaceScreen = ({ onBack, photo }: Props) => {
                     </View>
 
                     <View style={styles.contentSection}>
-                        <Text style={styles.contentLabel}>내용</Text>
+                        <View style={styles.contentLabelRow}>
+                            <Text style={styles.contentLabel}>내용</Text>
+                            {isGenerating && (
+                                <View style={styles.generatingRow}>
+                                    <ActivityIndicator size="small" color="#1A3A6B" />
+                                    <Text style={styles.generatingText}>AI 작성 중...</Text>
+                                </View>
+                            )}
+                        </View>
                         <TextInput
                             style={styles.contentInput}
                             multiline
-                            placeholder="내용을 입력하세요"
+                            placeholder={isGenerating ? 'AI가 초안을 작성 중이에요...' : '내용을 입력하세요'}
                             placeholderTextColor="#aaa"
                             value={content}
                             onChangeText={setContent}
+                            editable={!isGenerating}
                         />
                     </View>
                     
@@ -268,7 +277,6 @@ const EditPlaceScreen = ({ onBack, photo }: Props) => {
                             activeOpacity={1}
                         >
                             <View style={styles.musicModalBox}>
-                                {/* 검색창 */}
                                 <View style={styles.musicSearchBox}>
                                     <Ionicons name="search-outline" size={18} color="#aaa" />
                                     <TextInput
@@ -283,8 +291,6 @@ const EditPlaceScreen = ({ onBack, photo }: Props) => {
                                         autoFocus
                                     />
                                 </View>
-
-                                {/* 결과 목록 */}
                                 <FlatList
                                     data={musicResults}
                                     keyExtractor={(item) => item.trackId.toString()}
@@ -312,6 +318,64 @@ const EditPlaceScreen = ({ onBack, photo }: Props) => {
                                                 </Text>
                                                 <Text style={styles.musicResultArtist} numberOfLines={1}>
                                                     {item.artistName}
+                                                </Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    )}
+                                />
+                            </View>
+                        </TouchableOpacity>
+                    </Modal>
+
+                    {/* 장소 검색 모달 */}
+                    <Modal
+                        visible={placeSearchOpen}
+                        transparent
+                        animationType="slide"
+                        onRequestClose={() => setPlaceSearchOpen(false)}
+                    >
+                        <TouchableOpacity
+                            style={styles.modalBackdrop}
+                            onPress={() => setPlaceSearchOpen(false)}
+                            activeOpacity={1}
+                        >
+                            <View style={styles.musicModalBox}>
+                                <View style={styles.musicSearchBox}>
+                                    <Ionicons name="search-outline" size={18} color="#aaa" />
+                                    <TextInput
+                                        style={styles.musicSearchInput}
+                                        placeholder="장소명 검색 (예: 스타벅스 이태원)"
+                                        placeholderTextColor="#aaa"
+                                        value={placeQuery}
+                                        onChangeText={(text) => {
+                                            setPlaceQuery(text)
+                                            searchPlace(text)
+                                        }}
+                                        autoFocus
+                                    />
+                                </View>
+                                <FlatList
+                                    data={placeResults}
+                                    keyExtractor={(item) => item.id}
+                                    renderItem={({ item }) => (
+                                        <TouchableOpacity
+                                            style={styles.musicResultItem}
+                                            onPress={() => {
+                                                setLocationName(item.place_name)
+                                                // 구 정보도 업데이트
+                                                const matched = REGIONS.find(r => item.address_name?.includes(r))
+                                                if (matched) setRegion(matched)
+                                                setPlaceSearchOpen(false)
+                                                setPlaceQuery('')
+                                                setPlaceResults([])
+                                            }}
+                                        >
+                                            <View style={styles.musicResultInfo}>
+                                                <Text style={styles.musicResultTitle} numberOfLines={1}>
+                                                    {item.place_name}
+                                                </Text>
+                                                <Text style={styles.musicResultArtist} numberOfLines={1}>
+                                                    {item.address_name}
                                                 </Text>
                                             </View>
                                         </TouchableOpacity>
@@ -351,15 +415,6 @@ const styles = StyleSheet.create({
         marginTop: 20, 
     },
 
-    noiseOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        opacity: 1,
-    },   
-
     logContainer: {
         height: 705,
         borderRadius: 16,
@@ -393,7 +448,7 @@ const styles = StyleSheet.create({
 
     photoBox: {
         width: 340,
-        height: 230,
+        height: 170,
         borderRadius: 16,
         backgroundColor: '#FFFFFF',
         justifyContent: 'center',
@@ -420,6 +475,7 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: '#222',
         fontWeight: '600',
+        flex: 1,
     },
 
     divider: {
@@ -433,34 +489,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         gap: 12,
         marginTop: 16,
-    },
-
-    dropdownWrapper: {
-        flex: 1,
-        gap: 6,
-    },
-
-    dropdownLabel: {
-        fontSize: 13,
-        color: '#555',
-        fontWeight: '500',
-    },
-
-    dropdown: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderWidth: 1.5,
-        borderColor: '#1A3A6B',
-        backgroundColor: '#ffffff',
-        borderRadius: 12,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-    },
-
-    dropdownText: {
-        fontSize: 14,
-        color: '#222',
     },
 
     modalBackdrop: {
@@ -507,15 +535,34 @@ const styles = StyleSheet.create({
 
     contentSection: {
         width: '100%',
+        minHeight: 130,
+        maxHeight: 130,
         paddingHorizontal: 16,
         marginTop: 10,
         gap: 8,
+    },
+
+    contentLabelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
     },
 
     contentLabel: {
         fontSize: 13,
         color: '#555',
         fontWeight: '500',
+    },
+
+    generatingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+
+    generatingText: {
+        fontSize: 12,
+        color: '#1A3A6B',
     },
 
     contentInput: {
@@ -631,10 +678,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 4,
         gap: 12,
         marginRight: 15,
-    },
-
-    publicTextBox: {
-        gap: 4,
     },
 
     publicTitle: {
