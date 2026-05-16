@@ -1,3 +1,4 @@
+import { BASE_URL } from "@/src/api/config";
 import LighTripLogo from "@/src/constant/LighTrip.svg";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
@@ -12,7 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const KAKAO_AUTH_URL = `${process.env.EXPO_PUBLIC_API_BASE_URL}/oauth2/authorization/kakao`;
+const KAKAO_AUTH_URL = `${BASE_URL}/oauth2/authorization/kakao`;
 
 export default function LoginScreen() {
   const router = useRouter();
