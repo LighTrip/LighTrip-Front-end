@@ -5,7 +5,8 @@ const getBaseURL = (): string => {
     android: process.env.EXPO_PUBLIC_API_URL_ANDROID || "http://10.0.2.2:8080",
     ios: process.env.EXPO_PUBLIC_API_URL_IOS || "http://localhost:8080",
     default: process.env.EXPO_PUBLIC_API_URL_ANDROID || "http://localhost:8080",
-  });
+  }) ||
+  "https://api.lightrip.cloud"
 };
 
 export const BASE_URL = getBaseURL();
