@@ -7,7 +7,7 @@ export const profileUserDummy: ProfileUser = {
     lightCount: 12,
     locationCount: 23,
     totallike: 320,
-    profileImage: require("@/assets/images/favicon.png")
+    profileImage: null,
 };
 
 export const settingMenuDummy: ProfileMenuItem[] = [
