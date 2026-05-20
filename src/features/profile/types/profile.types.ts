@@ -1,13 +1,11 @@
-import { ImageSourcePropType } from "react-native";
-
 export type ProfileUser = {
     id: string;
     name: string;
     location: string;
-    lightCount: number;
+    districtCount: number;
     locationCount: number;
     totallike: number;
-    profileImage: ImageSourcePropType;
+    profileImage: string | null;
 };
 
 export type ProfileMenuItem = {
