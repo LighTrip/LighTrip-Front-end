@@ -12,12 +12,14 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import FriendManageModal from "../components/FriendManageModal";
+import TeamManageModal from "../components/TeamManageModal";
 import {
     accountMenuDummy,
     profileUserDummy,
     settingMenuDummy
 } from "../data/profileDummy";
-import { ProfileUser } from "../types/profile.types";
+import { ProfileMenuItem, ProfileUser } from "../types/profile.types";
 
 type MyProfileResponse = {
     success: boolean;
@@ -47,6 +49,26 @@ export default function ProfileView() {
     const [isTeam, setIsTeam] = useState(false);
     const [user, setUser] = useState<ProfileUser>(profileUserDummy);
     const [isLoading, setIsLoading] = useState(true);
+
+    const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
+    const [isFriendModalOpen, setIsFriendModalOpen] = useState(false);
+    
+    // 메뉴 클릭 함수
+    const handleMenuPress = (item: ProfileMenuItem) => {
+        if (item.id === "team") {
+            setIsTeamModalOpen(true);
+            return;
+        }
+
+        if (item.id === "friends") {
+            setIsFriendModalOpen(true);
+            return;
+        }
+
+        if (item.route) {
+            router.push(item.route as any);
+        }
+    }
 
     // 1. 내 프로필 조회 API 연결
     useEffect(() => {
@@ -100,7 +122,8 @@ export default function ProfileView() {
     }
 
     return(
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.content}>
             <Text style={styles.headerTitle}>마이페이지</Text>
 
             {/*프로필 카드*/}
@@ -189,6 +212,7 @@ export default function ProfileView() {
                                 index !== settingMenuDummy.length -1 && styles.menuItemBorder,
                             ]}
                             activeOpacity={0.8}
+                            onPress={() => handleMenuPress(item)}
                         >
                             <View style={styles.menuLeft}>
                                 <View style={styles.iconBox}>
@@ -239,6 +263,19 @@ export default function ProfileView() {
                     </View>
                 </View>
         </ScrollView> 
+
+        {/*팀 관리 모달*/}
+        <TeamManageModal 
+            visible={isTeamModalOpen}
+            onClose={() => setIsTeamModalOpen(false)}
+        />
+
+        {/*친구 관리 모달*/}
+        <FriendManageModal
+            visible = {isFriendModalOpen}
+            onClose={() => setIsFriendModalOpen(false)}
+        />
+        </View>
     )
 }
 
