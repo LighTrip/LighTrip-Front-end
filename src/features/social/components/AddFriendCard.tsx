@@ -5,22 +5,46 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { AddFriend } from "../types/social.types";
+import { RecommendedFriend } from "../types/social.types";
+
+const defaultProfile = require("../../../../assets/images/default_profile.png");
+
+const getMutualFriendText = (
+    mutualFriends?: {nickname: string}[]
+) => {
+    if (!mutualFriends || mutualFriends.length === 0) {
+        return "함께 아는 친구 없음"
+    }
+
+    if (mutualFriends.length === 1) {
+        return `${mutualFriends[0].nickname}와 함께`
+    }
+
+    return `${mutualFriends[0].nickname} 외 ${mutualFriends.length -1}명과 함께 `;
+};
 
 type AddFriendProps = {
-    friend: AddFriend;
-    onAdd: (friend: AddFriend) => void;
+    friend: RecommendedFriend;
+    onAdd: (friend: RecommendedFriend) => void;
 };
 
 export default function AddFriendCard({friend, onAdd}: AddFriendProps) {
     return (
         <View style={styles.card}>
-            <Image source={friend.image} style={styles.image} />
+            <Image 
+                source={
+                    friend.profileImg
+                        ? {uri: friend.profileImg}
+                        : defaultProfile
+                } style={styles.image} 
+            />
 
             <View style={styles.info}>
-                <Text style={styles.name}>{friend.name}</Text>
-                <Text style={styles.stamp}>도장 {friend.stampCount}개</Text>
-                <Text style={styles.description}>{friend.together}</Text>
+                <Text style={styles.name}>{friend.nickname}</Text>
+                <Text style={styles.stamp}>도장 {friend.stampCount ?? 0}개</Text>
+                <Text style={styles.description}>
+                    {getMutualFriendText(friend.mutualFriends)}
+                </Text>
             </View>
 
             <TouchableOpacity style={styles.addButton} onPress={() => onAdd(friend)}>

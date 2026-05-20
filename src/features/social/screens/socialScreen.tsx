@@ -18,6 +18,13 @@ type FriendApiItem = {
     friendCode: string;
     status: string;
     createdAt: string;
+    stampCount: number;
+    passportCount: number;
+    mutualFriends: {
+        userId: number;
+        nickname: string;
+        profileImg: string | null;
+    }[];
 }
 
 type FriendListResponse = {
@@ -67,6 +74,7 @@ export default function SocialView() {
 
             const mappedFriends: Friend[] = data.data.map((item) => ({
                 id: String(item.friendId),
+                friendId: item.friendId,
                 userId: item.userId,
                 name: item.nickname,
                 profileImg: item.profileImg,
@@ -74,10 +82,9 @@ export default function SocialView() {
                 status: item.status,
                 createdAt: item.createdAt,
 
-                // 임시 처리
-                stampCount: 0,
-                passportCount: 0,
-                together: "",
+                stampCount: item.stampCount,
+                passportCount: item.passportCount,
+                mutualFriends: item.mutualFriends ?? [],
             }));
 
             setFriends(mappedFriends);
