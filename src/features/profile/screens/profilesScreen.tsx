@@ -1,7 +1,10 @@
+import { BASE_URL } from "@/src/api/config";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import * as Securestore from "expo-secure-store";
+import { useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     Image,
     ScrollView,
     StyleSheet,
@@ -14,12 +17,87 @@ import {
     profileUserDummy,
     settingMenuDummy
 } from "../data/profileDummy";
+import { ProfileUser } from "../types/profile.types";
+
+type MyProfileResponse = {
+    success: boolean;
+    code: string;
+    message: string;
+    data: {
+        userId: number;
+        nickname: string;
+        email: string;
+        profileImg: string | null;
+        friendCode: string;
+        location: string | null;
+        bio: string | null;
+        currentMode: string;
+        createdAt: string;
+        stats: {
+            districtCount: number;
+            passportCount: number;
+            likeCount: number;
+        }
+    }
+}
 
 export default function ProfileView() {
     const router = useRouter();
-    const [isTeam, setIsTeam] = useState(false);
 
-    const user = profileUserDummy;
+    const [isTeam, setIsTeam] = useState(false);
+    const [user, setUser] = useState<ProfileUser>(profileUserDummy);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // 1. 내 프로필 조회 API 연결
+    useEffect(() => {
+        const fetchMyProfile = async () => {
+            const accessToken = await Securestore.getItemAsync("accessToken");
+            try {
+                const response = await fetch(`${BASE_URL}/api/v1/users/me`, {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${accessToken}`,
+                    }
+                });
+
+                const result: MyProfileResponse = await response.json();
+
+                console.log("내 프로필 조회 상태 코드:", response.status);
+                console.log("내 프로필 조회 응답:", result);
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || "내 프로필 조회 실패")
+                }
+
+                const profileData = result.data;
+
+                setUser({
+                    id: `#${profileData.userId}`,
+                    name: profileData.nickname,
+                    location: profileData.location || "위치 미설정",
+                    passportCount: profileData.stats.passportCount ?? 0,
+                    districtCount: profileData.stats.districtCount ?? 0,
+                    totallike: profileData.stats.likeCount ?? 0,
+                    profileImage: profileData.profileImg,
+                });
+            } catch(error) {
+                console.log("내 프로필 조회 에러:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+
+        fetchMyProfile();
+    }, []);
+
+    if (isLoading) {
+        return(
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#1A3A6B" />
+            </View>
+        )
+    }
 
     return(
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -28,7 +106,14 @@ export default function ProfileView() {
             {/*프로필 카드*/}
             <View style={styles.profileCard}>
                 <View style={styles.profileLeft}>
-                    <Image source={user.profileImage} style={styles.profileImage} />
+                    <Image 
+                        source={
+                            user.profileImage
+                                ? {uri: user.profileImage}
+                                : require("@/assets/images/favicon.png")
+                        } 
+                        style={styles.profileImage} 
+                    />
                     <View>
                         <Text style={styles.userName}>{user.name}</Text>
                         <View style={styles.locationSection}>
@@ -36,7 +121,7 @@ export default function ProfileView() {
                             <Text style={styles.userLocation}>{user.location}</Text>
                         </View>
                         <Text style={styles.userStatus}>
-                            {user.lightCount} | {user.locationCount} | {user.totallike}
+                            불빛: {user.passportCount} | 장소: {user.districtCount} | 좋아요: {user.totallike}
                         </Text>
                     </View>
                 </View>
@@ -107,7 +192,7 @@ export default function ProfileView() {
                         >
                             <View style={styles.menuLeft}>
                                 <View style={styles.iconBox}>
-                                <   Ionicons name={item.icon as any} size={22} color="#FFFFFF" />
+                                <Ionicons name={item.icon as any} size={22} color="#FFFFFF" />
                                 </View>
 
                                 <View>
@@ -231,6 +316,12 @@ const styles = StyleSheet.create({
         color: "#FFFFFF",
         fontSize: 14,
         marginTop: 8,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "#F8FAFD",
     },
 
     /*프리미엄*/
