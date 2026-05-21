@@ -4,8 +4,8 @@ export const profileUserDummy: ProfileUser = {
     id: "#30421",
     name: "저희이제하조",
     location: "고양시 덕양구",
-    lightCount: 12,
-    locationCount: 23,
+    passportCount: 12,
+    districtCount: 23,
     totallike: 320,
     profileImage: null,
 };
@@ -16,6 +16,7 @@ export const settingMenuDummy: ProfileMenuItem[] = [
         title: "프로필 수정",
         description: "프로필 및 프로필 사진 수정",
         icon: "pencil",
+        route: "/profile/profileEdit"
     },
     {
         id: "team",

@@ -1,8 +1,8 @@
 import { BASE_URL } from "@/src/api/config";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import * as Securestore from "expo-secure-store";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
     ActivityIndicator,
     Image,
@@ -71,47 +71,50 @@ export default function ProfileView() {
     }
 
     // 1. 내 프로필 조회 API 연결
-    useEffect(() => {
-        const fetchMyProfile = async () => {
-            const accessToken = await Securestore.getItemAsync("accessToken");
-            try {
-                const response = await fetch(`${BASE_URL}/api/v1/users/me`, {
-                    method: "GET",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${accessToken}`,
-                    }
-                });
+    const fetchMyProfile = async () => {
+        const accessToken = await Securestore.getItemAsync("accessToken");
 
-                const result: MyProfileResponse = await response.json();
+        try {
+            const response = await fetch(`${BASE_URL}/api/v1/users/me`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${accessToken}`,
+                },
+            });
 
-                console.log("내 프로필 조회 상태 코드:", response.status);
-                console.log("내 프로필 조회 응답:", result);
+            const result: MyProfileResponse = await response.json();
 
-                if (!response.ok || !result.success) {
-                    throw new Error(result.message || "내 프로필 조회 실패")
-                }
+            console.log("내 프로필 조회 상태 코드:", response.status);
 
-                const profileData = result.data;
-
-                setUser({
-                    id: `#${profileData.userId}`,
-                    name: profileData.nickname,
-                    location: profileData.location || "위치 미설정",
-                    passportCount: profileData.stats.passportCount ?? 0,
-                    districtCount: profileData.stats.districtCount ?? 0,
-                    totallike: profileData.stats.likeCount ?? 0,
-                    profileImage: profileData.profileImg,
-                });
-            } catch(error) {
-                console.log("내 프로필 조회 에러:", error);
-            } finally {
-                setIsLoading(false);
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || "내 프로필 조회 실패");
             }
-        }
 
-        fetchMyProfile();
-    }, []);
+            const profileData = result.data;
+
+            setUser({
+                id: `#${profileData.userId}`,
+                name: profileData.nickname,
+                location: profileData.location || "위치 미설정",
+                passportCount: profileData.stats.passportCount ?? 0,
+                districtCount: profileData.stats.districtCount ?? 0,
+                totallike: profileData.stats.likeCount ?? 0,
+                profileImage: profileData.profileImg,
+            });
+        } catch (error) {
+            console.log("내 프로필 조회 에러:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            setIsLoading(true);
+            fetchMyProfile();
+        }, [])
+    );
 
     if (isLoading) {
         return(
@@ -133,7 +136,7 @@ export default function ProfileView() {
                         source={
                             user.profileImage
                                 ? {uri: user.profileImage}
-                                : require("@/assets/images/favicon.png")
+                                : require("@/assets/images/default_profile.png")
                         } 
                         style={styles.profileImage} 
                     />
