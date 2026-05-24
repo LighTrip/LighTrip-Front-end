@@ -39,6 +39,9 @@ const districtGroups = PLACES.reduce((acc, place) => {
 
 const districts = Object.keys(districtGroups)
 
+const COVER_WIDTH = (Dimensions.get('window').width - 15 * 2 - 1) / 2
+const COVER_HEIGHT = COVER_WIDTH * (4 / 3)
+
 type Props = {
     onSelectPlace: (item: typeof PLACES[0], group?: typeof PLACES) => void
 }
@@ -53,6 +56,7 @@ const PassportList = ({ onSelectPlace }: Props) => {
     const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null)
 
     const coverContent = selectedDistrict ? (
+        // 도장 리스트뷰
         <FlatList
             data={districtGroups[selectedDistrict]}
             keyExtractor={(item) => item.id}
@@ -71,8 +75,9 @@ const PassportList = ({ onSelectPlace }: Props) => {
             )}
         />
     ) : (
+        // 여권 커버뷰
         <FlatList
-            style={{ flex: 1 }}
+            style={{ height: COVER_HEIGHT * 2, overflow: 'hidden' }}
             data={chunkArray(districts, 4)}
             keyExtractor={(_, index) => String(index)}
             horizontal={true}
@@ -103,7 +108,7 @@ const PassportList = ({ onSelectPlace }: Props) => {
     )
 
     return (
-        <View style={{flex: 1}}>
+        <View style={{ flex: 1 }}>
             {/* 탭 행 */}
             <View style={styles.tabRow}>
                 <>
@@ -112,7 +117,7 @@ const PassportList = ({ onSelectPlace }: Props) => {
                     onPress={() => { setSelected('cover'); setSelectedDistrict(null) }}
                 >
                     <Text style={[styles.tabText, selected === 'cover' && styles.tabTextActive]}>
-                        위치별 여권
+                        여권
                     </Text>
                 </TouchableOpacity>
 
@@ -121,7 +126,7 @@ const PassportList = ({ onSelectPlace }: Props) => {
                     onPress={() => setSelected('list')}
                 >
                     <Text style={[styles.tabText, selected === 'list' && styles.tabTextActive]}>
-                        장소별 여권
+                        도장
                     </Text>
                 </TouchableOpacity>
                 </>
@@ -230,64 +235,31 @@ const styles = StyleSheet.create({
         marginHorizontal: 13,
         marginBottom: 10,
         gap: 13,
-        paddingTop: 0,
-        marginTop: 10,
     },
 
     searchRow: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
-        marginHorizontal: 15,
+        marginHorizontal: 13,
         gap: 5,
-        paddingTop: 0,
         marginTop: 5,
         marginLeft: 20,
     },
 
-    statCard: {
-        width: 110,
-        height: 80,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 10,
-        borderWidth: 2,
-        borderColor: '#1A3A6B',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 16,
-        shadowColor: '#1A3A6B',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.4,
-        shadowRadius: 5,
-        elevation: 4,
-    },
-
     tabButton: {
-        width: Dimensions.get('window').width - 227,
+        width: COVER_WIDTH * 0.96,
         height: 39,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 1,
-        paddingVertical: 0,
-        paddingHorizontal: 16,
         borderRadius: 10,
         backgroundColor: '#FFFFFF',
         borderWidth: 2,
         borderColor: '#1A3A6B',
-        shadowColor: '#1A3A6B',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.4,
-        shadowRadius: 5,
-        elevation: 4,
     },
 
     tabButtonActive: {
         backgroundColor: '#1A3A6B',
         borderColor: '#1A3A6B',
-        shadowColor: '#1A3A6B',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.4,
-        shadowRadius: 5,
-        elevation: 4,
     },
 
     tabText: {
@@ -328,22 +300,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 5,
-        shadowColor: '#1A3A6B',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.4,
-        shadowRadius: 5,
-        elevation: 4,
     },
 
     iconButtonActive: {
         width: 39,
         height: 39,
         backgroundColor: '#1A3A6B',
-        shadowColor: '#1A3A6B',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.4,
-        shadowRadius: 5,
-        elevation: 4,
     },
 
     searchInput: {
@@ -357,47 +319,31 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         fontSize: 14,
         fontWeight: 'bold',
-        shadowColor: '#1A3A6B',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.4,
-        shadowRadius: 5,
-        elevation: 4,
-    },
-
-    gridContainer: {
-        flexDirection: 'row',
-        marginLeft: 10,
-        gap: 8,
-        paddingRight: 10,
-    },
-
-    gridColumn: {
-        flexDirection: 'column',
-        gap: 8,
     },
 
     page: {
         width: Dimensions.get('window').width,
-        flex: 1,
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginTop: 8,
-        marginLeft: 10,
+        marginTop: 3,
+        paddingHorizontal: 15,
+        justifyContent: 'flex-start',
+        gap: 1, 
     },
 
     passportCover: {
-        width: Dimensions.get('window').width / 2,
-        height: 280,
-        alignItems: 'center',
+        width: COVER_WIDTH,
+        height: COVER_HEIGHT,
+        borderRadius: 16,
         overflow: 'hidden',
-        justifyContent: 'flex-start',
+        alignItems: 'center',
     },
 
     placeName: {
+        position: 'absolute',
+        top: '30%',
         color: '#FFFFFF',
-        fontSize: 22,
-        marginTop: 190 / 3,
-        marginRight: 10,
+        fontSize: 28,
         fontFamily: 'Freesentation',
     },
 
@@ -416,6 +362,7 @@ const styles = StyleSheet.create({
         marginTop: 10,
         marginBottom: 10,
         alignItems: 'center',
+
         shadowColor: '#1A3A6B',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.4,
@@ -461,11 +408,6 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         borderWidth: 2,
         borderColor: '#1A3A6B',
-        shadowColor: '#1A3A6B',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 5,
         zIndex: 999,
         minWidth: 130,
     },

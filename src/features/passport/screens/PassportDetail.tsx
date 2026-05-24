@@ -41,6 +41,17 @@ const DUMMY = {
     placeImage: require('../../../../assets/images/profile1.jpg'),
 }
 
+const STAMP_MAP: Record<string, any> = {
+    '☕ 카페': require('@/assets/stamps/cafe.png'),
+    '🍽️ 식당': require('@/assets/stamps/restaurant.png'),
+    '🍶 술집': require('@/assets/stamps/bar.png'),
+    '🏞️ 공원': require('@/assets/stamps/park.png'),
+    '🎬 문화': require('@/assets/stamps/culture.png'),
+    '🏋️ 운동': require('@/assets/stamps/fitness.png'),
+    '🛍️ 쇼핑': require('@/assets/stamps/shopping.png'),
+    '📦 기타': require('@/assets/stamps/etc.png'),
+}
+
 const PLACE_TYPES = ['☕ 카페', '🍽️ 식당', '🍶 술집', '🏞️ 공원', '🎬 문화', '🏋️ 운동', '🛍️ 쇼핑', '📦 기타']
 
 const { width } = Dimensions.get('window')
@@ -114,7 +125,11 @@ const PassportDetail = ({ item, onBack, onNext, onPrev }: Props) => {
                         )}
                     </View>
 
-                    <Image source={require('../../../../assets/images/StampSeal.png')} style={styles.stampImage} resizeMode="contain" />
+                    <Image
+                        source={STAMP_MAP[editCategory] ?? STAMP_MAP['📦 기타']}
+                        style={styles.stampImage}
+                        resizeMode="contain"
+                    />
 
                     {/* 정보 */}
                     <View style={styles.infoArea}>
@@ -232,13 +247,13 @@ const PassportDetail = ({ item, onBack, onNext, onPrev }: Props) => {
                     {/* edit / save 버튼 */}
                     <View style={styles.editBox}>
                         <TouchableOpacity onPress={onPrev}>
-                            <Text style={styles.editText}>{'<<<<<<<<<<<<<<<<'}</Text>
+                            <Text style={styles.editText}>{'< < < < < < < < < < < < < <'}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => setIsEditing(!isEditing)}>
-                            <Text style={styles.editText}>{isEditing ? 'save passport' : 'edit my passport'}</Text>
+                            <Text style={styles.editText}>{isEditing ? 'save my passport' : 'edit my passport'}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={onNext}>
-                            <Text style={styles.editText}>{'>>>>>>>>>>>>>>>>'}</Text>
+                            <Text style={styles.editText}>{'> > > > > > > > > > > > > >'}</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -362,13 +377,13 @@ const styles = StyleSheet.create({
     },
 
     passportCard: {
-        height: 655,
+        height: '82%',
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
         overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
+        shadowOpacity: 0.5,
         shadowRadius: 4,
         elevation: 2,
         paddingBottom: 20,
@@ -515,7 +530,7 @@ const styles = StyleSheet.create({
 
     editReviewInput: {
         position: 'absolute',
-        width: '100%',
+        width: '102%',
         height: 120,
         borderRadius: 16,
         padding: 20,
@@ -525,11 +540,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         backgroundColor: '#ffffff',
         fontFamily: 'Griun_Gellyroll',
-        marginTop: 90,
+        marginTop: 30,
     },
 
     musicBox: {
-        position: 'absolute',
+        position: 'fixed',
         flexDirection: 'row',
         height: 80,
         width: '100%',
@@ -537,8 +552,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 12,
         backgroundColor: '#ffffff',
-        marginTop: 200,
-        marginLeft: 20,
+        marginTop: 130,
     },
 
     musicImage: {
@@ -586,7 +600,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 296,
+        marginTop: 245,
         marginLeft: 27,
         gap: 5,
     },
@@ -596,7 +610,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 13,
         color: '#757575',
-        fontFamily: 'SpaceMono',
+        fontFamily: 'Moneygraphy',
     },
 
     modalBackdrop: {

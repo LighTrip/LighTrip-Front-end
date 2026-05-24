@@ -1,9 +1,9 @@
-import { 
-    StatusBar, 
-    StyleSheet, 
-    Text, 
-    TextInput, 
-    TouchableOpacity, 
+import {
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
     Image,
     Dimensions,
     View,
@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import NoiseOverlay from '@/src/components/common/NoiseOverlay'
 import Dropdown from '@/src/components/common/Dropdown'
+import { REGIONS } from '@/src/constant/regions'
 
 const { width } = Dimensions.get('window')
 const CARD_WIDTH = width * 0.91
@@ -26,15 +27,14 @@ const CARD_WIDTH = width * 0.91
 const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY
 
 const PLACE_TYPES = ['☕ 카페', '🍽️ 식당', '🍶 술집', '🏞️ 공원', '🎬 문화', '🏋️ 운동', '🛍️ 쇼핑', '📦 기타']
-const REGIONS = [
-    '강남구', '강동구', '강북구', '강서구', '관악구',
-    '광진구', '구로구', '금천구', '노원구', '도봉구',
-    '동대문구', '동작구', '마포구', '서대문구', '서초구',
-    '성동구', '성북구', '송파구', '양천구', '영등포구',
-    '용산구', '은평구', '종로구', '중구', '중랑구'
-]
 
-const InfoRow = ({ iconName, text, onPress }: { iconName: string, text: string, onPress?: () => void }) => (
+// 주소에서 도시에 해당하는 구 목록 찾기
+const findDistrictsByAddress = (address: string): string[] => {
+    const matchedCity = Object.keys(REGIONS).find(city => address.includes(city))
+    return matchedCity ? REGIONS[matchedCity] : REGIONS['서울특별시']
+}
+
+const InfoRow = ({ iconName, text, onPress }: { iconName: string; text: string; onPress?: () => void }) => (
     <View style={styles.infoRowWrapper}>
         <TouchableOpacity onPress={onPress} disabled={!onPress}>
             <View style={styles.infoRow}>
@@ -48,15 +48,24 @@ const InfoRow = ({ iconName, text, onPress }: { iconName: string, text: string, 
 
 type Props = {
     onBack: () => void
+    onComplete: (item: { id: string; name: string; image: any; district: string; date: string; category: string }) => void
     photo: string | null
     description: string
     visitDate: Date | null
     locationAddress: string | null
     locationRegion: string | null
-    locationName: string | null 
+    locationName: string | null
 }
 
-const EditPlaceScreen = ({ onBack, photo, description, visitDate, locationAddress, locationRegion, locationName: initialLocationName }: Props) => {
+const EditPlaceScreen = ({
+    onBack,
+    onComplete,
+    photo,
+    description,
+    visitDate,
+    locationRegion,
+    locationName: initialLocationName,
+}: Props) => {
 
     const [date, setDate] = useState(visitDate ?? new Date())
     const [showDatePicker, setShowDatePicker] = useState(false)
@@ -66,7 +75,16 @@ const EditPlaceScreen = ({ onBack, photo, description, visitDate, locationAddres
     }
 
     const [placeType, setPlaceType] = useState('☕ 카페')
-    const [region, setRegion] = useState(locationRegion ?? '선택')
+
+    // 구 목록 (장소 선택 시 도시에 맞게 자동 변경)
+    const [availableDistricts, setAvailableDistricts] = useState<string[]>(
+        REGIONS[
+            Object.keys(REGIONS).find(city =>
+                locationRegion ? REGIONS[city].includes(locationRegion) : false
+            ) ?? '서울특별시'
+        ]
+    )
+    const [region, setRegion] = useState<string>(locationRegion ?? '선택')
 
     // 장소 이름 (수동 검색으로 변경 가능)
     const [locationName, setLocationName] = useState(initialLocationName ?? '위치 정보 없음')
@@ -78,7 +96,7 @@ const EditPlaceScreen = ({ onBack, photo, description, visitDate, locationAddres
     const [isGenerating, setIsGenerating] = useState(false)
     const [isPublic, setIsPublic] = useState(true)
 
-    const [music, setMusic] = useState<{ title: string, artist: string, artwork: string } | null>(null)
+    const [music, setMusic] = useState<{ title: string; artist: string; artwork: string } | null>(null)
     const [musicSearch, setMusicSearch] = useState('')
     const [musicResults, setMusicResults] = useState<any[]>([])
     const [musicModalOpen, setMusicModalOpen] = useState(false)
@@ -139,6 +157,23 @@ const EditPlaceScreen = ({ onBack, photo, description, visitDate, locationAddres
         }
     }
 
+    // 장소 선택 시 도시 감지 → 구 목록 자동 교체
+    const handlePlaceSelect = (item: any) => {
+        setLocationName(item.place_name)
+
+        const address = item.address_name ?? ''
+        const districts = findDistrictsByAddress(address)
+        setAvailableDistricts(districts)
+
+        const matchedDistrict = districts.find(r => address.includes(r))
+        setRegion(matchedDistrict ?? '선택')
+
+        setPlaceSearchOpen(false)
+        setPlaceQuery('')
+        setPlaceResults([])
+    }
+
+    // 아이튠즈 노래 검색
     const searchMusic = async (query: string) => {
         if (!query.trim()) return
         const response = await fetch(
@@ -169,7 +204,7 @@ const EditPlaceScreen = ({ onBack, photo, description, visitDate, locationAddres
 
                     <View style={styles.photoBox}>
                         {photo !== null ? (
-                            <Image 
+                            <Image
                                 source={{ uri: photo }}
                                 style={{ width: '100%', height: '100%', borderRadius: 16 }}
                                 resizeMode="cover"
@@ -180,13 +215,13 @@ const EditPlaceScreen = ({ onBack, photo, description, visitDate, locationAddres
                     </View>
 
                     <View style={styles.infoSection}>
-                        {/* 장소 이름 — 탭하면 검색 모달 열림 */}
+                        {/* 장소 이름 */}
                         <InfoRow
                             iconName="location-outline"
                             text={locationName}
                             onPress={() => setPlaceSearchOpen(true)}
                         />
-                        
+
                         <TouchableOpacity onPress={() => setShowDatePicker(true)}>
                             <View style={styles.infoRowWrapper}>
                                 <View style={styles.infoRow}>
@@ -220,7 +255,7 @@ const EditPlaceScreen = ({ onBack, photo, description, visitDate, locationAddres
                         <Dropdown
                             label="방문 지역"
                             value={region}
-                            options={REGIONS}
+                            options={availableDistricts}
                             onSelect={setRegion}
                         />
                     </View>
@@ -245,7 +280,7 @@ const EditPlaceScreen = ({ onBack, photo, description, visitDate, locationAddres
                             editable={!isGenerating}
                         />
                     </View>
-                    
+
                     {/* 뮤직카드 */}
                     <TouchableOpacity style={styles.musicCard} onPress={() => setMusicModalOpen(true)}>
                         {music ? (
@@ -360,15 +395,7 @@ const EditPlaceScreen = ({ onBack, photo, description, visitDate, locationAddres
                                     renderItem={({ item }) => (
                                         <TouchableOpacity
                                             style={styles.musicResultItem}
-                                            onPress={() => {
-                                                setLocationName(item.place_name)
-                                                // 구 정보도 업데이트
-                                                const matched = REGIONS.find(r => item.address_name?.includes(r))
-                                                if (matched) setRegion(matched)
-                                                setPlaceSearchOpen(false)
-                                                setPlaceQuery('')
-                                                setPlaceResults([])
-                                            }}
+                                            onPress={() => handlePlaceSelect(item)}
                                         >
                                             <View style={styles.musicResultInfo}>
                                                 <Text style={styles.musicResultTitle} numberOfLines={1}>
@@ -384,19 +411,33 @@ const EditPlaceScreen = ({ onBack, photo, description, visitDate, locationAddres
                             </View>
                         </TouchableOpacity>
                     </Modal>
-                    
+
                     <View style={styles.publicRow}>
                         <View>
                             <Text style={styles.publicTitle}>여권 공개 여부</Text>
                             <Text style={styles.publicSub}>{isPublic ? '모든 사람이 볼 수 있어요' : '나만 볼 수 있어요'}</Text>
                         </View>
-                        <Switch value={isPublic} onValueChange={setIsPublic} trackColor={{ false: '#D0D0D0', true: '#1A3A6B' }} thumbColor={'#FFFFFF'} />
+                        <Switch
+                            value={isPublic}
+                            onValueChange={setIsPublic}
+                            trackColor={{ false: '#D0D0D0', true: '#1A3A6B' }}
+                            thumbColor={'#FFFFFF'}
+                        />
                     </View>
-
                 </View>
             </Shadow>
 
-            <TouchableOpacity style={styles.clickContainer}>
+            <TouchableOpacity
+                style={styles.clickContainer}
+                onPress={() => onComplete({
+                    id: Date.now().toString(),
+                    name: locationName,
+                    image: photo ? { uri: photo } : require('@/assets/images/mapo.png'),
+                    district: region !== '선택' ? region : '미정',
+                    date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+                    category: placeType,
+                })}
+            >
                 <Text style={styles.clickText}>등록하기</Text>
             </TouchableOpacity>
         </View>
@@ -412,11 +453,11 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-start',
         alignItems: 'center',
         paddingTop: StatusBar.currentHeight || 65,
-        marginTop: 20, 
     },
 
     logContainer: {
-        height: 705,
+        position: 'relative',
+        height: 645,
         borderRadius: 16,
         backgroundColor: '#F8FAFD',
         justifyContent: 'flex-start',
@@ -453,7 +494,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 15,
+        marginTop: 10,
     },
 
     infoSection: {
@@ -487,7 +528,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         width: '100%',
         paddingHorizontal: 16,
-        gap: 12,
+        gap: 8,
         marginTop: 16,
     },
 
@@ -584,7 +625,7 @@ const styles = StyleSheet.create({
         borderColor: '#E0E0E0',
         backgroundColor: '#FFFFFF',
         padding: 12,
-        marginTop: 20,
+        marginBottom: 10,
         gap: 12,
     },
 
@@ -628,7 +669,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 10,
         gap: 8,
-        marginBottom: 12,
     },
 
     musicSearchInput: {
@@ -670,12 +710,13 @@ const styles = StyleSheet.create({
     },
 
     publicRow: {
+        position: 'absolute',
+        bottom: 0,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'flex-end',
         width: '100%',
-        marginTop: 10,
-        paddingHorizontal: 4,
+        paddingVertical: 12,
         gap: 12,
         marginRight: 15,
     },
@@ -699,7 +740,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#1A3A6B',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 0,
     },
 
     clickText: {
