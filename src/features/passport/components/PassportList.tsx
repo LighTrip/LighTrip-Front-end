@@ -12,7 +12,8 @@ import React, { useState } from 'react'
 import colors from '@/src/constant/colors';
 import Ionicons from '@expo/vector-icons/build/Ionicons';
 import { passportStyles, COVER_WIDTH, COVER_HEIGHT } from './passportStyles';
-import { Place } from './PlaceList';
+import PlaceListView, { Place } from './PlaceList';
+import SearchBar from './SearchBar'
 
 const chunkArray = <T,>(array: T[], size: number): T[][] => {
     return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
@@ -45,28 +46,12 @@ type Props = {
 
 const PassportList = ({ onSelectPlace }: Props) => {
     const [selected, setSelected] = useState<'cover' | 'list'>('cover')
-    const [searchSelected, setSearchSelected] = useState(false)
-    const [sortVisible, setSortVisible] = useState(false)
-    const [sortOption, setSortOption] = useState('최근 방문순')
     const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null)
 
     const coverContent = selectedDistrict ? (
-        <FlatList
+        <PlaceListView
             data={districtGroups[selectedDistrict]}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={passportStyles.listContainer}
-            renderItem={({ item }) => (
-                <TouchableOpacity style={passportStyles.listCard} onPress={() => onSelectPlace(item)}>
-                    <Text style={passportStyles.stamp}>도장</Text>
-                    <View style={passportStyles.textArea}>
-                        <Text style={passportStyles.listName}>{item.name}</Text>
-                        <View style={passportStyles.metaRow}>
-                            <Text style={passportStyles.meta}>📍 {item.district}</Text>
-                            <Text style={passportStyles.meta}>📅 {item.date}</Text>
-                        </View>
-                    </View>
-                </TouchableOpacity>
-            )}
+            onSelectPlace={onSelectPlace}
         />
     ) : (
         <FlatList
@@ -119,72 +104,12 @@ const PassportList = ({ onSelectPlace }: Props) => {
                 </>
             </View>
 
-            <View style={passportStyles.searchRow}>
-                {searchSelected ? (
-                    <>
-                        <TextInput
-                            style={passportStyles.searchInput}
-                            placeholder="기억에 남았던 장소를 입력하세요."
-                            placeholderTextColor="#000000"
-                            autoFocus
-                        />
-                        <TouchableOpacity
-                            style={[passportStyles.iconButton, passportStyles.iconButtonActive]}
-                            onPress={() => setSearchSelected(false)}
-                        >
-                            <Ionicons name="search" size={25} color={colors.text.primary} />
-                        </TouchableOpacity>
-                    </>
-                ) : (
-                    <>
-                        <Text style={{ color: '#4c4c4c', fontSize: 16, fontWeight: '600', marginTop: 8, flex: 1 }}>
-                            {selectedDistrict ? `${selectedDistrict}구` : sortOption}
-                        </Text>
-                        <View>
-                            <TouchableOpacity style={passportStyles.iconButton} onPress={() => setSortVisible(!sortVisible)}>
-                                <Image source={require('../../../../assets/icons/reorder.png')} />
-                            </TouchableOpacity>
-                            {sortVisible && (
-                                <View style={passportStyles.dropdown}>
-                                    {['최근 방문순', '오래된 순', '이름순'].map((option) => (
-                                        <TouchableOpacity
-                                            key={option}
-                                            style={passportStyles.dropdownOption}
-                                            onPress={() => { setSortOption(option); setSortVisible(false) }}
-                                        >
-                                            <Text style={passportStyles.dropdownText}>{option}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            )}
-                        </View>
-                        <TouchableOpacity
-                            style={[passportStyles.iconButton, searchSelected && passportStyles.iconButtonActive]}
-                            onPress={() => setSearchSelected(true)}
-                        >
-                            <Ionicons name="search" size={25} color="#000000" />
-                        </TouchableOpacity>
-                    </>
-                )}
-            </View>
+            <SearchBar label={selectedDistrict ? `${selectedDistrict}구` : undefined} />
 
             {selected === 'cover' ? coverContent : (
-                <FlatList
+                <PlaceListView
                     data={PLACES}
-                    keyExtractor={(item) => item.id}
-                    contentContainerStyle={passportStyles.listContainer}
-                    renderItem={({ item }) => (
-                        <TouchableOpacity style={passportStyles.listCard} onPress={() => onSelectPlace(item)}>
-                            <Text style={passportStyles.stamp}>도장</Text>
-                            <View style={passportStyles.textArea}>
-                                <Text style={passportStyles.listName}>{item.name}</Text>
-                                <View style={passportStyles.metaRow}>
-                                    <Text style={passportStyles.meta}>📍 {item.district}</Text>
-                                    <Text style={passportStyles.meta}>📅 {item.date}</Text>
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-                    )}
+                    onSelectPlace={onSelectPlace}
                 />
             )}
         </View>
