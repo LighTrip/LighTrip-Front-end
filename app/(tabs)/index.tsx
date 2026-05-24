@@ -2,12 +2,13 @@ import {
   NaverMapMarkerOverlay,
   NaverMapView,
 } from "@mj-studio/react-native-naver-map";
-import { useState } from "react";
+import * as Location from "expo-location";
+import { useRef, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const NAVY = "#0F2744";
-const TAB_BAR_HEIGHT = 80; // 탭바 컴포넌트 실제 높이로 조정
+const TAB_BAR_HEIGHT = 80;
 
 function ExplorationLegend() {
   return (
@@ -24,6 +25,17 @@ function ExplorationLegend() {
       <View style={styles.legendRow}>
         <View style={[styles.legendDot, { backgroundColor: "#1E3A5F" }]} />
         <Text style={styles.legendLabel}>탐험 완료</Text>
+      </View>
+    </View>
+  );
+}
+
+// 현재 위치 표시용 SVG 스타일 마커 (파란 점 + 외곽 원)
+function UserLocationMarker() {
+  return (
+    <View style={styles.userLocationMarker}>
+      <View style={styles.userLocationOuter}>
+        <View style={styles.userLocationInner} />
       </View>
     </View>
   );
@@ -74,15 +86,35 @@ function DiscoveryCard({
   );
 }
 
+interface PassportPin {
+  latitude: number;
+  longitude: number;
+  placeName: string;
+}
+
 export default function MapScreen() {
   const { bottom: safeBottom } = useSafeAreaInsets();
   const [showDiscovery, setShowDiscovery] = useState(true);
   const [showRegisterBtn, setShowRegisterBtn] = useState(false);
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [passportPins, setPassportPins] = useState<PassportPin[]>([]);
+  const mapRef = useRef<any>(null);
 
-  // 탭바 위 기준점
   const baseBottom = TAB_BAR_HEIGHT + safeBottom + 12;
 
   const handleConfirm = () => {
+    // 여권 기록 시 현재 발견된 장소를 핀으로 추가
+    setPassportPins((prev) => [
+      ...prev,
+      {
+        latitude: 37.5665,
+        longitude: 126.978,
+        placeName: "스타벅스 OO점",
+      },
+    ]);
     setShowDiscovery(false);
   };
 
@@ -91,17 +123,57 @@ export default function MapScreen() {
     setShowRegisterBtn(true);
   };
 
+  const handleLocationPress = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      alert("위치 권한이 필요합니다.");
+      return;
+    }
+
+    const location = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High,
+    });
+
+    const { latitude, longitude } = location.coords;
+    setUserLocation({ latitude, longitude });
+
+    mapRef.current?.animateCameraTo({
+      latitude,
+      longitude,
+      zoom: 16,
+      duration: 500,
+    });
+  };
+
   return (
     <View style={styles.container}>
       <NaverMapView
+        ref={mapRef}
         style={styles.map}
         camera={{ latitude: 37.5665, longitude: 126.978, zoom: 14 }}
       >
-        <NaverMapMarkerOverlay
-          latitude={37.5665}
-          longitude={126.978}
-          anchor={{ x: 0.5, y: 1 }}
-        />
+        {/* 현재 위치 마커 (파란 점) */}
+        {userLocation && (
+          <NaverMapMarkerOverlay
+            latitude={userLocation.latitude}
+            longitude={userLocation.longitude}
+            anchor={{ x: 0.5, y: 0.5 }}
+            width={40}
+            height={40}
+          >
+            <UserLocationMarker />
+          </NaverMapMarkerOverlay>
+        )}
+
+        {/* 여권 기록된 장소 핀들 */}
+        {passportPins.map((pin, index) => (
+          <NaverMapMarkerOverlay
+            key={index}
+            latitude={pin.latitude}
+            longitude={pin.longitude}
+            anchor={{ x: 0.5, y: 1 }}
+          />
+        ))}
       </NaverMapView>
 
       {/* 탐험 범례 */}
@@ -116,6 +188,7 @@ export default function MapScreen() {
       <TouchableOpacity
         style={[styles.locationButton, { bottom: baseBottom }]}
         activeOpacity={0.8}
+        onPress={handleLocationPress}
       >
         <Text style={styles.locationButtonIcon}>◎</Text>
       </TouchableOpacity>
@@ -151,6 +224,37 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
+
+  // 현재 위치 마커 스타일
+  userLocationMarker: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  userLocationOuter: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(66, 133, 244, 0.25)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "rgba(66, 133, 244, 0.4)",
+  },
+  userLocationInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#4285F4",
+    borderWidth: 2,
+    borderColor: "white",
+    shadowColor: "#4285F4",
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 4,
+  },
 
   legendWrapper: {
     position: "absolute",
