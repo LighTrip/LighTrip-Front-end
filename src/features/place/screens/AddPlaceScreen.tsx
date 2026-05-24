@@ -6,7 +6,8 @@ import {
     TouchableOpacity, 
     Image,
     Dimensions,
-    View } from 'react-native'
+    View 
+} from 'react-native'
 import React, { useState } from 'react'
 import { Shadow } from 'react-native-shadow-2'
 import * as ImagePicker from 'expo-image-picker'
@@ -14,6 +15,8 @@ import * as Location from 'expo-location'
 
 import NoiseOverlay from '@/src/components/common/NoiseOverlay'
 import EditPlaceScreen from './EditPlaceScreen'
+import PassportDetail from '../../passport/screens/PassportDetail'
+
 
 const { width } = Dimensions.get('window')
 export const CARD_WIDTH = width * 0.91
@@ -39,7 +42,10 @@ const AddPlaceScreen = () => {
     const [locationRegion, setLocationRegion] = useState<string | null>(null)
     const [locationName, setLocationName] = useState<string | null>(null)
 
-    // 카카오 좌표 → 장소 이름 검색
+    const [completedPlace, setCompletedPlace] = useState<any | null>(null)
+
+
+    // 카카오 좌표 -> 장소 이름 검색
     const fetchPlaceNameFromCoords = async (latitude: number, longitude: number) => {
         try {
             const response = await fetch(
@@ -109,6 +115,7 @@ const AddPlaceScreen = () => {
         }
     }
 
+    // 앨범 접근
     const openAlbum = async () => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
         if (!permission.granted) {
@@ -131,6 +138,7 @@ const AddPlaceScreen = () => {
         }
     }
 
+    // 카메라 접근
     const openCamera = async () => {
         const permission = await ImagePicker.requestCameraPermissionsAsync()
         if (!permission.granted) {
@@ -152,15 +160,28 @@ const AddPlaceScreen = () => {
         }
     }
 
+    if (completedPlace) {
+        return (
+            <PassportDetail
+                item={completedPlace}
+                onBack={() => setCompletedPlace(null)}
+            />
+        )
+    }
+
     if (showEdit) {
-        return <EditPlaceScreen 
-            onBack={() => setShowEdit(false)} 
+        return <EditPlaceScreen
+            onBack={() => setShowEdit(false)}
+            onComplete={(item) => {
+                setShowEdit(false)
+                setCompletedPlace(item)
+            }}
             photo={photo}
             description={description}
             visitDate={visitDate}
             locationAddress={locationAddress}
             locationRegion={locationRegion}
-            locationName={locationName}    
+            locationName={locationName}
         />
     }
 
@@ -177,7 +198,7 @@ const AddPlaceScreen = () => {
                     <View style={styles.photoTextbox}>
                         <Text style={styles.photoText}>장소의 사진을 등록해 주세요!</Text>
                     </View>
-                    <TouchableOpacity style={styles.photoButton} onPress={openAlbum}>
+                    <TouchableOpacity style={styles.albumButton} onPress={openAlbum}>
                         {photo !== null ? (
                             <Image
                                 source={{ uri: photo }}
@@ -237,11 +258,11 @@ export const styles = StyleSheet.create({
             justifyContent: 'flex-start',
             alignItems: 'center',
             paddingTop: StatusBar.currentHeight || 65,
-            marginTop: 20, 
         },   
 
     photoContainer: {
-        height: 500,
+        position: 'fixed',
+        height: 450,
         borderRadius: 16,
         backgroundColor: '#F8FAFD',
         justifyContent: 'center',
@@ -257,15 +278,16 @@ export const styles = StyleSheet.create({
     },
 
     photoText: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 'bold',
         marginTop: 5,
         marginLeft: 5,
     },
 
-    photoButton: {
+    albumButton: {
+        position: 'fixed',
         width: 340,
-        height: 365,
+        height: 315,
         borderRadius: 16,
         backgroundColor: '#FFFFFF',
         justifyContent: 'center',
@@ -275,6 +297,7 @@ export const styles = StyleSheet.create({
     },
     
     cameraButton: {
+        position: 'fixed',
         width: 240,
         height: 40,
         justifyContent: 'center',
@@ -284,7 +307,8 @@ export const styles = StyleSheet.create({
     },
 
     infoContainer: {
-        height: 180,
+        position: 'fixed',
+        height: 170,
         borderRadius: 16,
         backgroundColor: '#F8FAFD',
         justifyContent: 'center',
@@ -307,19 +331,23 @@ export const styles = StyleSheet.create({
 
     infoTypeBox: {
         width: 340,
-        height: 110,
+        height: 80,
         borderRadius: 16,
         backgroundColor: '#FFFFFF',
         justifyContent: 'center',
         alignItems: 'center',
+        paddingVertical: 5,
     },
 
     infoTypeText: {
         fontSize: 14,
         color: '#A0A0A0',
+        textAlignVertical: 'top',
+        paddingHorizontal: 10,
     },
 
     clickContainer: {
+        position: 'fixed',
         width: '91%',
         height: 45,
         borderRadius: 16,

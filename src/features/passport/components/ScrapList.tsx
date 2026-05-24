@@ -1,14 +1,13 @@
-import { StyleSheet, Text, View } from 'react-native'
-import React from 'react'
+import PlaceListView, { Place } from "./PlaceList"
+import SearchBar from './SearchBar'
 
-const ScrapList = () => {
-  return (
-    <View>
-      <Text>ScrapList</Text>
-    </View>
-  )
+
+type Props = {
+    onSelectPlace?: (item: Place) => void
 }
 
-export default ScrapList
+const ScrapList = ({ onSelectPlace }: Props) => (
+    <PlaceListView data={[]} onSelectPlace={onSelectPlace} />
+)
 
-const styles = StyleSheet.create({})
+export default ScrapList
