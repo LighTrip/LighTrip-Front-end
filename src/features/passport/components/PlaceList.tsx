@@ -1,16 +1,15 @@
 import {
     View,
     Text,
-    StyleSheet,
     Image,
     TouchableOpacity,
     TextInput,
-    Dimensions,
     FlatList,
 } from 'react-native';
 import React, { useState } from 'react'
 import colors from '@/src/constant/colors';
 import Ionicons from '@expo/vector-icons/build/Ionicons';
+import { passportStyles as styles } from './passportStyles';
 
 export type Place = {
     id: string
@@ -112,96 +111,3 @@ const PlaceListView = ({ data, onSelectPlace }: Props) => {
 }
 
 export default PlaceListView
-
-const styles = StyleSheet.create({
-    searchRow: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        marginHorizontal: 15,
-        gap: 5,
-        marginTop: 5,
-        marginLeft: 20,
-    },
-    iconButton: {
-        width: 39,
-        height: 39,
-        borderRadius: 10,
-        backgroundColor: '#ffffff',
-        borderWidth: 2,
-        borderColor: '#1A3A6B',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 5,
-    },
-    iconButtonActive: {
-        width: 39,
-        height: 39,
-        backgroundColor: '#1A3A6B',
-    },
-    searchInput: {
-        width: Dimensions.get('window').width - 80,
-        height: 39,
-        backgroundColor: '#ffffff',
-        borderRadius: 10,
-        borderWidth: 2,
-        borderColor: '#1A3A6B',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        fontSize: 14,
-        fontWeight: 'bold',
-    },
-    listContainer: {
-        paddingHorizontal: 16,
-        paddingBottom: 100,
-    },
-    listCard: {
-        width: Dimensions.get('window').width - 32,
-        height: 85,
-        flexDirection: 'row',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 16,
-        marginTop: 10,
-        marginBottom: 10,
-        alignItems: 'center',
-        shadowColor: '#1A3A6B',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.4,
-        shadowRadius: 5,
-        elevation: 4,
-    },
-    listName: {
-        color: '#000000',
-        fontSize: 18,
-        fontWeight: '600',
-        marginBottom: 4,
-    },
-    stamp: {
-        color: '#000000',
-        fontSize: 14,
-        fontWeight: 'bold',
-        marginRight: 12,
-        padding: 15,
-    },
-    textArea: { flex: 1 },
-    metaRow: { flexDirection: 'row', gap: 24 },
-    meta: { color: '#000000', fontSize: 14, fontWeight: '500' },
-    dropdown: {
-        position: 'absolute',
-        top: 44,
-        right: 0,
-        backgroundColor: '#fff',
-        borderRadius: 10,
-        borderWidth: 2,
-        borderColor: '#1A3A6B',
-        zIndex: 999,
-        minWidth: 130,
-    },
-    dropdownOption: {
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-    },
-    dropdownText: { fontSize: 14, color: '#000' },
-})

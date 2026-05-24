@@ -6,13 +6,13 @@ import {
     TouchableOpacity,
     TextInput,
     Dimensions,
-    StatusBar,
     FlatList,
 } from 'react-native';
 import React, { useState } from 'react'
-import { useRouter } from 'expo-router';
 import colors from '@/src/constant/colors';
 import Ionicons from '@expo/vector-icons/build/Ionicons';
+import { passportStyles, COVER_WIDTH, COVER_HEIGHT } from './passportStyles';
+import { Place } from './PlaceList';
 
 const chunkArray = <T,>(array: T[], size: number): T[][] => {
     return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
@@ -20,7 +20,7 @@ const chunkArray = <T,>(array: T[], size: number): T[][] => {
     );
 };
 
-const PLACES: { id: string; name: string; image: any; district: string; date: string; category: string }[] = [
+const PLACES: Place[] = [
     { id: '1', name: '렉터스라운지 홍대', image: require('../../../../assets/images/mapo.png'), district: '마포', date: '2026-03-30', category: '카페' },
     { id: '2', name: '다운타우너', image: require('../../../../assets/images/yongsan.png'), district: '용산', date: '2026-03-16', category: '식당' },
     { id: '3', name: '포셋 연희', image: require('../../../../assets/images/seodaemun.png'), district: '서대문', date: '2026-02-24', category: '카페' },
@@ -35,53 +35,46 @@ const districtGroups = PLACES.reduce((acc, place) => {
     if (!acc[place.district]) acc[place.district] = []
     acc[place.district].push(place)
     return acc
-}, {} as Record<string, typeof PLACES>)
+}, {} as Record<string, Place[]>)
 
 const districts = Object.keys(districtGroups)
 
-const COVER_WIDTH = (Dimensions.get('window').width - 15 * 2 - 1) / 2
-const COVER_HEIGHT = COVER_WIDTH * (4 / 3)
-
 type Props = {
-    onSelectPlace: (item: typeof PLACES[0], group?: typeof PLACES) => void
+    onSelectPlace: (item: Place, group?: Place[]) => void
 }
 
 const PassportList = ({ onSelectPlace }: Props) => {
-
-    const router = useRouter();
-    const [selected, setSelected] = useState<'cover'| 'list'>('cover');
-    const [searchSelected, setSearchSelected] = useState(false);
-    const [sortVisible, setSortVisible] = useState(false);
-    const [sortOption, setSortOption] = useState('최근 방문순');
+    const [selected, setSelected] = useState<'cover' | 'list'>('cover')
+    const [searchSelected, setSearchSelected] = useState(false)
+    const [sortVisible, setSortVisible] = useState(false)
+    const [sortOption, setSortOption] = useState('최근 방문순')
     const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null)
 
     const coverContent = selectedDistrict ? (
-        // 도장 리스트뷰
         <FlatList
             data={districtGroups[selectedDistrict]}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContainer}
+            contentContainerStyle={passportStyles.listContainer}
             renderItem={({ item }) => (
-                <TouchableOpacity style={styles.listCard} onPress={() => onSelectPlace(item)}>
-                    <Text style={styles.stamp}>도장</Text>
-                    <View style={styles.textArea}>
-                        <Text style={styles.listName}>{item.name}</Text>
-                        <View style={styles.metaRow}>
-                            <Text style={styles.meta}>📍 {item.district}</Text>
-                            <Text style={styles.meta}>📅 {item.date}</Text>
+                <TouchableOpacity style={passportStyles.listCard} onPress={() => onSelectPlace(item)}>
+                    <Text style={passportStyles.stamp}>도장</Text>
+                    <View style={passportStyles.textArea}>
+                        <Text style={passportStyles.listName}>{item.name}</Text>
+                        <View style={passportStyles.metaRow}>
+                            <Text style={passportStyles.meta}>📍 {item.district}</Text>
+                            <Text style={passportStyles.meta}>📅 {item.date}</Text>
                         </View>
                     </View>
                 </TouchableOpacity>
             )}
         />
     ) : (
-        // 여권 커버뷰
         <FlatList
             style={{ height: COVER_HEIGHT * 2, overflow: 'hidden' }}
             data={chunkArray(districts, 4)}
             keyExtractor={(_, index) => String(index)}
-            horizontal={true}
-            pagingEnabled={true}
+            horizontal
+            pagingEnabled
             showsHorizontalScrollIndicator={false}
             renderItem={({ item: pageItems }) => (
                 <View style={styles.page}>
@@ -109,79 +102,68 @@ const PassportList = ({ onSelectPlace }: Props) => {
 
     return (
         <View style={{ flex: 1 }}>
-            {/* 탭 행 */}
             <View style={styles.tabRow}>
                 <>
-                <TouchableOpacity
-                    style={[styles.tabButton, selected === 'cover' && styles.tabButtonActive]}
-                    onPress={() => { setSelected('cover'); setSelectedDistrict(null) }}
-                >
-                    <Text style={[styles.tabText, selected === 'cover' && styles.tabTextActive]}>
-                        여권
-                    </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={[styles.tabButton, selected === 'list' && styles.tabButtonActive]}
-                    onPress={() => setSelected('list')}
-                >
-                    <Text style={[styles.tabText, selected === 'list' && styles.tabTextActive]}>
-                        도장
-                    </Text>
-                </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.tabButton, selected === 'cover' && styles.tabButtonActive]}
+                        onPress={() => { setSelected('cover'); setSelectedDistrict(null) }}
+                    >
+                        <Text style={[styles.tabText, selected === 'cover' && styles.tabTextActive]}>여권</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.tabButton, selected === 'list' && styles.tabButtonActive]}
+                        onPress={() => setSelected('list')}
+                    >
+                        <Text style={[styles.tabText, selected === 'list' && styles.tabTextActive]}>도장</Text>
+                    </TouchableOpacity>
                 </>
             </View>
 
-            <View style={styles.searchRow}>
+            <View style={passportStyles.searchRow}>
                 {searchSelected ? (
                     <>
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="기억에 남았던 장소를 입력하세요."
-                        placeholderTextColor="#000000"
-                        autoFocus
-                    />
-                    <TouchableOpacity
-                        style={[styles.iconButton, styles.iconButtonActive]}
-                        onPress={() => setSearchSelected(false)}
-                    >
-                        <Ionicons name="search" size={25} color={colors.text.primary} />
-                    </TouchableOpacity>
+                        <TextInput
+                            style={passportStyles.searchInput}
+                            placeholder="기억에 남았던 장소를 입력하세요."
+                            placeholderTextColor="#000000"
+                            autoFocus
+                        />
+                        <TouchableOpacity
+                            style={[passportStyles.iconButton, passportStyles.iconButtonActive]}
+                            onPress={() => setSearchSelected(false)}
+                        >
+                            <Ionicons name="search" size={25} color={colors.text.primary} />
+                        </TouchableOpacity>
                     </>
                 ) : (
                     <>
-                    <Text style={{ color: '#4c4c4c', fontSize: 16, fontWeight: '600', marginTop: 8, flex: 1 }}>
-                        {selectedDistrict ? `${selectedDistrict}구` : sortOption}
-                    </Text>
-                    <View>
-                        <TouchableOpacity style={styles.iconButton} onPress={() => setSortVisible(!sortVisible)}>
-                            <Image source={require('../../../../assets/icons/reorder.png')} />
+                        <Text style={{ color: '#4c4c4c', fontSize: 16, fontWeight: '600', marginTop: 8, flex: 1 }}>
+                            {selectedDistrict ? `${selectedDistrict}구` : sortOption}
+                        </Text>
+                        <View>
+                            <TouchableOpacity style={passportStyles.iconButton} onPress={() => setSortVisible(!sortVisible)}>
+                                <Image source={require('../../../../assets/icons/reorder.png')} />
+                            </TouchableOpacity>
+                            {sortVisible && (
+                                <View style={passportStyles.dropdown}>
+                                    {['최근 방문순', '오래된 순', '이름순'].map((option) => (
+                                        <TouchableOpacity
+                                            key={option}
+                                            style={passportStyles.dropdownOption}
+                                            onPress={() => { setSortOption(option); setSortVisible(false) }}
+                                        >
+                                            <Text style={passportStyles.dropdownText}>{option}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                        <TouchableOpacity
+                            style={[passportStyles.iconButton, searchSelected && passportStyles.iconButtonActive]}
+                            onPress={() => setSearchSelected(true)}
+                        >
+                            <Ionicons name="search" size={25} color="#000000" />
                         </TouchableOpacity>
-
-                        {sortVisible && (
-                            <View style={styles.dropdown}>
-                                {['최근 방문순', '오래된 순', '이름순'].map((option) => (
-                                    <TouchableOpacity
-                                        key={option}
-                                        style={styles.dropdownOption}
-                                        onPress={() => {
-                                            setSortOption(option);
-                                            setSortVisible(false);
-                                        }}
-                                    >
-                                        <Text style={styles.dropdownText}>{option}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        )}
-                    </View>
-
-                    <TouchableOpacity
-                        style={[styles.iconButton, searchSelected && styles.iconButtonActive]}
-                        onPress={() => setSearchSelected(true)}
-                    >
-                        <Ionicons name="search" size={25} color="#000000" />
-                    </TouchableOpacity>
                     </>
                 )}
             </View>
@@ -190,15 +172,15 @@ const PassportList = ({ onSelectPlace }: Props) => {
                 <FlatList
                     data={PLACES}
                     keyExtractor={(item) => item.id}
-                    contentContainerStyle={styles.listContainer}
+                    contentContainerStyle={passportStyles.listContainer}
                     renderItem={({ item }) => (
-                        <TouchableOpacity style={styles.listCard} onPress={() => onSelectPlace(item)}>
-                            <Text style={styles.stamp}>도장</Text>
-                            <View style={styles.textArea}>
-                                <Text style={styles.listName}>{item.name}</Text>
-                                <View style={styles.metaRow}>
-                                    <Text style={styles.meta}>📍 {item.district}</Text>
-                                    <Text style={styles.meta}>📅 {item.date}</Text>
+                        <TouchableOpacity style={passportStyles.listCard} onPress={() => onSelectPlace(item)}>
+                            <Text style={passportStyles.stamp}>도장</Text>
+                            <View style={passportStyles.textArea}>
+                                <Text style={passportStyles.listName}>{item.name}</Text>
+                                <View style={passportStyles.metaRow}>
+                                    <Text style={passportStyles.meta}>📍 {item.district}</Text>
+                                    <Text style={passportStyles.meta}>📅 {item.date}</Text>
                                 </View>
                             </View>
                         </TouchableOpacity>
@@ -206,29 +188,12 @@ const PassportList = ({ onSelectPlace }: Props) => {
                 />
             )}
         </View>
-    );
-};
+    )
+}
 
 export default PassportList
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F8FAFD',
-        justifyContent: 'flex-start',
-        paddingTop: StatusBar.currentHeight || 65,
-    },
-
-    title: {
-        color: '#000000',
-        fontSize: 24,
-        textAlign: 'left',
-        fontWeight: 'bold',
-        marginBottom: 10,
-        marginLeft: 20,
-        marginTop: 20,
-    },
-
     tabRow: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
@@ -236,16 +201,6 @@ const styles = StyleSheet.create({
         marginBottom: 10,
         gap: 13,
     },
-
-    searchRow: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        marginHorizontal: 13,
-        gap: 5,
-        marginTop: 5,
-        marginLeft: 20,
-    },
-
     tabButton: {
         width: COVER_WIDTH * 0.96,
         height: 39,
@@ -256,71 +211,23 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: '#1A3A6B',
     },
-
     tabButtonActive: {
         backgroundColor: '#1A3A6B',
         borderColor: '#1A3A6B',
     },
-
     tabText: {
         color: '#4c4c4c90',
         fontSize: 16,
         fontWeight: 'bold',
         includeFontPadding: false,
-        textAlignVertical: 'center'
+        textAlignVertical: 'center',
     },
-
-    numText: {
-        color: '#000000',
-        fontSize: 20,
-        fontWeight: 'bold',
-        textAlign: 'center',
-    },
-
-    statText: {
-        color: '#000000',
-        fontSize: 14,
-        textAlign: 'center',
-    },
-
     tabTextActive: {
         color: '#ffffff',
         fontWeight: 'bold',
         includeFontPadding: false,
-        textAlignVertical: 'center'
+        textAlignVertical: 'center',
     },
-
-    iconButton: {
-        width: 39,
-        height: 39,
-        borderRadius: 10,
-        backgroundColor: '#ffffff',
-        borderWidth: 2,
-        borderColor: '#1A3A6B',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 5,
-    },
-
-    iconButtonActive: {
-        width: 39,
-        height: 39,
-        backgroundColor: '#1A3A6B',
-    },
-
-    searchInput: {
-        width: Dimensions.get('window').width - 80,
-        height: 39,
-        backgroundColor: '#ffffff',
-        borderRadius: 10,
-        borderWidth: 2,
-        borderColor: '#1A3A6B',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        fontSize: 14,
-        fontWeight: 'bold',
-    },
-
     page: {
         width: Dimensions.get('window').width,
         flexDirection: 'row',
@@ -328,9 +235,8 @@ const styles = StyleSheet.create({
         marginTop: 3,
         paddingHorizontal: 15,
         justifyContent: 'flex-start',
-        gap: 1, 
+        gap: 1,
     },
-
     passportCover: {
         width: COVER_WIDTH,
         height: COVER_HEIGHT,
@@ -338,7 +244,6 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         alignItems: 'center',
     },
-
     placeName: {
         position: 'absolute',
         top: '30%',
@@ -346,81 +251,4 @@ const styles = StyleSheet.create({
         fontSize: 28,
         fontFamily: 'Freesentation',
     },
-
-    listContainer: {
-        paddingHorizontal: 16,
-        paddingBottom: 100,
-    },
-
-    listCard: {
-        width: Dimensions.get('window').width - 32,
-        height: 85,
-        flexDirection: 'row',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 16,
-        marginTop: 10,
-        marginBottom: 10,
-        alignItems: 'center',
-
-        shadowColor: '#1A3A6B',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.4,
-        shadowRadius: 5,
-        elevation: 4,
-    },
-
-    listName: {
-        color: '#000000',
-        fontSize: 18,
-        fontWeight: '600',
-        marginBottom: 4,
-    },
-
-    stamp: {
-        color: '#000000',
-        fontSize: 14,
-        fontWeight: 'bold',
-        marginRight: 12,
-        padding: 15,
-    },
-
-    textArea: {
-        flex: 1,
-    },
-
-    metaRow: {
-        flexDirection: 'row',
-        gap: 24,
-    },
-
-    meta: {
-        color: '#000000',
-        fontSize: 14,
-        fontWeight: '500',
-    },
-
-    dropdown: {
-        position: 'absolute',
-        top: 44,
-        right: 0,
-        backgroundColor: '#fff',
-        borderRadius: 10,
-        borderWidth: 2,
-        borderColor: '#1A3A6B',
-        zIndex: 999,
-        minWidth: 130,
-    },
-
-    dropdownOption: {
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-    },
-
-    dropdownText: {
-        fontSize: 14,
-        color: '#000',
-    },
-});
+})
