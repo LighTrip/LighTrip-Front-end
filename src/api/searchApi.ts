@@ -3,8 +3,11 @@ import type {
     GetPassportFeedParams,
     PassportFeedResponse,
 } from "../features/search/types/passport.types";
+import type { RankingResponse } from "../features/search/types/ranking.types";
 import { BASE_URL } from "./config";
 
+
+// 1. 릴스 피드 조회 API
 export async function getPassportFeed(params: GetPassportFeedParams = {}) {
     const token = await Securestore.getItemAsync("accessToken");
 
@@ -58,6 +61,33 @@ export async function getPassportFeed(params: GetPassportFeedParams = {}) {
 
     if(!response.ok || !data.success) {
         throw new Error(data.message || "피드 조회에 실패했습니다.")
+    }
+
+    return data.data
+}
+
+// 2. 랭킹 조회 API
+export async function getTotalRanking() {
+    const token = await Securestore.getItemAsync("accessToken");
+
+    const url = `${BASE_URL}/api/v1/rankings/total`;
+
+    console.log("전체 주간 랭킹 조회 요청 URL:", url);
+
+    const response = await fetch(url, {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    })
+
+    const data: RankingResponse = await response.json();
+
+    console.log("전체 주간 랭킹 조회 상태 코드:", response.status);
+    console.log("전체 주간 랭킹 조회 응답:",data);
+
+    if(!response.ok || !data.success) {
+        throw new Error(data.message || "랭킹 조회에 실패했습니다.");
     }
 
     return data.data
