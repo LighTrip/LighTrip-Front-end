@@ -4,10 +4,11 @@ import type { PassportFeedItem } from "../types/passport.types";
 
 type SearchUserCardProps = {
     item: PassportFeedItem;
-    onAddFriend: () => void;
+    onAddFriend: (friendCode: string) => void;
+    isRequested: boolean;
 };
 
-export default function SearchUserCard({item, onAddFriend}: SearchUserCardProps) {
+export default function SearchUserCard({item, onAddFriend, isRequested}: SearchUserCardProps) {
     return(
         <View style={styles.userInfoBox}>
         <View style={styles.userRow}>
@@ -35,9 +36,18 @@ export default function SearchUserCard({item, onAddFriend}: SearchUserCardProps)
             </View>
             
             {!item.isFriend && (
-                <TouchableOpacity style={styles.addButton} onPress={onAddFriend}>
-                    <Ionicons name="person-add-outline" size={20} color="#000000" />
-                </TouchableOpacity>
+                isRequested ? (
+                    <View style={styles.requestedButton}>
+                        <Ionicons name="checkmark" size={22} color="#1A3A6B" />
+                    </View>
+                ) : (
+                    <TouchableOpacity 
+                        style={styles.addButton} 
+                        onPress={() => onAddFriend(item.writerFriendCode)}
+                    >
+                        <Ionicons name="person-add-outline" size={20} color="#000000" />
+                    </TouchableOpacity>
+                )
             )}
         </View>
     </View>
@@ -94,4 +104,8 @@ const styles=StyleSheet.create({
         marginTop: 35,
         marginRight: -5,
     },
+    requestedButton: {
+        marginTop: 35,
+        marginRight: -5,
+    }
 })

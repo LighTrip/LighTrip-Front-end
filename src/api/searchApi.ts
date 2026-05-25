@@ -92,3 +92,36 @@ export async function getTotalRanking() {
 
     return data.data
 }
+
+// 3. 친구 추가 요청 API
+export async function requestFriend(friendCode: string) {
+    const token = await Securestore.getItemAsync("accessToken");
+
+    const url = `${BASE_URL}/api/v1/friends/request`;
+
+    console.log("친구 요청 URL:", url);
+    console.log("보낼 친구 코드:", friendCode);
+
+    const response = await fetch(url, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            friendCode,
+        })
+    })
+
+    const data = await response.json();
+
+    console.log("친구 요청 상태 코드:", response.status);
+    console.log("친구 요청 응답:", data);
+
+    if(!response.ok || !data.success) {
+        throw new Error(data.message || "친구 추가 요청에 실패했습니다.");
+    }
+
+    return data.data
+
+}
