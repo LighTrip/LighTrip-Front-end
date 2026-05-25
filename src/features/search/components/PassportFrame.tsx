@@ -1,11 +1,14 @@
 import { Image, StyleSheet, Text, View } from "react-native";
-import type { Place } from "../types/passport.types";
+import type { PassportFeedItem } from "../types/passport.types";
 
-type SearchPassportCardProps = {
-  item: Place;
+type PassportFrameProps = {
+  item: PassportFeedItem;
 };
 
-export default function PassportFrame({item}: SearchPassportCardProps) {
+export default function PassportFrame({item}: PassportFrameProps) {
+
+  const placeImageUrl = item.imageUrls?.[0];
+
   return (
     <View style={styles.passportCard}>
       <Image
@@ -23,7 +26,11 @@ export default function PassportFrame({item}: SearchPassportCardProps) {
             resizeMode="contain"
           />
           <Image 
-            source={item.image}
+            source={
+              placeImageUrl
+                ? { uri: placeImageUrl}
+                : require("@/assets/images/default_profile.png")
+            }
             style={styles.placeImage}
             resizeMode="cover"
           />
@@ -34,8 +41,8 @@ export default function PassportFrame({item}: SearchPassportCardProps) {
           />
 
           <View style={styles.infoArea}>
-            <Text style={styles.infoRow}>📍 {item.name}</Text>
-            <Text style={styles.infoRow}>🗓 {item.date}</Text>
+            <Text style={styles.infoRow}>📍 {item.spaceName}</Text>
+            <Text style={styles.infoRow}>🗓 {item.visitedAt}</Text>
           </View>
         </View>
 
@@ -50,19 +57,23 @@ export default function PassportFrame({item}: SearchPassportCardProps) {
         <View style={styles.bottomHalf}>
           <View style={styles.reviewBox}>
             <Text style={styles.reviewText}>
-              "마포구에서 맛있는 커피를 파는 카페를 찾았다! 케이크도 있었는데 다음에 가면 케이크도 꼭 먹어 봐야겠다는 생각이 들었다. 🍰"
+              {item.content}
             </Text>
           </View>
 
           <View style={styles.musicBox}>
             <Image 
-              source={require("@/assets/images/profile1.jpg")}
+              source={require("@/assets/images/default_profile.png")}
               style={styles.musicImage}
             />
 
             <View style={styles.musicText}>
-              <Text style={styles.musicTitle}>멍냥</Text>
-              <Text style={styles.musicArtist}>KiiiKiii</Text>
+              <Text style={styles.musicTitle}>
+                {item.musicTitle || "음악 정보 없음"}
+              </Text>
+              <Text style={styles.musicArtist}>
+                {item.musicArtist || ""}
+              </Text>
             </View>
           </View>
 

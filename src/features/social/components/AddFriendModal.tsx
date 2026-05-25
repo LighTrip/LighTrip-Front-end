@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     Alert,
     FlatList,
     Modal,
@@ -11,38 +12,185 @@ import {
     View
 } from "react-native";
 
-import { addFriendDummy } from "../data/addFriendDummy";
-import { AddFriend } from "../types/social.types";
+import { BASE_URL } from "@/src/api/config";
+import * as Securestore from "expo-secure-store";
+import { RecommendedFriend } from "../types/social.types";
 import AddFriendCard from "./AddFriendCard";
 
 type AddFriendModalProps = {
     visible: boolean,
-    onClose: () => void,
+    onClose: () => void
 };
+
+type RecommendedFriendsResponse = {
+    success: boolean;
+    code: string;
+    message: string;
+    data: RecommendedFriend[];
+}
+
+type SearchFriendResponse = {
+    success: boolean;
+    code: string;
+    message: string;
+    data: RecommendedFriend;
+}
 
 export default function AddFriendModal({visible, onClose}: AddFriendModalProps) {
 
     const [keyword, setKeyword] = useState("");
+    const [friends, setFriends] = useState<RecommendedFriend[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
 
-    const filteredFriends = useMemo(() => {
+    // 1. 추천 친구 목록 받아오기 API 연결
+    const fetchRecommendedFriends = async () => {
+        const accessToken = await Securestore.getItemAsync("accessToken");
+
+        try {
+            setLoading(true);
+            setErrorMessage("");
+
+            console.log("추천 친구 목록 조회 시작");
+            console.log("추천 친구 목록 조회 요청 URL:", `${BASE_URL}/api/v1/friends/recommendations`)
+
+            const response = await fetch(`${BASE_URL}/api/v1/friends/recommendations`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${accessToken}`,
+                }
+            });
+
+            const data: RecommendedFriendsResponse = await response.json();
+
+            console.log("추천 친구 응답 상태:",response.status);
+            console.log("추천 친구 응답 데이터:", data);
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || "추천 친구 목록 조회 실패"); 
+            }
+
+            setFriends(data.data)
+        }catch(error) {
+            console.log("추천 친구 목록 조회 에러:", error);
+            setErrorMessage("추천 친구 목록을 불러오지 못했습니다.");
+        }finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect (() => {
+        if(!visible) return;
+
+        setKeyword("");
+        fetchRecommendedFriends();
+    }, [visible]);
+
+    // 2. 친구코드로 검색하는 API 연결
+    const handleSearchFriends = async () => {
+        const accessToken = await Securestore.getItemAsync("accessToken");
         const trimmedKeyword = keyword.trim();
 
         if(trimmedKeyword.length === 0) {
-            return addFriendDummy;
+            setErrorMessage("친구 코드를 입력해주세요.");
+            fetchRecommendedFriends();
+            return;
         }
 
-        return addFriendDummy.filter((friend) => {
-            return(
-                friend.id.includes(trimmedKeyword) || friend.phone.includes(trimmedKeyword)
-            );
-        });
-    }, [keyword]);
+        try {
+            setLoading(true);
+            setErrorMessage("");
 
-    const handleAddFriend = (friend: AddFriend) => {
-        Alert.alert(
-            "친구 요청 완료!",
-            `${friend.name}님에게 친구 요청을 보냈습니다.\n관련 정보는 마이페이지에서 확인할 수 있습니다.`
-        );
+            const requestUrl = `${BASE_URL}/api/v1/friends/search?code=${encodeURIComponent(trimmedKeyword)}`;
+
+            console.log("친구 코드 검색 시작");
+            console.log("친구 코드 검색 요청 URL:", requestUrl);
+            
+            const response = await fetch(requestUrl, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${accessToken}`,
+                }
+            });
+
+            const data: SearchFriendResponse = await response.json();
+
+            console.log("친구 코드 검색 응답 상태:", response.status);
+            console.log("친구 코드 검색 응답 데이터:", data);
+
+            if(!response.ok || !data.success) {
+                throw new Error(data.message || "친구 검색 실패");
+            }
+
+            setFriends([data.data])
+        }catch (error) {
+            console.log("친구 코드 검색 에러:", error);
+            setFriends([]);
+            setErrorMessage("검색 결과가 없습니다.");
+        }finally {
+            setLoading(false);
+        }
+    };
+
+    // 2-1. 검색창 비웠을 때 다시 추천 친구 목록 보이도록
+    const handleChangeKeyword = (text: string) => {
+        setKeyword(text);
+
+        if(text.trim().length === 0) {
+            setErrorMessage("");
+            fetchRecommendedFriends();
+        }
+    }
+
+    // 3. 친구 추가하는 API 연결
+    const handleAddFriend = async (friend: RecommendedFriend) => {
+        const accessToken = await Securestore.getItemAsync("accessToken");
+
+        try {
+            const requestUrl = `${BASE_URL}/api/v1/friends/request`;
+
+            console.log("친구 요청 시작");
+            console.log("친구 요청 URL:", requestUrl)
+            console.log("보낼 친구 코드:", friend.friendCode);
+
+            const response = await fetch(requestUrl, {
+                method: "POST",
+                headers: {
+                    "Contetnt-Type": "application/json",
+                    Authorization: `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                    friendCode: friend.friendCode,
+                })
+            })
+
+            const data = await response.json();
+
+            console.log("친구 요청 응답 상태:", response.status);
+            console.log("친구 요청 응답 데이터:", data);
+
+            if(!response.ok || !data.success) {
+                throw new Error(data.message || "친구 요청에 실패했습니다.")
+            }
+
+            Alert.alert(
+                "친구 요청 완료!",
+                `${friend.nickname}님에게 친구 요청을 보냈습니다.`
+            );
+
+            // 친구 요청 성공 후 추천 친구 목록 다시 불러오기
+            fetchRecommendedFriends();
+        } catch(error) {
+            console.log("친구 요청 에러:", error)
+
+            if(error instanceof Error) {
+                Alert.alert("친구 요청 실패", error.message)
+            }else {
+                Alert.alert("친구 요청 실패", "알 수 없는 오류가 발생했습니다.")
+            }
+        }
     };
 
     return (
@@ -70,29 +218,39 @@ export default function AddFriendModal({visible, onClose}: AddFriendModalProps) 
                 </View>
 
                 <View style={styles.content}>
-                    <FlatList  
-                        style={styles.list}
-                        data={filteredFriends}
-                        keyExtractor={(item) => item.id}
-                        renderItem={({item}) => (
-                            <AddFriendCard friend={item} onAdd={handleAddFriend} />
-                        )} 
-                        showsVerticalScrollIndicator={false}
-                        ListEmptyComponent={
-                            <Text style={styles.emptyText}>검색 결과가 없습니다.</Text>
-                        }
-                    />
+                    {loading ? (
+                        <View style={styles.centerBox}>
+                            <ActivityIndicator size="large" color="#1A3A6B" />
+                            <Text style={styles.emptyText}>추천 친구 목록을 불러오는 중입니다.</Text>
+                        </View>
+                    ) : (
+                        <FlatList  
+                            style={styles.list}
+                            data={friends}
+                            keyExtractor={(item) => String(item.friendId)}
+                            renderItem={({item}) => (
+                                <AddFriendCard friend={item} onAdd={handleAddFriend} />
+                            )} 
+                            showsVerticalScrollIndicator={false}
+                            ListEmptyComponent={
+                                <Text style={styles.emptyText}>검색 결과가 없습니다.</Text>
+                            }
+                        />
+                    )}
 
                     <View style={styles.searchBox}>
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="친구 코드 또는 전화번호 입력"
+                            placeholder="친구 코드 입력"
                             placeholderTextColor="#d9d9d9"
                             value={keyword}
-                            onChangeText={setKeyword}
+                            onChangeText={handleChangeKeyword}
                         />
 
-                        <TouchableOpacity style={styles.searchButton}>
+                        <TouchableOpacity 
+                            style={styles.searchButton}
+                            onPress={handleSearchFriends}
+                        >
                             <Text style={styles.searchButtonText}>검색</Text>
                         </TouchableOpacity>
                     </View>
@@ -189,5 +347,10 @@ const styles = StyleSheet.create({
     searchButtonText: {
         color: "#FFFFFF",
         fontSize: 14,
+    },
+    centerBox: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
     },
 })

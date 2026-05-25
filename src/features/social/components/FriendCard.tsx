@@ -7,6 +7,22 @@ type FriendCardProps = {
     onPress: () => void;
 };
 
+const defaultProfile = require("../../../../assets/images/default_profile.png");
+
+const getMutualFriendText = (
+    mutualFriends?: {nickname: string}[]
+) => {
+    if (!mutualFriends || mutualFriends.length === 0) {
+        return "함께 아는 친구 없음"
+    }
+
+    if (mutualFriends.length === 1) {
+        return `${mutualFriends[0].nickname}와 함께`
+    }
+
+    return `${mutualFriends[0].nickname} 외 ${mutualFriends.length -1}명과 함께 `;
+};
+
 export default function FriendCard({friend, isSelected, onPress}: FriendCardProps) {
     return(
         <TouchableOpacity
@@ -17,10 +33,17 @@ export default function FriendCard({friend, isSelected, onPress}: FriendCardProp
             ]}
             onPress={onPress}
         >
-            <Image source={friend.image} style={styles.profileImage} />
+            <Image 
+                source={
+                    friend.profileImg
+                        ? {uri: friend.profileImg}
+                        : defaultProfile
+                } style={styles.profileImage} />
             <Text style={styles.name}>{friend.name}</Text>
-            <Text style={styles.stampText}>도장{friend.stampCount}개</Text>
-            <Text style={styles.togetherText}>{friend.together}</Text>
+            <Text style={styles.stampText}>도장 {friend.stampCount ?? 0}개</Text>
+            <Text style={styles.togetherText}>
+                {getMutualFriendText(friend.mutualFriends)}
+            </Text>
         </TouchableOpacity>
     );
 };

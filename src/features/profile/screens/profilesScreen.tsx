@@ -1,7 +1,9 @@
+import { getMyProfile } from "@/src/api/profileApi";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     Image,
     ScrollView,
     StyleSheet,
@@ -9,26 +11,80 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import FriendManageModal from "../components/FriendManageModal";
+import TeamManageModal from "../components/TeamManageModal";
 import {
     accountMenuDummy,
     profileUserDummy,
     settingMenuDummy
 } from "../data/profileDummy";
+import { ProfileMenuItem, ProfileUser } from "../types/profile.types";
 
 export default function ProfileView() {
     const router = useRouter();
-    const [isTeam, setIsTeam] = useState(false);
 
-    const user = profileUserDummy;
+    const [isTeam, setIsTeam] = useState(false);
+    const [user, setUser] = useState<ProfileUser>(profileUserDummy);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
+    const [isFriendModalOpen, setIsFriendModalOpen] = useState(false);
+    
+    // 메뉴 클릭 함수
+    const handleMenuPress = (item: ProfileMenuItem) => {
+        if (item.id === "team") {
+            setIsTeamModalOpen(true);
+            return;
+        }
+
+        if (item.id === "friends") {
+            setIsFriendModalOpen(true);
+            return;
+        }
+
+        if (item.route) {
+            router.push(item.route as any);
+        }
+    }
+
+    useEffect(() => {
+        const fetchMyProfile = async () => {
+            try {
+                const profile = await getMyProfile();
+                setUser(profile);
+            }catch(error) {
+                console.log("내 프로필 조회 에러:", error);
+            }finally {
+                setIsLoading(false);
+            }
+        }
+        fetchMyProfile();
+    },[])
+
+    if (isLoading) {
+        return(
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#1A3A6B" />
+            </View>
+        )
+    }
 
     return(
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.content}>
             <Text style={styles.headerTitle}>마이페이지</Text>
 
             {/*프로필 카드*/}
             <View style={styles.profileCard}>
                 <View style={styles.profileLeft}>
-                    <Image source={user.profileImage} style={styles.profileImage} />
+                    <Image 
+                        source={
+                            user.profileImage
+                                ? {uri: user.profileImage}
+                                : require("@/assets/images/default_profile.png")
+                        } 
+                        style={styles.profileImage} 
+                    />
                     <View>
                         <Text style={styles.userName}>{user.name}</Text>
                         <View style={styles.locationSection}>
@@ -36,7 +92,7 @@ export default function ProfileView() {
                             <Text style={styles.userLocation}>{user.location}</Text>
                         </View>
                         <Text style={styles.userStatus}>
-                            {user.lightCount} | {user.locationCount} | {user.totallike}
+                            불빛: {user.passportCount} | 장소: {user.districtCount} | 좋아요: {user.totallike}
                         </Text>
                     </View>
                 </View>
@@ -104,10 +160,11 @@ export default function ProfileView() {
                                 index !== settingMenuDummy.length -1 && styles.menuItemBorder,
                             ]}
                             activeOpacity={0.8}
+                            onPress={() => handleMenuPress(item)}
                         >
                             <View style={styles.menuLeft}>
                                 <View style={styles.iconBox}>
-                                <   Ionicons name={item.icon as any} size={22} color="#FFFFFF" />
+                                <Ionicons name={item.icon as any} size={22} color="#FFFFFF" />
                                 </View>
 
                                 <View>
@@ -154,6 +211,19 @@ export default function ProfileView() {
                     </View>
                 </View>
         </ScrollView> 
+
+        {/*팀 관리 모달*/}
+        <TeamManageModal 
+            visible={isTeamModalOpen}
+            onClose={() => setIsTeamModalOpen(false)}
+        />
+
+        {/*친구 관리 모달*/}
+        <FriendManageModal
+            visible = {isFriendModalOpen}
+            onClose={() => setIsFriendModalOpen(false)}
+        />
+        </View>
     )
 }
 
@@ -231,6 +301,12 @@ const styles = StyleSheet.create({
         color: "#FFFFFF",
         fontSize: 14,
         marginTop: 8,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "#F8FAFD",
     },
 
     /*프리미엄*/

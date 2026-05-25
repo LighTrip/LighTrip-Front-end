@@ -1,6 +1,8 @@
+import { getPassportFeed } from "@/src/api/searchApi";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     Dimensions,
     FlatList,
     Image,
@@ -14,9 +16,8 @@ import PassportActionButtons from "../components/PassportActionButtons";
 import PassportFrame from "../components/PassportFrame";
 import SearchToggle from "../components/SearchToggle";
 import SearchUserCard from "../components/SearchUserCard";
-
-import { passportDummy } from "../data/passportDummy";
 import { rankingDummy } from "../data/searchDummy";
+import type { PassportFeedItem } from "../types/passport.types";
 import { RankingUser, SearchTab } from "../types/search.types";
 
 export default function SearchView() {
@@ -57,6 +58,15 @@ function AllSearchContent() {
     // 친구 추가 메시지
     const [showAddMessage, setShowAddMessage] = useState(false);
 
+    const [feedList, setFeedList] = useState<PassportFeedItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isFetchingMore, setIsFetchingMore] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+
+    const [hasNext, setHasNext] = useState(false);
+    const [nextCursor, setNextCursor] = useState<number | null>(null);
+    const [nextCursorScore, setNextCursorScore] = useState<number | null>(null);
+
     const handleAddFriend = () => {
         setShowAddMessage(true);
 
@@ -65,11 +75,62 @@ function AllSearchContent() {
         }, 2000);
     };
 
-    // 좋아요 및 스크랩
-    const [likeIds, setLikeIds] = useState<string[]>([]);
-    const [scrappedIds, setScrapped] = useState<string[]>([]);
+    // 릴스 피드 조회 API 연결
+    const fetchFeed = async (isNextPage = false) => {
+        try {
+            if (isNextPage) {
+                setIsFetchingMore(true);
+            } else {
+                setIsLoading(true);
+                setErrorMessage("");
+            }
 
-    const toggleLike = (id: string) => {
+            const result = await getPassportFeed({
+                size: 10,
+                cursor: isNextPage ? nextCursor : null,
+                cursorScore: isNextPage ? nextCursorScore : null
+            });
+
+            if (isNextPage) {
+                setFeedList((prev) => [...prev, ...result.content]);
+            } else {
+                setFeedList(result.content);
+            }
+
+            setHasNext(result.hasNext);
+            setNextCursor(result.nextCursor);
+            setNextCursorScore(result.nextCursorScore);
+        } catch(error) {
+            console.log("피드 조회 에러:", error);
+
+            if(error instanceof Error) {
+                setErrorMessage(error.message);
+            } else {
+                setErrorMessage("피드 조회 중 오류가 발생했습니다.")
+            }
+        } finally {
+            setIsLoading(false);
+            setIsFetchingMore(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchFeed();
+    }, []);
+
+    const handleEndReached = () => {
+        if (isLoading || isFetchingMore || !hasNext) {
+            return
+        }
+
+        fetchFeed(true);
+    };
+
+    // 좋아요 및 스크랩
+    const [likeIds, setLikeIds] = useState<number[]>([]);
+    const [scrappedIds, setScrappedIds] = useState<number[]>([]);
+
+    const toggleLike = (id: number) => {
         setLikeIds((prev) =>
             prev.includes(id)
                 ? prev.filter((likeId) => likeId !== id)
@@ -77,19 +138,43 @@ function AllSearchContent() {
         );
     };
 
-    const toggleScrap = (id: string) => {
-        setScrapped((prev) => 
+    const toggleScrap = (id: number) => {
+        setScrappedIds((prev) => 
             prev.includes(id)
                 ? prev.filter((scrappedId) => scrappedId !== id)
                 : [...prev, id]
         );
     };
 
+    if (isLoading) {
+        return (
+            <View style={styles.centerBox}>
+                <ActivityIndicator size="large" color="#1A3A6B" />
+            </View>
+        )
+    }
+
+    if (errorMessage) {
+        return (
+            <View style={styles.centerBox}>
+                <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+        )
+    }
+
+    if (feedList.length === 0) {
+        return (
+            <View style={styles.centerBox}>
+                <Text style={styles.emptyText}>아직 표시할 피드가 없습니다.</Text>
+            </View>
+        )
+    }
+
     return(
         <View style={styles.reelsContainer}>
             <FlatList
-                data={passportDummy}
-                keyExtractor= {(item) => item.id}
+                data={feedList}
+                keyExtractor= {(item) => String(item.passportId)}
                 renderItem= {({item}) => (
                     <View style={styles.reelsPage}>
                         <View style={styles.card}>
@@ -101,17 +186,22 @@ function AllSearchContent() {
 
                             <View style={styles.cardContent}>
                                 {/*사용자 정보*/}
-                                <SearchUserCard onAddFriend={handleAddFriend} />
+                                <SearchUserCard 
+                                    item={item}
+                                    onAddFriend={handleAddFriend} 
+                                />
                             
                                 {/*여권 상세*/}
                                 <View style={styles.passportDetailArea}>
                                     <PassportFrame item={item} />
 
                                     <PassportActionButtons
-                                        isLiked={likeIds.includes(item.id)}
-                                        isScrapped={scrappedIds.includes(item.id)}
-                                        onPressLike={() => toggleLike(item.id)}
-                                        onPressScrap={() => toggleScrap(item.id)}
+                                        isLiked={item.isLiked || likeIds.includes(item.passportId)}
+                                        isScrapped={
+                                            item.isScrapped|| scrappedIds.includes(item.passportId)
+                                        }
+                                        onPressLike={() => toggleLike(item.passportId)}
+                                        onPressScrap={() => toggleScrap(item.passportId)}
                                     />
                                 </View>
                             </View>
@@ -121,6 +211,13 @@ function AllSearchContent() {
             pagingEnabled
             showsVerticalScrollIndicator={false}
             decelerationRate="fast"
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={
+                isFetchingMore ? (
+                    <ActivityIndicator size="small" color="#1A3A6B" />
+                ) : null
+            }
         /> 
 
         {showAddMessage && (
@@ -317,6 +414,22 @@ const styles = StyleSheet.create({
     addMessageText: {
         color: "#FFFFFF",
         fontSize: 14,
+    },
+    centerBox: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: 20,
+    },
+    errorText: {
+        fontSize: 14,
+        color: "#ED3838",
+        textAlign: "center",
+    },
+    emptyText: {
+        fontSize: 14,
+        color: "#666667",
+        textAlign: "center",
     },
 
     // 랭킹

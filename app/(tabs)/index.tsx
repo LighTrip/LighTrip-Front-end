@@ -6,6 +6,7 @@ import * as Location from "expo-location";
 import { useRef, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AddPlaceScreen from '@/src/features/place/screens/AddPlaceScreen'
 
 const NAVY = "#0F2744";
 const TAB_BAR_HEIGHT = 80;
@@ -116,6 +117,7 @@ export default function MapScreen() {
       },
     ]);
     setShowDiscovery(false);
+    setShowAddPlace(true);
   };
 
   const handleDismiss = () => {
