@@ -52,7 +52,7 @@ export default function LoginScreen() {
     }
     await SecureStore.setItemAsync("accessToken", accessToken);
 
-    router.replace("/(tabs)");
+    router.replace("/signup");
   };
 
   const handleKakaoLogin = async () => {
