@@ -11,7 +11,7 @@ export type Friend = {
     friendId: number; // 친구 아이디 번호
     userId: number // 사용자 아이디 번호
     name: string; // 사용자 닉네임
-    profileImg: string | null; //프로필 이미지지
+    profileImg: string | null; //프로필 이미지
     friendCode: string; // 친구 코드
     status: string;
     createdAt: string;
@@ -33,7 +33,7 @@ export type RecommendedFriend = {
     status: string;
     createdAt: string;
 
-    stampCount: number; // 도장 개수
+    stampCount?: number; // 도장 개수
     mutualFriends?: MutualFriend[]; // 함께 아는 친구
     image?: ImageSourcePropType; // 사진
 }

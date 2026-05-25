@@ -1,8 +1,7 @@
-import { BASE_URL } from "@/src/api/config";
+import { getMyProfile } from "@/src/api/profileApi";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useFocusEffect, useRouter } from "expo-router";
-import * as Securestore from "expo-secure-store";
-import { useCallback, useState } from "react";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Image,
@@ -20,28 +19,6 @@ import {
     settingMenuDummy
 } from "../data/profileDummy";
 import { ProfileMenuItem, ProfileUser } from "../types/profile.types";
-
-type MyProfileResponse = {
-    success: boolean;
-    code: string;
-    message: string;
-    data: {
-        userId: number;
-        nickname: string;
-        email: string;
-        profileImg: string | null;
-        friendCode: string;
-        location: string | null;
-        bio: string | null;
-        currentMode: string;
-        createdAt: string;
-        stats: {
-            districtCount: number;
-            passportCount: number;
-            likeCount: number;
-        }
-    }
-}
 
 export default function ProfileView() {
     const router = useRouter();
@@ -70,51 +47,19 @@ export default function ProfileView() {
         }
     }
 
-    // 1. 내 프로필 조회 API 연결
-    const fetchMyProfile = async () => {
-        const accessToken = await Securestore.getItemAsync("accessToken");
-
-        try {
-            const response = await fetch(`${BASE_URL}/api/v1/users/me`, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            });
-
-            const result: MyProfileResponse = await response.json();
-
-            console.log("내 프로필 조회 상태 코드:", response.status);
-
-            if (!response.ok || !result.success) {
-                throw new Error(result.message || "내 프로필 조회 실패");
+    useEffect(() => {
+        const fetchMyProfile = async () => {
+            try {
+                const profile = await getMyProfile();
+                setUser(profile);
+            }catch(error) {
+                console.log("내 프로필 조회 에러:", error);
+            }finally {
+                setIsLoading(false);
             }
-
-            const profileData = result.data;
-
-            setUser({
-                id: `#${profileData.userId}`,
-                name: profileData.nickname,
-                location: profileData.location || "위치 미설정",
-                passportCount: profileData.stats.passportCount ?? 0,
-                districtCount: profileData.stats.districtCount ?? 0,
-                totallike: profileData.stats.likeCount ?? 0,
-                profileImage: profileData.profileImg,
-            });
-        } catch (error) {
-            console.log("내 프로필 조회 에러:", error);
-        } finally {
-            setIsLoading(false);
         }
-    };
-
-    useFocusEffect(
-        useCallback(() => {
-            setIsLoading(true);
-            fetchMyProfile();
-        }, [])
-    );
+        fetchMyProfile();
+    },[])
 
     if (isLoading) {
         return(

@@ -5,6 +5,7 @@ import {
 import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AddPlaceScreen from '@/src/features/place/screens/AddPlaceScreen'
 
 const NAVY = "#0F2744";
 const TAB_BAR_HEIGHT = 80; // 탭바 컴포넌트 실제 높이로 조정
@@ -78,18 +79,24 @@ export default function MapScreen() {
   const { bottom: safeBottom } = useSafeAreaInsets();
   const [showDiscovery, setShowDiscovery] = useState(true);
   const [showRegisterBtn, setShowRegisterBtn] = useState(false);
+  const [showAddPlace, setShowAddPlace] = useState(false);
 
   // 탭바 위 기준점
   const baseBottom = TAB_BAR_HEIGHT + safeBottom + 12;
 
   const handleConfirm = () => {
     setShowDiscovery(false);
+    setShowAddPlace(true);
   };
 
   const handleDismiss = () => {
     setShowDiscovery(false);
     setShowRegisterBtn(true);
   };
+
+  if (showAddPlace) {
+	return <AddPlaceScreen />
+  }
 
   return (
     <View style={styles.container}>

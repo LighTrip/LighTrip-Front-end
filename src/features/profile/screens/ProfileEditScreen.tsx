@@ -1,8 +1,11 @@
-import { BASE_URL } from "@/src/api/config";
+import {
+    getMyProfileEditForm,
+    updateMyProfile,
+    uploadProfileImage
+} from "@/src/api/profileApi";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import * as Securestore from "expo-secure-store";
 import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -16,47 +19,7 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
-
-type MyProfileResponse = {
-    success: boolean;
-    code: string;
-    message: string;
-    data: {
-        userId: number;
-        nickname: string;
-        email: string;
-        profileImg: string | null;
-        friendCode: string;
-        location: string | null;
-        bio: string | null;
-        currentMode: string;
-        createdAt: string;
-        stats: {
-            friendCount: number;
-            districtCount: number;
-            passportCount: number;
-            likeCount: number;
-            scrapCount: number;
-        }
-    }
-}
-
-// 이미지 업로드 관련 타입 정의
-type PresignedUrlResponse = {
-    presignedUrl: string;
-    imageUrl: string;
-}
-type PresignedUrlRequest = {
-    domain: string;
-    contentType: string;
-}
-
-type UpdateProfileRequest = {
-    nickname: string;
-    profileImg: string | null;
-    location: string;
-    bio: string;
-}
+import { UpdateProfileRequest } from "../types/profile.types";
 export default function ProfileEditView() {
     const router = useRouter();
 
@@ -75,34 +38,16 @@ export default function ProfileEditView() {
     // 1. 내 프로필 조회 API 연결
     useEffect(() => {
         const fetchMyProfile = async () => {
-            const accessToken = await Securestore.getItemAsync("accessToken");
 
             try {
-                const response = await fetch (`${BASE_URL}/api/v1/users/me`, {
-                    method: "GET",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${accessToken}`
-                    }
-                })
+                const profile = await getMyProfileEditForm();
 
-                const result: MyProfileResponse = await response.json();
-
-                console.log("프로필 수정 화면 조회 상태:", response.status);
-                console.log("프로필 수정 화면 조회 응답:", result);
-
-                if(!response.ok || !result.success) {
-                    throw new Error(result.message || "프로필 조회 실패");
-                }
-
-                const profileData = result.data;
-
-                setProfileImg(profileData.profileImg);
-                setEmail(profileData.email);
-                setUserId(`#${profileData.userId}`);
-                setNickname(profileData.nickname);
-                setLocation(profileData.location || "");
-                setBio(profileData.bio || "");
+                setProfileImg(profile.profileImg);
+                setEmail(profile.email);
+                setUserId(profile.userId);
+                setNickname(profile.nickname);
+                setLocation(profile.location || "");
+                setBio(profile.bio || "");
             } catch(error) {
                 console.log("프로필 수정 화면 조회 에러:", error)
             } finally {
@@ -113,60 +58,7 @@ export default function ProfileEditView() {
         fetchMyProfile();
     }, []);
 
-    // 2. 이미지 업로드 API 연결
-    const uploadImageToS3 = async (imageUri: string, contentType: string) => {
-        const accessToken = await Securestore.getItemAsync("accessToken");
-
-        if(!accessToken) {
-            throw new Error("로그인 토큰이 없습니다.");
-        }
-
-        // 2-1. Presigned URL 발급 요청
-        const presignedResponse = await fetch(`${BASE_URL}/api/v1/images/presigned-url`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({
-                domain: "profile",
-                contentType,
-            } satisfies PresignedUrlRequest),
-        });
-
-        const presignedResult: PresignedUrlResponse = await presignedResponse.json();
-
-        console.log("Presigned URL 발급 상태:", presignedResponse.status);
-        console.log("Presigned URL 발급 응답:", presignedResult);
-
-        if (!presignedResponse.ok) {
-            throw new Error("Presigned URL 발급 실패");
-        }
-
-        // 2-2.로컬 이미지 파일을 blob로 변환
-        const imageResponse = await fetch(imageUri);
-        const imageBlob = await imageResponse.blob();
-
-        // 2-3. S3 presignedUrl로 실제 이미지 업로드
-        const uploadResponse = await fetch (presignedResult.presignedUrl, {
-            method: "PUT",
-            headers: {
-                "Content-Type": contentType,
-            },
-            body: imageBlob,
-        })
-
-        console.log("S3 이미지 업로드 상태:", uploadResponse.status);
-
-        if(!uploadResponse.ok) {
-            throw new Error("S3 이미지 업로드 실패");
-        }
-
-        // 2-4. DB에 저장할 이미지 조회 URL 반환
-        return presignedResult.imageUrl;
-    }
-
-    // 갤러리에서 사진 고르기
+    // 2. 갤러리에서 사진 고르기
     const handlePickImage = async () => {
 
         const previousProfileImg = profileImg;
@@ -204,7 +96,7 @@ export default function ProfileEditView() {
             setProfileImg(imageUri);
 
             // S3 업로드 후 imageUrl 받기
-            const uploadedImageUrl = await uploadImageToS3(imageUri, contentType);
+            const uploadedImageUrl = await uploadProfileImage(imageUri, contentType);
 
             console.log("업로드 완료 imageUrl:", uploadedImageUrl);
 
@@ -230,12 +122,6 @@ export default function ProfileEditView() {
         setIsSaving(true);
 
         try {
-            const accessToken = await Securestore.getItemAsync("accessToken");
-
-            if(!accessToken) {
-                throw new Error("로그인 토큰이 없습니다.");
-            }
-
             const requestBody: UpdateProfileRequest = {
                 nickname: nickname.trim(),
                 profileImg: profileImg,
@@ -245,29 +131,11 @@ export default function ProfileEditView() {
 
             console.log("프로필 수정 요청 body:", requestBody);
 
-            const response = await fetch(`${BASE_URL}/api/v1/users/me`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify(requestBody),
-            })
-
-            const result: MyProfileResponse = await response.json();
-
-            console.log("프로필 수정 상태:", response.status);
-            console.log("프로필 수정 응답:", result)
-
-            if(!response.ok || !result.success) {
-                throw new Error(result.message || "프로필 수정 실패")
-            }
-
-            const updatedProfile = result.data;
+            const updatedProfile = await updateMyProfile(requestBody);
 
             setProfileImg(updatedProfile.profileImg)
             setEmail(updatedProfile.email)
-            setUserId(`#${updatedProfile.userId}`)
+            setUserId(updatedProfile.userId)
             setNickname(updatedProfile.nickname)
             setLocation(updatedProfile.location || "")
             setBio(updatedProfile.bio || "")

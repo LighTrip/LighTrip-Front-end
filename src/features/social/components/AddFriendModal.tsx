@@ -145,11 +145,52 @@ export default function AddFriendModal({visible, onClose}: AddFriendModalProps) 
     }
 
     // 3. 친구 추가하는 API 연결
-    const handleAddFriend = (friend: RecommendedFriend) => {
-        Alert.alert(
-            "친구 요청 완료!",
-            `${friend.nickname}님에게 친구 요청을 보냈습니다.\n관련 정보는 마이페이지에서 확인할 수 있습니다.`
-        );
+    const handleAddFriend = async (friend: RecommendedFriend) => {
+        const accessToken = await Securestore.getItemAsync("accessToken");
+
+        try {
+            const requestUrl = `${BASE_URL}/api/v1/friends/request`;
+
+            console.log("친구 요청 시작");
+            console.log("친구 요청 URL:", requestUrl)
+            console.log("보낼 친구 코드:", friend.friendCode);
+
+            const response = await fetch(requestUrl, {
+                method: "POST",
+                headers: {
+                    "Contetnt-Type": "application/json",
+                    Authorization: `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                    friendCode: friend.friendCode,
+                })
+            })
+
+            const data = await response.json();
+
+            console.log("친구 요청 응답 상태:", response.status);
+            console.log("친구 요청 응답 데이터:", data);
+
+            if(!response.ok || !data.success) {
+                throw new Error(data.message || "친구 요청에 실패했습니다.")
+            }
+
+            Alert.alert(
+                "친구 요청 완료!",
+                `${friend.nickname}님에게 친구 요청을 보냈습니다.`
+            );
+
+            // 친구 요청 성공 후 추천 친구 목록 다시 불러오기
+            fetchRecommendedFriends();
+        } catch(error) {
+            console.log("친구 요청 에러:", error)
+
+            if(error instanceof Error) {
+                Alert.alert("친구 요청 실패", error.message)
+            }else {
+                Alert.alert("친구 요청 실패", "알 수 없는 오류가 발생했습니다.")
+            }
+        }
     };
 
     return (
