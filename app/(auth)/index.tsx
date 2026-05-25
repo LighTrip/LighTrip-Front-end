@@ -31,27 +31,22 @@ export default function LoginScreen() {
   }, []);
 
   const handleDeepLink = async (event: { url: string }) => {
-    console.log("딥링크 수신:", event.url);
-
     const parsed = Linking.parse(event.url);
-    console.log("path:", parsed.path);
-    console.log("queryParams:", parsed.queryParams);
 
-    if (!parsed.path?.includes("callback")) {
-      console.log("path 불일치로 return");
-      return;
-    }
+    if (!parsed.path?.includes("callback")) return;
 
     const accessToken = parsed.queryParams?.accessToken as string | undefined;
-    console.log("accessToken:", accessToken);
+    const isNewUser = parsed.queryParams?.isNewUser === "true";
 
-    if (!accessToken) {
-      console.log("accessToken 없어서 return");
-      return;
-    }
+    if (!accessToken) return;
+
     await SecureStore.setItemAsync("accessToken", accessToken);
 
-    router.replace("/signup");
+    if (isNewUser) {
+      router.replace("/signup");
+    } else {
+      router.replace("/(tabs)");
+    }
   };
 
   const handleKakaoLogin = async () => {
