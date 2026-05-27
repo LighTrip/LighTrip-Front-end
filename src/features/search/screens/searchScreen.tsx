@@ -8,6 +8,8 @@ import { SearchTab } from "../types/search.types";
 
 export default function SearchView() {
     const [selectedTab, setSelectedTab] = useState<SearchTab>("all");
+    const [requestedFriendCodes, setRequestedFriendCodes] = useState<string[]>([]);
+
 
     return (
         <SafeAreaView style={styles.container}>
@@ -23,7 +25,10 @@ export default function SearchView() {
             </View>
 
             {selectedTab === "all" ? (
-                <AllSearchContent />
+                <AllSearchContent 
+                    requestedFriendCodes ={requestedFriendCodes}
+                    setRequestedFriendCodes={setRequestedFriendCodes}
+                />
             ) : (
                 <RankingContent />
             )}

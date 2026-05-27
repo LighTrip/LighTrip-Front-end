@@ -1,4 +1,4 @@
-import { getPassportFeed } from "@/src/api/searchApi";
+import { getPassportFeed, requestFriend } from "@/src/api/searchApi";
 import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -14,13 +14,23 @@ import PassportActionButtons from "./PassportActionButtons";
 import PassportFrame from "./PassportFrame";
 import SearchUserCard from "./SearchUserCard";
 
+type AllSearchContentProps = {
+    requestedFriendCodes: string[];
+    setRequestedFriendCodes: React.Dispatch<React.SetStateAction<string[]>>;
+}
+
 // 둘러보기 메인 화면
-export default function AllSearchContent() {
+export default function AllSearchContent({
+    requestedFriendCodes,
+    setRequestedFriendCodes,
+}: AllSearchContentProps) {
 
-    // 친구 추가 메시지
+    // 친구 추가 관련 state
     const [showAddMessage, setShowAddMessage] = useState(false);
+    const [addFriendMessage, setAddFriendMessage] = useState("");
+    const [isRequestingFriend, setIsRequestingFriend] = useState(false);
 
-    // 피드 조회
+    // 피드 조회 관련 state
     const [feedList, setFeedList] = useState<PassportFeedItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isFetchingMore, setIsFetchingMore] = useState(false);
@@ -33,13 +43,38 @@ export default function AllSearchContent() {
     const [likeIds, setLikeIds] = useState<number[]>([]);
     const [scrappedIds, setScrappedIds] = useState<number[]>([]);
 
-    // 친구 추가
-    const handleAddFriend = () => {
-        setShowAddMessage(true);
+    // 친구 추가 API 연결
+    const handleAddFriend = async (friendCode: string) => {
+        if (isRequestingFriend) return;
 
-        setTimeout(() => {
-            setShowAddMessage(false);
-        }, 2000);
+        try {
+            setIsRequestingFriend(true);
+
+            await requestFriend(friendCode);
+
+            setRequestedFriendCodes((prev) => 
+                prev.includes(friendCode) ? prev : [...prev, friendCode]
+            );
+
+            setAddFriendMessage("친구 추가 요청을 보냈습니다.")
+            setShowAddMessage(true);
+        } catch(error) {
+            console.log("친구 추가 요청 에러:", error);
+
+            if(error instanceof Error) {
+                setAddFriendMessage(error.message);
+            } else {
+                setAddFriendMessage("친구 추가 요청 중 오류가 발생했습니다.")
+            }
+
+            setShowAddMessage(true);
+        } finally {
+            setIsRequestingFriend(false);
+
+            setTimeout(() => {
+                setShowAddMessage(false);
+            }, 2000);
+        }
     };
 
     // 릴스 피드 조회 API 연결
@@ -153,6 +188,7 @@ export default function AllSearchContent() {
                                 <SearchUserCard
                                     item={item}
                                     onAddFriend={handleAddFriend}
+                                    isRequested={requestedFriendCodes.includes(item.writerFriendCode)}
                                 />
 
                                 <View style={styles.passportDetailArea}>
@@ -190,7 +226,7 @@ export default function AllSearchContent() {
             {showAddMessage && (
                 <View style={styles.addMessageBox}>
                     <Text style={styles.addMessageText}>
-                        친구 추가 요청을 보냈습니다.
+                        {addFriendMessage}
                     </Text>
                 </View>
             )}
