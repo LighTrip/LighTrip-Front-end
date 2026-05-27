@@ -1,3 +1,5 @@
+import { likePassport, unlikePassport } from "@/src/api/list/like.api";
+import { scrapPassport, unscrapPassport } from "@/src/api/list/scrap.api";
 import { getPassportFeed, requestFriend } from "@/src/api/searchApi";
 import { useEffect, useState } from "react";
 import {
@@ -40,10 +42,11 @@ export default function AllSearchContent({
     const [nextCursor, setNextCursor] = useState<number | null>(null);
     const [nextCursorScore, setNextCursorScore] = useState<number | null>(null);
 
-    const [likeIds, setLikeIds] = useState<number[]>([]);
-    const [scrappedIds, setScrappedIds] = useState<number[]>([]);
+    // 좋아요/스크랩 관련 state
+    const [likingPassportIds, setLikingPassportIds] = useState<number[]>([]);
+    const [scrappingPassportIds, setScrappingPassportIds] = useState<number[]>([]);
 
-    // 친구 추가 API 연결
+    // 1. 친구 추가 API 연결
     const handleAddFriend = async (friendCode: string) => {
         if (isRequestingFriend) return;
 
@@ -77,7 +80,7 @@ export default function AllSearchContent({
         }
     };
 
-    // 릴스 피드 조회 API 연결
+    // 2. 릴스 피드 조회 API 연결
     const fetchFeed = async (isNextPage = false) => {
         try {
             if (isNextPage) {
@@ -128,22 +131,151 @@ export default function AllSearchContent({
         fetchFeed(true);
     };
 
-    // 좋아요 
-    const toggleLike = (id: number) => {
-        setLikeIds((prev) =>
-            prev.includes(id)
-                ? prev.filter((likeId) => likeId !== id)
-                : [...prev, id]
+    // 3. 좋아요 
+    const toggleLike = async (passportId: number) => {
+        if (likingPassportIds.includes(passportId)) return;
+
+        const targetItem = feedList.find(
+            (item) => item.passportId === passportId
         );
+
+        if (!targetItem) return;
+
+        const previousIsLiked = targetItem.isLiked;
+        const previousLikeCount = targetItem.likeCount;
+
+        try {
+            setLikingPassportIds((prev) => [...prev, passportId]);
+
+            // 화면에 먼저 반영
+            setFeedList((prev) =>
+                prev.map((item) => 
+                    item.passportId === passportId
+                        ? {
+                            ...item,
+                            isLiked: !item.isLiked,
+                            likeCount: item.isLiked
+                                ? Math.max(item.likeCount - 1, 0)
+                                : item.likeCount +1
+                        }
+                        : item
+                )
+            );
+
+            // 실제 좋아요 API 호출
+            if (previousIsLiked) {
+                // 좋아요 취소
+                const response = await unlikePassport(passportId);
+
+                console.log("좋아요 취소 성공:", {
+                    passportId,
+                    status: response.status,
+                    data: response.data
+                })
+
+            } else { 
+                // 좋아요 등록
+                const response = await likePassport(passportId); 
+
+                console.log("좋아요 등록 성공:", {
+                    passportId,
+                    status: response.status,
+                    data: response.data
+                })
+            }
+        }catch(error) {
+            console.log("좋아요 처리 에러:", error);
+
+            // 실패하면 원래 상태로 복구
+            setFeedList((prev) =>
+                prev.map((item) => 
+                    item.passportId === passportId
+                        ? {
+                            ...item,
+                            isLiked: previousIsLiked,
+                            likeCount: previousLikeCount,
+                        }
+                        : item
+                )
+            )
+        }finally {
+            setLikingPassportIds((prev) =>
+                prev.filter((id) => id !== passportId)
+            )
+        }
     };
 
-    // 스크랩
-    const toggleScrap = (id: number) => {
-        setScrappedIds((prev) =>
-            prev.includes(id)
-                ? prev.filter((scrappedId) => scrappedId !== id)
-                : [...prev, id]
+    // 4. 스크랩
+    const toggleScrap = async (passportId: number) => {
+
+        if(scrappingPassportIds.includes(passportId)) return;
+
+        const targetItem = feedList.find(
+            (item) => item.passportId === passportId
         );
+
+        if(!targetItem) return;
+
+        const previousIsScrapped = targetItem.isScrapped;
+        const previousScrapCount = targetItem.scrapCount;
+
+        try {
+            setScrappingPassportIds((prev) => [...prev, passportId]);
+
+            // 화면에 먼저 반영
+            setFeedList((prev) =>
+                prev.map((item) =>
+                    item.passportId === passportId
+                        ? {
+                            ...item,
+                            isScrapped: !item.isScrapped,
+                            scrapCount: item.isScrapped
+                                ? Math.max(item.scrapCount -1, 0)
+                                : item.scrapCount+1
+                        }
+                        : item
+                )
+            )
+
+            // 실제 스크랩 API 호출
+            if(previousIsScrapped) {
+                const response = await unscrapPassport(passportId);
+
+                console.log("스크랩 취소 성공:", {
+                    passportId,
+                    status: response.status,
+                    data: response.data
+                })
+            } else {
+                const response = await scrapPassport(passportId);
+
+                console.log("스크랩 등록 성공:", {
+                    passportId,
+                    status: response.status,
+                    data: response.data
+                })
+            }
+        } catch(error: any) {
+            console.log("스크랩 처리 에러:", error);
+
+            // 실패하면 원래 상태로 복구
+            setFeedList((prev) =>
+                prev.map((item) => 
+                    item.passportId === passportId
+                        ? {
+                            ...item,
+                            isScrapped: previousIsScrapped,
+                            scrapCount: previousScrapCount,
+                        }
+                        : item
+                )
+            )
+        } finally {
+            setScrappingPassportIds((prev) => 
+                prev.filter((id) => id !== passportId)
+            )
+        }
+    
     };
 
     if (isLoading) {
@@ -195,14 +327,10 @@ export default function AllSearchContent({
                                     <PassportFrame item={item} />
 
                                     <PassportActionButtons
-                                        isLiked={
-                                            item.isLiked ||
-                                            likeIds.includes(item.passportId)
-                                        }
-                                        isScrapped={
-                                            item.isScrapped ||
-                                            scrappedIds.includes(item.passportId)
-                                        }
+                                        isLiked={item.isLiked}
+                                        isScrapped={item.isScrapped}
+                                        isLiking={likingPassportIds.includes(item.passportId)}
+                                        isScrapping={scrappingPassportIds.includes(item.passportId)}
                                         onPressLike={() => toggleLike(item.passportId)}
                                         onPressScrap={() => toggleScrap(item.passportId)}
                                     />
