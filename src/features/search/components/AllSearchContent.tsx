@@ -21,6 +21,9 @@ type AllSearchContentProps = {
     setRequestedFriendCodes: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const CARD_WIDTH = SCREEN_WIDTH - 48;
+
 // 둘러보기 메인 화면
 export default function AllSearchContent({
     requestedFriendCodes,
@@ -37,6 +40,7 @@ export default function AllSearchContent({
     const [isLoading, setIsLoading] = useState(true);
     const [isFetchingMore, setIsFetchingMore] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
+    const [listHeight, setListHeight] = useState(0);
 
     const [hasNext, setHasNext] = useState(false);
     const [nextCursor, setNextCursor] = useState<number | null>(null);
@@ -303,53 +307,63 @@ export default function AllSearchContent({
     }
 
     return (
-        <View style={styles.reelsContainer}>
-            <FlatList
-                data={feedList}
-                keyExtractor={(item) => String(item.passportId)}
-                renderItem={({ item }) => (
-                    <View style={styles.reelsPage}>
-                        <View style={styles.card}>
-                            <Image
-                                source={require("@/assets/images/noise.png")}
-                                style={styles.noiseBackground}
-                                resizeMode="cover"
-                            />
-
-                            <View style={styles.cardContent}>
-                                <SearchUserCard
-                                    item={item}
-                                    onAddFriend={handleAddFriend}
-                                    isRequested={requestedFriendCodes.includes(item.writerFriendCode)}
+        <View 
+            style={styles.reelsContainer}
+            onLayout={(event) => {
+                setListHeight(event.nativeEvent.layout.height)
+            }}
+        >
+            {listHeight > 0 && (
+                <FlatList
+                    data={feedList}
+                    keyExtractor={(item) => String(item.passportId)}
+                    renderItem={({ item }) => (
+                        <View style={[styles.reelsPage, { height: listHeight }]}>
+                            <View style={[styles.card, { height: listHeight - 16 }]}>
+                                <Image
+                                    source={require("@/assets/images/noise.png")}
+                                    style={styles.noiseBackground}
+                                    resizeMode="cover"
                                 />
 
-                                <View style={styles.passportDetailArea}>
-                                    <PassportFrame item={item} />
-
-                                    <PassportActionButtons
-                                        isLiked={item.isLiked}
-                                        isScrapped={item.isScrapped}
-                                        isLiking={likingPassportIds.includes(item.passportId)}
-                                        isScrapping={scrappingPassportIds.includes(item.passportId)}
-                                        onPressLike={() => toggleLike(item.passportId)}
-                                        onPressScrap={() => toggleScrap(item.passportId)}
+                                <View style={styles.cardContent}>
+                                    <SearchUserCard
+                                        item={item}
+                                        onAddFriend={handleAddFriend}
+                                        isRequested={requestedFriendCodes.includes(item.writerFriendCode)}
                                     />
+
+                                    <View style={styles.passportDetailArea}>
+                                        <PassportFrame item={item} />
+
+                                        <PassportActionButtons
+                                            isLiked={item.isLiked}
+                                            isScrapped={item.isScrapped}
+                                            isLiking={likingPassportIds.includes(item.passportId)}
+                                            isScrapping={scrappingPassportIds.includes(item.passportId)}
+                                            onPressLike={() => toggleLike(item.passportId)}
+                                            onPressScrap={() => toggleScrap(item.passportId)}
+                                        />
+                                    </View>
                                 </View>
                             </View>
                         </View>
-                    </View>
-                )}
-                pagingEnabled
-                showsVerticalScrollIndicator={false}
-                decelerationRate="fast"
-                onEndReached={handleEndReached}
-                onEndReachedThreshold={0.5}
-                ListFooterComponent={
-                    isFetchingMore ? (
-                        <ActivityIndicator size="small" color="#1A3A6B" />
-                    ) : null
-                }
-            />
+                    )}
+                    pagingEnabled
+                    snapToInterval={listHeight}
+                    snapToAlignment="start"
+                    decelerationRate="fast"
+                    disableIntervalMomentum
+                    showsVerticalScrollIndicator={false}
+                    onEndReached={handleEndReached}
+                    onEndReachedThreshold={0.5}
+                    ListFooterComponent={
+                        isFetchingMore ? (
+                            <ActivityIndicator size="small" color="#1A3A6B" />
+                        ) : null
+                    }
+                />
+            )}
 
             {showAddMessage && (
                 <View style={styles.addMessageBox}>
@@ -384,14 +398,13 @@ const styles = StyleSheet.create({
         position: "relative",
     },
     reelsPage: {
-        height: Dimensions.get("window").height - 150,
-        paddingHorizontal: 20,
-        paddingBottom: 24,
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 24,
     },
     card: {
-        flex: 1,
+        width: CARD_WIDTH,
         position: "relative",
-        width: "100%",
         backgroundColor: "#F8FAFD",
         borderRadius: 16,
         shadowColor: "#000000",

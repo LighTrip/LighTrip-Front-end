@@ -41,6 +41,7 @@ export default function PassportFrame({item}: PassportFrameProps) {
           />
 
           <View style={styles.infoArea}>
+            <Text style={styles.infoRow}>🏷 {item.categoryDisplayName || item.category}</Text>
             <Text style={styles.infoRow}>📍 {item.spaceName}</Text>
             <Text style={styles.infoRow}>🗓 {item.visitedAt}</Text>
           </View>
