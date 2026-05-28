@@ -40,7 +40,7 @@ const PlaceListView = ({ data, onSelectPlace }: Props) => {
     }
 
     return (
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, marginBottom: 90 }}>
             
             <FlatList
                 data={data}

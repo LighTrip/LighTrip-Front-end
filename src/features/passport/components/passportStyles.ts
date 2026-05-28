@@ -51,7 +51,7 @@ export const passportStyles = StyleSheet.create({
     
     listCard: {
         width: Dimensions.get('window').width - 32,
-        height: 85,
+        height: 80,
         flexDirection: 'row',
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
@@ -71,7 +71,7 @@ export const passportStyles = StyleSheet.create({
         fontWeight: '600',
         marginBottom: 4,
     },
-
+    
     stamp: {
         color: '#000000',
         fontSize: 14,
@@ -104,7 +104,7 @@ export const passportStyles = StyleSheet.create({
         zIndex: 999,
         minWidth: 130,
     },
-    
+
     dropdownOption: {
         paddingVertical: 12,
         paddingHorizontal: 16,
