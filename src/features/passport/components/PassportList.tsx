@@ -4,16 +4,15 @@ import {
     StyleSheet,
     Image,
     TouchableOpacity,
-    TextInput,
     Dimensions,
     FlatList,
 } from 'react-native';
-import React, { useState } from 'react'
-import colors from '@/src/constant/colors';
-import Ionicons from '@expo/vector-icons/build/Ionicons';
-import { passportStyles, COVER_WIDTH, COVER_HEIGHT } from './passportStyles';
-import PlaceListView, { Place } from './PlaceList';
+import { useFocusEffect } from 'expo-router'
+import React, { useState, useCallback, useEffect } from 'react'
+import { COVER_WIDTH, COVER_HEIGHT } from './passportStyles';
+import PlaceListView from './PlaceListView';
 import SearchBar from './SearchBar'
+import { getDistrictsPassports, getMyPassportDistricts, getMyPassports, MyPassport } from '@/src/api/passport/passport.api'
 
 const chunkArray = <T,>(array: T[], size: number): T[][] => {
     return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
@@ -21,42 +20,99 @@ const chunkArray = <T,>(array: T[], size: number): T[][] => {
     );
 };
 
-const PLACES: Place[] = [
-    { id: '1', name: '렉터스라운지 홍대', image: require('../../../../assets/images/mapo.png'), district: '마포', date: '2026-03-30', category: '카페' },
-    { id: '2', name: '다운타우너', image: require('../../../../assets/images/yongsan.png'), district: '용산', date: '2026-03-16', category: '식당' },
-    { id: '3', name: '포셋 연희', image: require('../../../../assets/images/seodaemun.png'), district: '서대문', date: '2026-02-24', category: '카페' },
-    { id: '4', name: '명동 쇼핑 거리', image: require('../../../../assets/images/mapo.png'), district: '중구', date: '2026-04-12', category: '쇼핑' },
-    { id: '5', name: '초이다이닝 강남', image: require('../../../../assets/images/yongsan.png'), district: '강남', date: '2026-01-30', category: '음식점' },
-    { id: '6', name: '카페 드 파리', image: require('../../../../assets/images/seodaemun.png'), district: '서초', date: '2026-02-15', category: '카페' },
-    { id: '7', name: '가게', image: require('../../../../assets/images/mapo.png'), district: '일산동구', date: '2026-03-05', category: '카페' },
-    { id: '8', name: '식당', image: require('../../../../assets/images/yongsan.png'), district: '용산', date: '2026-02-11', category: '식당' },
-];
-
-const districtGroups = PLACES.reduce((acc, place) => {
-    if (!acc[place.district]) acc[place.district] = []
-    acc[place.district].push(place)
-    return acc
-}, {} as Record<string, Place[]>)
-
-const districts = Object.keys(districtGroups)
-
 type Props = {
-    onSelectPlace: (item: Place, group?: Place[]) => void
+    onSelectPlace: (item: MyPassport, group?: MyPassport[]) => void
+    initialTab?: 'cover' | 'list'
+    onTabChange?: (tab: 'cover' | 'list') => void
 }
 
-const PassportList = ({ onSelectPlace }: Props) => {
-    const [selected, setSelected] = useState<'cover' | 'list'>('cover')
+const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange }: Props) => {
+    const [selected, setSelected] = useState<'cover' | 'list'>(initialTab)
     const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null)
+    const [districts, setDistricts] = useState<any[]>([])  
+    const [passports, setPassports] = useState<MyPassport[]>([])
+    const [coverSortOrder, setCoverSortOrder] = useState('최근 방문순')
+    const [listSortOrder, setListSortOrder] = useState('최근 방문순')
+    const [searchQuery, setSearchQuery] = useState('')
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchDistricts()
+            fetchPassports()   // 도장 탭용
+        }, [])
+    )
+    
+    useEffect(() => {
+        if (initialTab) setSelected(initialTab)
+    }, [initialTab])
+
+    const sortedDistricts = [...districts].sort((a, b) => {
+        if (coverSortOrder === '이름순') return a.displayName.localeCompare(b.displayName)
+        return 0
+    })
+
+    const sortedPassports = [...passports].sort((a, b) => {
+        if (listSortOrder === '이름순') return a.spaceName.localeCompare(b.spaceName, 'ko')
+        return 0
+    })
+
+    const filteredPassports = sortedPassports.filter(p => {
+        if (!searchQuery) return true
+        const q = searchQuery.toLowerCase()
+        return (
+            p.spaceName?.toLowerCase().includes(q) ||
+            p.districtDisplayName?.toLowerCase().includes(q) ||
+            p.categoryDisplayName?.toLowerCase().includes(q)
+        )
+    })
+
+    const filteredDistricts = sortedDistricts.filter(d => {
+        if (!searchQuery) return true
+        const q = searchQuery.toLowerCase()
+        return d.displayName?.toLowerCase().includes(q)
+    })
+
+    const fetchPassports = async () => {
+        try {
+            const res = await getMyPassports()
+            setPassports(res.data?.data?.content ?? [])
+        } catch (e) {
+            console.error(e)
+        }
+    }
+
+    const fetchDistricts = async () => {
+        try {
+            const res = await getMyPassportDistricts()
+            console.log('districts[0]:', JSON.stringify(res.data?.data?.[0]))
+
+            setDistricts(res.data?.data ?? [])
+        } catch (e) {
+            console.error(e)
+        }
+    }
+
+    const handleDistrictPress = async (district: any) => {
+        try {
+            const res = await getDistrictsPassports(district.districtCategory)
+            const items: MyPassport[] = res.data?.data?.content ?? []
+            if (items.length > 0) {
+                onSelectPlace(items[0], items)
+            }
+        } catch (e) {
+            console.error(e)
+        }
+    }
 
     const coverContent = selectedDistrict ? (
         <PlaceListView
-            data={districtGroups[selectedDistrict]}
+            data={sortedPassports}
             onSelectPlace={onSelectPlace}
         />
     ) : (
         <FlatList
             style={{ height: COVER_HEIGHT * 2, overflow: 'hidden' }}
-            data={chunkArray(districts, 4)}
+            data={chunkArray(filteredDistricts, 4)}
             keyExtractor={(_, index) => String(index)}
             horizontal
             pagingEnabled
@@ -65,19 +121,19 @@ const PassportList = ({ onSelectPlace }: Props) => {
                 <View style={styles.page}>
                     {pageItems.map((district) => (
                         <TouchableOpacity
-                            key={district}
+                            key={district.districtCategory}
                             style={styles.passportCover}
-                            onPress={() => {
-                                const placesInDistrict = districtGroups[district]
-                                onSelectPlace(placesInDistrict[0], placesInDistrict)
-                            }}
+                            onPress={() => handleDistrictPress(district)}
                         >
                             <Image
-                                source={districtGroups[district][0].image}
-                                style={StyleSheet.absoluteFillObject}
+                                source={{ uri: district.thumbnailUrl }}
+                                style={[StyleSheet.absoluteFillObject, {
+                                    borderTopRightRadius: 16, 
+                                    borderBottomRightRadius: 16,
+                                }]}
                                 resizeMode="cover"
                             />
-                            <Text style={styles.placeName}>{district}</Text>
+                            <Text style={styles.placeName}>{district.displayName}</Text>
                         </TouchableOpacity>
                     ))}
                 </View>
@@ -91,24 +147,28 @@ const PassportList = ({ onSelectPlace }: Props) => {
                 <>
                     <TouchableOpacity
                         style={[styles.tabButton, selected === 'cover' && styles.tabButtonActive]}
-                        onPress={() => { setSelected('cover'); setSelectedDistrict(null) }}
+                        onPress={() => { setSelected('cover'); setSelectedDistrict(null); onTabChange?.('cover')  }}
                     >
                         <Text style={[styles.tabText, selected === 'cover' && styles.tabTextActive]}>여권</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.tabButton, selected === 'list' && styles.tabButtonActive]}
-                        onPress={() => setSelected('list')}
+                        onPress={() => { setSelected('list'); onTabChange?.('list') }}
                     >
                         <Text style={[styles.tabText, selected === 'list' && styles.tabTextActive]}>도장</Text>
                     </TouchableOpacity>
                 </>
             </View>
 
-            <SearchBar label={selectedDistrict ? `${selectedDistrict}구` : undefined} />
+            <SearchBar 
+            label={selectedDistrict ? `${selectedDistrict}구` : undefined} 
+            onSortChange={selected === 'cover' ? setCoverSortOrder : setListSortOrder}
+            onSearchChange={setSearchQuery}
+            />
 
             {selected === 'cover' ? coverContent : (
                 <PlaceListView
-                    data={PLACES}
+                    data={filteredPassports}
                     onSelectPlace={onSelectPlace}
                 />
             )}
@@ -121,25 +181,27 @@ export default PassportList
 const styles = StyleSheet.create({
     tabRow: {
         flexDirection: 'row',
-        justifyContent: 'flex-end',
-        marginHorizontal: 13,
-        marginBottom: 10,
-        gap: 13,
+        justifyContent: 'center',
+        marginBottom: 5,
     },
+
     tabButton: {
-        width: COVER_WIDTH * 0.96,
+        width: COVER_WIDTH * 0.98,
         height: 39,
         alignItems: 'center',
         justifyContent: 'center',
+        marginHorizontal: 5,
         borderRadius: 10,
         backgroundColor: '#FFFFFF',
         borderWidth: 2,
         borderColor: '#1A3A6B',
     },
+
     tabButtonActive: {
         backgroundColor: '#1A3A6B',
         borderColor: '#1A3A6B',
     },
+
     tabText: {
         color: '#4c4c4c90',
         fontSize: 16,
@@ -147,28 +209,38 @@ const styles = StyleSheet.create({
         includeFontPadding: false,
         textAlignVertical: 'center',
     },
+
     tabTextActive: {
         color: '#ffffff',
         fontWeight: 'bold',
         includeFontPadding: false,
         textAlignVertical: 'center',
     },
+
     page: {
         width: Dimensions.get('window').width,
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginTop: 3,
+        marginTop: 10,
         paddingHorizontal: 15,
         justifyContent: 'flex-start',
-        gap: 1,
+        gap: 11,
     },
     passportCover: {
         width: COVER_WIDTH,
         height: COVER_HEIGHT,
-        borderRadius: 16,
-        overflow: 'hidden',
+        borderTopRightRadius: 16,
+        borderBottomRightRadius: 16,
+        borderTopLeftRadius: 0,
+        borderBottomLeftRadius: 0,
         alignItems: 'center',
+        shadowColor: '#1A3A6B',
+        shadowOffset: { width: 3, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 2,
+        elevation: 4,
     },
+
     placeName: {
         position: 'absolute',
         top: '30%',

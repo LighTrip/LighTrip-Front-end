@@ -20,14 +20,25 @@ export const API_ENDPOINTS = {
   USER: {},
 
   PASSPORT: {
+    // 여권 등록
     CREATE: '/api/v1/passports',
+    // 여권 상세 조회
     GET_DETAIL: (passportId: number) => `/api/v1/passports/${passportId}`,
+    // 여권 수정
     UPDATE: (passportId: number) => `/api/v1/passports/${passportId}`,
+    // 여권 삭제
     DELETE: (passportId: number) => `/api/v1/passports/${passportId}`,
+    // 여권 공개 범위 수정
     UPDATE_VISIBILITY: (passportId: number) => `/api/v1/passports/${passportId}/visibility`,
+    // 내 여권 목록 조회 (리스트)
     GET_MY_LIST: '/api/v1/passports/me',
+    // 여권 통계 조회
     GET_MY_STATS: '/api/v1/passports/stats/me',
+    // 지역별 여권 목록 조회
+    GET_DISTRICT_PASSPORTS: (districtCategory: string) => `/api/v1/passports/districts/${districtCategory}`,
+    // 여권 지역 목록 조회
     GET_MY_DISTRICTS: '/api/v1/passports/districts/me',
+    // 카테고리별 여권 목록 조회
     GET_BY_CATEGORY: (category: string) => `/api/v1/passports/categories/${category}`,
   },
 
