@@ -4,6 +4,8 @@ import { StyleSheet, TouchableOpacity, View } from "react-native";
 type PassportActionButtonsProps = {
     isLiked: boolean;
     isScrapped: boolean;
+    isLiking?: boolean;
+    isScrapping?: boolean;
     onPressLike: () => void;
     onPressScrap: () => void;
 };
@@ -11,12 +13,17 @@ type PassportActionButtonsProps = {
 export default function PassportActionButtons({
     isLiked,
     isScrapped,
+    isLiking = false,
+    isScrapping = false,
     onPressLike,
     onPressScrap,
 }: PassportActionButtonsProps) {
     return (
         <View style={styles.actionButtonArea}>
-            <TouchableOpacity onPress={onPressLike}>
+            <TouchableOpacity 
+                onPress={onPressLike}
+                disabled={isLiking}
+            >
                 <Ionicons
                     name={isLiked ? "heart" : "heart-outline"}
                     size={24}
@@ -24,7 +31,10 @@ export default function PassportActionButtons({
                 />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={onPressScrap}>
+            <TouchableOpacity 
+                onPress={onPressScrap}
+                disabled={isScrapping}
+            >
                 <Ionicons
                     name={isScrapped ? "bookmark" : "bookmark-outline"}
                     size={24}

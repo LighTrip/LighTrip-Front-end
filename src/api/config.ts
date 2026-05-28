@@ -36,8 +36,8 @@ export const API_ENDPOINTS = {
   },
 
   SCRAP: {
-    SCRAP: (passportId: number) => `/api/v1/passports/${passportId}/scrap`,
-    UNSCRAP: (passportId: number) => `/api/v1/passports/${passportId}/scrap`,
+    SCRAP: (passportId: number) => `/api/v1/passports/${passportId}/scraps`,
+    UNSCRAP: (passportId: number) => `/api/v1/passports/${passportId}/scraps`,
     GET_MY_SCRAPS: '/api/v1/passports/scraps/me',
   },
 
