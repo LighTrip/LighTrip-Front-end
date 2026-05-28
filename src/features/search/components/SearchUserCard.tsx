@@ -1,35 +1,54 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { searchUserDummy } from "../data/searchDummy";
+import type { PassportFeedItem } from "../types/passport.types";
 
 type SearchUserCardProps = {
-    onAddFriend: () => void;
+    item: PassportFeedItem;
+    onAddFriend: (friendCode: string) => void;
+    isRequested: boolean;
 };
 
-export default function SearchUserCard({onAddFriend}: SearchUserCardProps) {
+export default function SearchUserCard({item, onAddFriend, isRequested}: SearchUserCardProps) {
     return(
         <View style={styles.userInfoBox}>
         <View style={styles.userRow}>
             <Image
-                source={require("@/assets/images/profile1.jpg")}
+                source={
+                    item.writerProfileImg
+                        ? {uri: item.writerProfileImg}
+                        : require("@/assets/images/default_profile.png")
+                }
                 style={styles.profileImage}
             />
             
             <View style={styles.userTextArea}>
                 <View style={styles.nameRow}>
-                    <Text style={styles.userName}>{searchUserDummy.name}</Text>
-                    <Text style={styles.userId}>#{searchUserDummy.id}</Text>
+                    <Text style={styles.userName}>{item.writerNickname}</Text>
+                    <Text style={styles.userId}>#{item.writerUserId}</Text>
                 </View>
             
                 <View style={styles.locationRow}>
                     <Ionicons name="location-outline" size={12} color="#666667" />
-                    <Text style={styles.locationText}>{searchUserDummy.location}</Text>
+                    <Text style={styles.locationText}>
+                        {item.districtDisplayName || item.district}
+                    </Text>
                 </View>
             </View>
             
-            <TouchableOpacity style={styles.addButton} onPress={onAddFriend}>
-                <Ionicons name="person-add-outline" size={20} color="#000000" />
-            </TouchableOpacity>
+            {!item.isFriend && (
+                isRequested ? (
+                    <View style={styles.requestedButton}>
+                        <Ionicons name="checkmark" size={22} color="#1A3A6B" />
+                    </View>
+                ) : (
+                    <TouchableOpacity 
+                        style={styles.addButton} 
+                        onPress={() => onAddFriend(item.writerFriendCode)}
+                    >
+                        <Ionicons name="person-add-outline" size={20} color="#000000" />
+                    </TouchableOpacity>
+                )
+            )}
         </View>
     </View>
     )
@@ -85,4 +104,8 @@ const styles=StyleSheet.create({
         marginTop: 35,
         marginRight: -5,
     },
+    requestedButton: {
+        marginTop: 35,
+        marginRight: -5,
+    }
 })

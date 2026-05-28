@@ -1,5 +1,6 @@
 import LighTripLogo from "@/src/constant/LighTrip.svg";
 import { useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import { useState } from "react";
 import {
   Alert,
@@ -27,9 +28,26 @@ export default function SignupScreen() {
 
   const handleSubmit = async () => {
     if (!isFormValid) return;
-
     setLoading(true);
     try {
+      const accessToken = await SecureStore.getItemAsync("accessToken");
+
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_API_BASE_URL}/api/v1/users/me/onboarding`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            nickname,
+            location: region,
+            bio,
+          }),
+        },
+      );
+      if (!response.ok) throw new Error("Failed to update profile");
       router.replace("/(tabs)");
     } catch (e) {
       Alert.alert("오류", "프로필 저장에 실패했어요. 다시 시도해주세요.");
