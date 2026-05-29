@@ -13,12 +13,14 @@ import {
 } from "react-native";
 
 import {
+    getPublicUserProfile,
     getRecommendedFriends,
     requestFriend,
-    searchFriendByCode,
+    searchFriendByCode
 } from "@/src/api/socialApi";
-import { RecommendedFriend } from "../types/social.types";
+import { PublicUserProfile, RecommendedFriend } from "../types/social.types";
 import AddFriendCard from "./AddFriendCard";
+import PublicUserProfileModal from "./PublicUserProfileModal";
 
 type AddFriendModalProps = {
     visible: boolean,
@@ -32,6 +34,9 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
     const [friends, setFriends] = useState<RecommendedFriend[]>([]);
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
+
+    const [selectedUser, setSelectedUser] = useState<PublicUserProfile | null>(null);
+    const [profileLoading, setProfileLoading] = useState(false);
 
     // 1. 추천 친구 목록 받아오기 
     const fetchRecommendedFriends = async () => {
@@ -120,7 +125,30 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
         }
     };
 
+    // 4. 공개 프로필 조회
+    const handlePressFriendCard = async (friend: RecommendedFriend) => {
+        try {
+            setProfileLoading(true);
+
+            console.log("조회할 사용자 userId:", friend.userId);
+
+            const profile = await getPublicUserProfile(friend.userId);
+            setSelectedUser(profile);
+        }catch(error) {
+            console.log("공개 프로필 조회 에러:", error);
+
+            if(error instanceof Error) {
+                Alert.alert("프로필 조회 실패:", error.message);
+            } else {
+                Alert.alert("프로필 조회 실패", "알 수 없는 오류가 발생했습니다.")
+            }
+        } finally {
+            setProfileLoading(false);
+        }
+    }
+
     return (
+        <>
         <Modal
             visible={visible}
             transparent
@@ -156,7 +184,11 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
                             data={friends}
                             keyExtractor={(item) => String(item.friendId)}
                             renderItem={({item}) => (
-                                <AddFriendCard friend={item} onAdd={handleAddFriend} />
+                                <AddFriendCard 
+                                    friend={item} 
+                                    onAdd={handleAddFriend}
+                                    onPress={handlePressFriendCard} 
+                                />
                             )} 
                             showsVerticalScrollIndicator={false}
                             ListEmptyComponent={
@@ -184,6 +216,13 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
                 </View>
             </View>
         </Modal>
+
+        <PublicUserProfileModal
+            visible={selectedUser !== null}
+            user={selectedUser}
+            onClose={() => setSelectedUser(null)}
+        />
+        </>
         
     )
 }
