@@ -299,8 +299,8 @@ const EditPlaceScreen = ({
                             <>
                                 <Image source={{ uri: music.artwork }} style={styles.albumArt} />
                                 <View style={styles.musicInfo}>
-                                    <Text style={styles.musicTitle}>{music.title}</Text>
-                                    <Text style={styles.musicArtist}>{music.artist}</Text>
+                                    <Text style={styles.musicTitle} numberOfLines={1}>{music.title}</Text>
+                                    <Text style={styles.musicArtist} numberOfLines={1}>{music.artist}</Text>
                                 </View>
                             </>
                         ) : (
@@ -532,6 +532,8 @@ const styles = StyleSheet.create({
         borderColor: '#E0E0E0',
         backgroundColor: '#FFFFFF',
         padding: 12,
+        paddingRight: 20, 
+        marginTop: -10,
         marginBottom: 10,
         gap: 12,
     },
@@ -543,7 +545,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#ddd',
     },
 
-    musicInfo: { gap: 4 },
+    musicInfo: { 
+        gap: 4,
+        flex: 1,
+        maxWidth: '80%',
+        overflow: 'hidden',
+    },
 
     musicTitle: {
         fontSize: 15,

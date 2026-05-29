@@ -13,7 +13,7 @@ type Props = {
 const SearchBar = ({ label, onSortChange, onSearchChange }: Props) => {
     const [searchSelected, setSearchSelected] = useState(false)
     const [sortVisible, setSortVisible] = useState(false)
-    const [sortOption, setSortOption] = useState('최근 방문순')
+    const [sortOption, setSortOption] = useState('최근 등록순')
 
     return (
         <View style={passportStyles.searchRow}>
@@ -35,7 +35,7 @@ const SearchBar = ({ label, onSortChange, onSearchChange }: Props) => {
                 </>
             ) : (
                 <>
-                    <Text style={{ color: '#4c4c4c', fontSize: 16, fontWeight: '600', marginTop: 8, flex: 1 }}>
+                    <Text style={{ color: '#4c4c4c', fontSize: 16, fontWeight: '600', marginTop: 10, flex: 1 }}>
                         {label ?? sortOption}
                     </Text>
                     <View>

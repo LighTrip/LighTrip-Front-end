@@ -363,13 +363,13 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts }: Props) => {
                         {isEditing ? (
                             <>
                                 <TouchableOpacity onPress={handleDelete}>
-                                    <Text style={styles.editText}>🗑 삭제</Text>
+                                    <Text style={styles.editText}>삭제</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={handleSave}>
                                     <Text style={styles.editText}>save my passport</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={() => setIsPublic(!isPublic)}>
-                                    <Text style={styles.editText}>{isPublic ? '🌐 공개' : '🔒 비공개'}</Text>
+                                    <Text style={styles.editText}>{isPublic ? '공개' : '비공개'}</Text>
                                 </TouchableOpacity>
                             </>
                         ) : (
@@ -721,12 +721,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
+        bottom: 3,
         gap: 5,
     },
 
     editText: {
         width: 110,
+        height: 20,
         textAlign: 'center',
+        textAlignVertical: 'center',
         fontSize: 10,
         color: '#757575',
         fontFamily: 'Moneygraphy',

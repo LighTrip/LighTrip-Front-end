@@ -40,7 +40,7 @@ const PlaceListView = ({ data, onSelectPlace }: Props) => {
     }
 
     return (
-        <View style={{ flex: 1, marginBottom: 90 }}>
+        <View style={{ flex: 1, marginTop: 5 }}>
             
             <FlatList
                 data={data}
@@ -61,7 +61,7 @@ const PlaceListView = ({ data, onSelectPlace }: Props) => {
                         <View style={styles.textArea}>
                             <Text style={styles.listName}>{item.spaceName}</Text>
                             <View style={styles.metaRow}>
-                                <Text style={styles.meta}>📍 {item.districtDisplayName}</Text>
+                                <Text style={styles.meta}>📍{item.districtDisplayName}</Text>
                                 <Text style={styles.meta}>📅 {item.visitedAt}</Text>
                             </View>
                         </View>

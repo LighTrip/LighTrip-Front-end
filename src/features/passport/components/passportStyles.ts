@@ -84,7 +84,8 @@ export const passportStyles = StyleSheet.create({
 
     metaRow: { 
         flexDirection: 'row', 
-        gap: 24 
+        gap: 24,
+        paddingVertical: 2,
     },
 
     meta: { 

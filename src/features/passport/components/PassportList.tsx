@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     },
 
     tabButton: {
-        width: COVER_WIDTH * 0.98,
+        width: COVER_WIDTH * 0.99,
         height: 39,
         alignItems: 'center',
         justifyContent: 'center',
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
     },
     passportCover: {
         width: COVER_WIDTH,
-        height: COVER_HEIGHT,
+        height: COVER_HEIGHT * 0.98,
         borderTopRightRadius: 16,
         borderBottomRightRadius: 16,
         borderTopLeftRadius: 0,

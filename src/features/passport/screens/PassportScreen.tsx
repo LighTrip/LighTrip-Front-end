@@ -141,6 +141,7 @@ const styles = StyleSheet.create({
     tabRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
         marginVertical: -50,
         marginHorizontal: 20,
         gap: 10,
