@@ -1,9 +1,11 @@
-import { getMyProfile } from "@/src/api/profileApi";
+import { getMyProfile, logout } from "@/src/api/profileApi";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import * as Securestore from "expo-secure-store";
+import { useCallback, useState } from "react";
 import {
     ActivityIndicator,
+    Alert,
     Image,
     ScrollView,
     StyleSheet,
@@ -47,7 +49,45 @@ export default function ProfileView() {
         }
     }
 
-    useEffect(() => {
+    // 로그아웃 함수
+    const handleLogout = () => {
+        Alert.alert(
+            "로그아웃",
+            "정말 로그아웃하시겠습니까?",
+            [
+                {
+                    text: "취소",
+                    style: "cancel",
+                },
+                {
+                    text: "확인",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            await logout();
+
+                            await Securestore.deleteItemAsync("accessToken");
+                            await Securestore.deleteItemAsync("refreshToken");
+
+                            router.replace("/(auth)" as any);
+                        }catch(error) {
+                            console.log("로그아웃 에러:", error);
+
+                            Alert.alert(
+                                "로그아웃 실패",
+                                error instanceof Error
+                                    ? error.message
+                                    : "로그아웃 중 문제가 발생했습니다."
+                            )
+                        }
+                    }
+                }
+            ]
+        )
+    }
+
+    useFocusEffect(
+        useCallback (() => {
         const fetchMyProfile = async () => {
             try {
                 const profile = await getMyProfile();
@@ -59,7 +99,8 @@ export default function ProfileView() {
             }
         }
         fetchMyProfile();
-    },[])
+        },[])
+    );
 
     if (isLoading) {
         return(
@@ -192,6 +233,11 @@ export default function ProfileView() {
                             ]}
                             activeOpacity={0.8}
                             onPress={() => {
+                                if(item.id === "logout") {
+                                    handleLogout();
+                                    return;
+                                }
+                                
                                 if(item.route) {
                                     router.push(item.route as any);
                                 }

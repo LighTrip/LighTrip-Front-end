@@ -165,3 +165,59 @@ export const updateMyProfile = async (
 
     return mapMyProfileToEditForm(result.data);
 };
+
+// 5. 회원탈퇴 DELETE 요청
+export const withdrawMember = async () : Promise<void> => {
+    const accessToken = await getAccessToken();
+
+    const response = await fetch(`${BASE_URL}/auth/withdraw`, {
+        method: "DELETE",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+        }
+    });
+
+    console.log("회원탈퇴 상태:", response.status);
+
+    if(!response.ok) {
+        let errorMessage = "회원탈퇴 실패";
+        
+        try {
+            const result = await response.json();
+            console.log("회원탈퇴 응답:", result);
+            errorMessage = result.message || errorMessage;
+        } catch {
+            console.log("회원탈퇴 응답 body 없음");
+        }
+
+        throw new Error(errorMessage);
+    }
+}
+
+// 6. 로그아웃 POST 요청
+export const logout = async (): Promise<void> => {
+    const accessToken = await getAccessToken();
+
+    const response = await fetch(`${BASE_URL}/auth/logout`, {
+        method: "POST",
+        headers: {
+            Autorization: `Bearer ${accessToken}`,
+        }
+    })
+
+    console.log("로그아웃 상태:", response.status);
+
+    if(!response.ok) {
+        let errorMessage = "로그아웃 실패";
+
+        try {
+            const result = await response.json();
+            console.log("로그아웃 응답:", result);
+            errorMessage = result.message || errorMessage;
+        } catch {
+            console.log("로그아웃 응답 body 없음");
+        }
+
+        throw new Error(errorMessage);
+    }
+}

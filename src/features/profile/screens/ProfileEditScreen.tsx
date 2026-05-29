@@ -1,14 +1,17 @@
 import {
     getMyProfileEditForm,
     updateMyProfile,
-    uploadProfileImage
+    uploadProfileImage,
+    withdrawMember
 } from "@/src/api/profileApi";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
+import * as Securestore from "expo-secure-store";
 import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
+    Alert,
     Image,
     KeyboardAvoidingView,
     Platform,
@@ -20,12 +23,14 @@ import {
     View
 } from "react-native";
 import { UpdateProfileRequest } from "../types/profile.types";
+
 export default function ProfileEditView() {
     const router = useRouter();
 
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
+    const [isWithdrawing, setIsWithdrawing] = useState(false);
 
     const[profileImg, setProfileImg] = useState<string | null>(null);
     const [email, setEmail] = useState("");
@@ -147,6 +152,57 @@ export default function ProfileEditView() {
             setIsSaving(false)
         }
     };
+
+    const handleWithdraw = () => {
+        Alert.alert(
+            "회원탈퇴",
+            "회원탈퇴 시 계정 정보와 관련 데이터가 삭제되며 복구할 수 없습니다. 정말 탈퇴하시겠습니까?",
+            [
+                {
+                    text: "취소",
+                    style: "cancel",
+                },
+                {
+                    text: "확인",
+                    style: "destructive",
+                    onPress: async () => {
+                        setIsWithdrawing(true);
+
+                        try {
+                            await withdrawMember();
+
+                            await Securestore.deleteItemAsync("accessToken");
+                            await Securestore.deleteItemAsync("refreshToken");
+
+                            Alert.alert(
+                                "탈퇴 완료",
+                                "회원탈퇴가 완료되었습니다.",
+                                [
+                                    {
+                                        text: "확인",
+                                        onPress: () => {
+                                            router.replace("/(auth)" as any);
+                                        },
+                                    },
+                                ]
+                            );
+                        } catch(error) {
+                            console.log("회원탈퇴 에러:", error);
+
+                            Alert.alert(
+                                "회원탈퇴 실패",
+                                error instanceof Error
+                                    ? error.message
+                                    : "회원탈퇴 중 문제가 발생했습니다."
+                            )
+                        } finally {
+                            setIsWithdrawing(false);
+                        }
+                    }
+                }
+            ]
+        )
+    }
 
     if(isLoading) {
         return(
@@ -284,6 +340,7 @@ export default function ProfileEditView() {
                     />
                 </View>
 
+                {/*변경사항 저장 버튼*/}
                 <TouchableOpacity
                     activeOpacity={0.8}
                     style={[
@@ -297,6 +354,23 @@ export default function ProfileEditView() {
                         <ActivityIndicator size="small" color="#FFFFFF" />
                     ) : (
                         <Text style={styles.saveButtonText}>변경사항 저장하기</Text>
+                    )}
+                </TouchableOpacity>
+
+                {/*회원탈퇴 버튼*/}
+                <TouchableOpacity
+                    activeOpacity={0.8}
+                    style={[
+                        styles.withdrawButton,
+                        isWithdrawing && styles.withdrawButtonDisabled,
+                    ]}
+                    onPress={handleWithdraw}
+                    disabled={isWithdrawing}
+                >
+                    {isWithdrawing ? (
+                        <ActivityIndicator size="small" color="#D64545" />
+                    ) : (
+                        <Text style={styles.withdrawButtonText}>회원탈퇴</Text>
                     )}
                 </TouchableOpacity>
             </ScrollView>
@@ -519,4 +593,23 @@ const styles= StyleSheet.create({
         fontSize: 16,
         fontWeight: "600",
     },
+    withdrawButton: {
+        height: 52,
+        borderRadius: 18,
+        backgroundColor: "#FFFFFF",
+        borderWidth: 1.2,
+        borderColor: "#D64545",
+        justifyContent: "center",
+        alignItems: "center",
+        marginTop: 25,
+    },
+    withdrawButtonDisabled: {
+        borderColor: "#E3A5A5",
+        backgroundColor: "#FFF7F7",
+    },
+    withdrawButtonText: {
+        color: "#D64545",
+        fontSize: 16,
+        fontWeight: "600"
+    }
 })
