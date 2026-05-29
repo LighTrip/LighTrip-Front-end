@@ -6,16 +6,21 @@ import {
     TouchableOpacity, 
     Image,
     Dimensions,
-    View 
+    View,
+    KeyboardAvoidingView,
+    Platform,
+    Alert,
 } from 'react-native'
 import React, { useState } from 'react'
 import { Shadow } from 'react-native-shadow-2'
 import * as ImagePicker from 'expo-image-picker'
 import * as Location from 'expo-location'
+import { useRouter } from 'expo-router'
 
 import NoiseOverlay from '@/src/components/common/NoiseOverlay'
 import EditPlaceScreen from './EditPlaceScreen'
 import PassportDetail from '../../passport/screens/PassportDetail'
+import { REGIONS } from '@/src/constant/regions'
 
 
 const { width } = Dimensions.get('window')
@@ -23,15 +28,9 @@ export const CARD_WIDTH = width * 0.91
 
 const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY
 
-const REGIONS = [
-    '강남구', '강동구', '강북구', '강서구', '관악구',
-    '광진구', '구로구', '금천구', '노원구', '도봉구',
-    '동대문구', '동작구', '마포구', '서대문구', '서초구',
-    '성동구', '성북구', '송파구', '양천구', '영등포구',
-    '용산구', '은평구', '종로구', '중구', '중랑구'
-]
-
 const AddPlaceScreen = () => {
+
+    const router = useRouter()
 
     const [showEdit, setShowEdit] = useState(false)
     const [photo, setPhoto] = useState<string | null>(null)
@@ -41,9 +40,10 @@ const AddPlaceScreen = () => {
     const [locationAddress, setLocationAddress] = useState<string | null>(null)
     const [locationRegion, setLocationRegion] = useState<string | null>(null)
     const [locationName, setLocationName] = useState<string | null>(null)
+    const [latitude, setLatitude] = useState<number | null>(null)
+    const [longitude, setLongitude] = useState<number | null>(null)
 
     const [completedPlace, setCompletedPlace] = useState<any | null>(null)
-
 
     // 카카오 좌표 -> 장소 이름 검색
     const fetchPlaceNameFromCoords = async (latitude: number, longitude: number) => {
@@ -93,6 +93,9 @@ const AddPlaceScreen = () => {
                 if (exif.GPSLatitudeRef === 'S') latitude = -latitude
                 if (exif.GPSLongitudeRef === 'W') longitude = -longitude
 
+                setLatitude(latitude)
+                setLongitude(longitude)
+
                 // expo-location으로 구 정보 추출
                 const [place] = await Location.reverseGeocodeAsync({ latitude, longitude })
                 if (place) {
@@ -102,9 +105,10 @@ const AddPlaceScreen = () => {
                     setLocationAddress(fullAddress)
 
                     if (place.district) {
-                        const matched = REGIONS.find(r => place.district!.includes(r))
+                        const allDistricts = Object.values(REGIONS).flat()
+                        const matched = allDistricts.find(r => place.district!.includes(r)) 
                         if (matched) setLocationRegion(matched)
-                    }
+                    }       
                 }
 
                 // 카카오로 장소 이름 가져오기
@@ -124,7 +128,7 @@ const AddPlaceScreen = () => {
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ['images'],
             allowsEditing: false,
             aspect: [4, 3],
             quality: 1,
@@ -173,8 +177,11 @@ const AddPlaceScreen = () => {
         return <EditPlaceScreen
             onBack={() => setShowEdit(false)}
             onComplete={(item) => {
-                setShowEdit(false)
-                setCompletedPlace(item)
+                Alert.alert(
+                    '등록 완료',
+                    '새 여권이 등록되었습니다! 🎉',
+                    [{ text: '확인', onPress: () => router.replace('/(tabs)/passport') }]
+                )
             }}
             photo={photo}
             description={description}
@@ -182,11 +189,16 @@ const AddPlaceScreen = () => {
             locationAddress={locationAddress}
             locationRegion={locationRegion}
             locationName={locationName}
+            latitude={latitude}
+            longitude={longitude}
         />
     }
 
     return (
-        <View style={styles.container}>
+        <KeyboardAvoidingView 
+            style={styles.container} 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
             <Shadow
                 distance={6}
                 startColor={'#00000012'}
@@ -245,7 +257,7 @@ const AddPlaceScreen = () => {
             >
                 <Text style={styles.clickText}>기록 생성하기 with AI</Text>
             </TouchableOpacity>
-        </View>
+        </KeyboardAvoidingView>
     )
 }
 
