@@ -12,66 +12,36 @@ import {
     View
 } from "react-native";
 
-import { BASE_URL } from "@/src/api/config";
-import * as Securestore from "expo-secure-store";
+import {
+    getRecommendedFriends,
+    requestFriend,
+    searchFriendByCode,
+} from "@/src/api/socialApi";
 import { RecommendedFriend } from "../types/social.types";
 import AddFriendCard from "./AddFriendCard";
 
 type AddFriendModalProps = {
     visible: boolean,
-    onClose: () => void
+    onClose: () => void;
+    onFriendRequestSuccess?: () => void;
 };
 
-type RecommendedFriendsResponse = {
-    success: boolean;
-    code: string;
-    message: string;
-    data: RecommendedFriend[];
-}
-
-type SearchFriendResponse = {
-    success: boolean;
-    code: string;
-    message: string;
-    data: RecommendedFriend;
-}
-
-export default function AddFriendModal({visible, onClose}: AddFriendModalProps) {
+export default function AddFriendModal({visible, onClose, onFriendRequestSuccess}: AddFriendModalProps) {
 
     const [keyword, setKeyword] = useState("");
     const [friends, setFriends] = useState<RecommendedFriend[]>([]);
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
-    // 1. 추천 친구 목록 받아오기 API 연결
+    // 1. 추천 친구 목록 받아오기 
     const fetchRecommendedFriends = async () => {
-        const accessToken = await Securestore.getItemAsync("accessToken");
 
         try {
             setLoading(true);
             setErrorMessage("");
 
-            console.log("추천 친구 목록 조회 시작");
-            console.log("추천 친구 목록 조회 요청 URL:", `${BASE_URL}/api/v1/friends/recommendations`)
-
-            const response = await fetch(`${BASE_URL}/api/v1/friends/recommendations`, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${accessToken}`,
-                }
-            });
-
-            const data: RecommendedFriendsResponse = await response.json();
-
-            console.log("추천 친구 응답 상태:",response.status);
-            console.log("추천 친구 응답 데이터:", data);
-
-            if (!response.ok || !data.success) {
-                throw new Error(data.message || "추천 친구 목록 조회 실패"); 
-            }
-
-            setFriends(data.data)
+            const recommendedFriends = await getRecommendedFriends();
+            setFriends(recommendedFriends);
         }catch(error) {
             console.log("추천 친구 목록 조회 에러:", error);
             setErrorMessage("추천 친구 목록을 불러오지 못했습니다.");
@@ -87,9 +57,8 @@ export default function AddFriendModal({visible, onClose}: AddFriendModalProps) 
         fetchRecommendedFriends();
     }, [visible]);
 
-    // 2. 친구코드로 검색하는 API 연결
+    // 2. 친구코드로 검색
     const handleSearchFriends = async () => {
-        const accessToken = await Securestore.getItemAsync("accessToken");
         const trimmedKeyword = keyword.trim();
 
         if(trimmedKeyword.length === 0) {
@@ -102,29 +71,8 @@ export default function AddFriendModal({visible, onClose}: AddFriendModalProps) 
             setLoading(true);
             setErrorMessage("");
 
-            const requestUrl = `${BASE_URL}/api/v1/friends/search?code=${encodeURIComponent(trimmedKeyword)}`;
-
-            console.log("친구 코드 검색 시작");
-            console.log("친구 코드 검색 요청 URL:", requestUrl);
-            
-            const response = await fetch(requestUrl, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${accessToken}`,
-                }
-            });
-
-            const data: SearchFriendResponse = await response.json();
-
-            console.log("친구 코드 검색 응답 상태:", response.status);
-            console.log("친구 코드 검색 응답 데이터:", data);
-
-            if(!response.ok || !data.success) {
-                throw new Error(data.message || "친구 검색 실패");
-            }
-
-            setFriends([data.data])
+            const searchedFriend = await searchFriendByCode(trimmedKeyword);
+            setFriends([searchedFriend])
         }catch (error) {
             console.log("친구 코드 검색 에러:", error);
             setFriends([]);
@@ -144,36 +92,13 @@ export default function AddFriendModal({visible, onClose}: AddFriendModalProps) 
         }
     }
 
-    // 3. 친구 추가하는 API 연결
+    // 3. 친구 추가
     const handleAddFriend = async (friend: RecommendedFriend) => {
-        const accessToken = await Securestore.getItemAsync("accessToken");
-
+    
         try {
-            const requestUrl = `${BASE_URL}/api/v1/friends/request`;
-
-            console.log("친구 요청 시작");
-            console.log("친구 요청 URL:", requestUrl)
             console.log("보낼 친구 코드:", friend.friendCode);
 
-            const response = await fetch(requestUrl, {
-                method: "POST",
-                headers: {
-                    "Contetnt-Type": "application/json",
-                    Authorization: `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify({
-                    friendCode: friend.friendCode,
-                })
-            })
-
-            const data = await response.json();
-
-            console.log("친구 요청 응답 상태:", response.status);
-            console.log("친구 요청 응답 데이터:", data);
-
-            if(!response.ok || !data.success) {
-                throw new Error(data.message || "친구 요청에 실패했습니다.")
-            }
+            await requestFriend(friend.friendCode);
 
             Alert.alert(
                 "친구 요청 완료!",
@@ -182,6 +107,8 @@ export default function AddFriendModal({visible, onClose}: AddFriendModalProps) 
 
             // 친구 요청 성공 후 추천 친구 목록 다시 불러오기
             fetchRecommendedFriends();
+
+            onFriendRequestSuccess?.();
         } catch(error) {
             console.log("친구 요청 에러:", error)
 
@@ -233,7 +160,7 @@ export default function AddFriendModal({visible, onClose}: AddFriendModalProps) 
                             )} 
                             showsVerticalScrollIndicator={false}
                             ListEmptyComponent={
-                                <Text style={styles.emptyText}>검색 결과가 없습니다.</Text>
+                                <Text style={styles.emptyText}>{errorMessage || "검색 결과가 없습니다."}</Text>
                             }
                         />
                     )}
