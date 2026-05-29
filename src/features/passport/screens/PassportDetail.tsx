@@ -22,7 +22,6 @@ import * as ImagePicker from 'expo-image-picker'
 import NoiseOverlay from '@/src/components/common/NoiseOverlay'
 import DatePickerModal from '@/src/components/passport/DatePickerModal'
 
-// API
 import { 
     deletePassport, 
     updatePassport, 
@@ -65,22 +64,57 @@ const PLACE_TYPES = ['☕ 카페', '🍽️ 식당', '🍶 술집', '🏞️ 공
 
 const { width } = Dimensions.get('window')
 
-const PassportDetail = ({ item, onBack, onNext, onPrev, districts }: Props) => {
-    console.log('item 전체:', JSON.stringify(item))
+type MusicDisplayItem = { title: string; artist: string; artwork: string } | null
 
+const MusicBox = ({ music, onPress, styles }: { music: MusicDisplayItem; onPress?: () => void; styles: any }) => {
+    const content = music ? (
+        <>
+            {music.artwork ? (
+                <Image source={{ uri: music.artwork }} style={styles.musicImage} />
+            ) : (
+                <View style={[styles.musicImage, { backgroundColor: '#ddd' }]} />
+            )}
+            <View>
+                <Text style={styles.musicTitle}>{music.title}</Text>
+                <Text style={styles.artist}>{music.artist}</Text>
+            </View>
+        </>
+    ) : (
+        <View style={{ marginLeft: 20 }}>
+            <Text style={styles.musicTitle}>음악 없음</Text>
+        </View>
+    )
+
+    return onPress ? (
+        <TouchableOpacity style={styles.musicBox} onPress={onPress}>{content}</TouchableOpacity>
+    ) : (
+        <View style={styles.musicBox}>{content}</View>
+    )
+}
+
+const PassportDetail = ({ item, onBack, onNext, onPrev, districts }: Props) => {
     const [isEditing, setIsEditing] = useState(false)
     const [editReview, setEditReview] = useState(item.content ?? '')
-    const [editCategory, setEditCategory] = useState(CATEGORY_TO_KOREAN[item.category] ?? '선택')            
+    const [editCategory, setEditCategory] = useState(CATEGORY_TO_KOREAN[item.category] ?? '선택')
     const [editDate, setEditDate] = useState(new Date(item.visitedAt))
     const [editImageUri, setEditImageUri] = useState<string | null>(null)
-    const [editMusic, setEditMusic] = useState<{ title: string, artist: string, artwork: string } | null>(null)
+    const [editMusic, setEditMusic] = useState<{ title: string; artist: string; artwork: string } | null>(null)
     const [musicArtwork, setMusicArtwork] = useState<string | null>(null)
-
     const [isCover, setIsCover] = useState(false)
     const [isPublic, setIsPublic] = useState(true)
     const [editSpaceName, setEditSpaceName] = useState(item.spaceName ?? '')
     const [placeSearchOpen, setPlaceSearchOpen] = useState(false)
+    const [musicModalOpen, setMusicModalOpen] = useState(false)
+    const [categoryOpen, setCategoryOpen] = useState(false)
+    const [showDatePicker, setShowDatePicker] = useState(false)
+
     const districtCount = districts?.find(d => d.displayName === item.district)?.passportCount ?? 0
+
+    const displayMusic: MusicDisplayItem = editMusic ?? (item.musicTitle ? {
+        title: item.musicTitle,
+        artist: item.musicArtist,
+        artwork: musicArtwork ?? ''
+    } : null)
 
     useEffect(() => {
         if (item.musicTitle && item.musicArtist) {
@@ -117,7 +151,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts }: Props) => {
     }
 
     const openImagePicker = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
         if (!permission.granted) return alert('앨범 접근 권한이 필요해요')
 
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -130,7 +164,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts }: Props) => {
             setEditImageUri(result.assets[0].uri)
         }
     }
-        
+
     const handleSave = async () => {
         try {
             const updateData = {
@@ -140,25 +174,19 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts }: Props) => {
                     key => CATEGORY_TO_KOREAN[key] === editCategory
                 ) as PassportCategory | undefined,
                 musicTitle: editMusic?.title ?? item.musicTitle,
-                musicArtist: editMusic?.artist ?? item.musicArtist,  
+                musicArtist: editMusic?.artist ?? item.musicArtist,
                 imageUrls: item.imageUrls ?? [],
                 districtCategory: item.districtCategory,
                 visibility: (isPublic ? 'PUBLIC' : 'PRIVATE') as Visibility,
                 spaceName: editSpaceName,
             }
-            const res = await updatePassport(item.passportId, updateData)
-            const updated = res.data.data
-
+            await updatePassport(item.passportId, updateData)
             await updatePassportVisibility(item.passportId, isPublic ? 'PUBLIC' : 'PRIVATE')
             setIsEditing(false)
         } catch (e: any) {
             console.error('저장 실패:', e.response?.data)
         }
     }
-
-    const [musicModalOpen, setMusicModalOpen] = useState(false)
-    const [categoryOpen, setCategoryOpen] = useState(false)
-    const [showDatePicker, setShowDatePicker] = useState(false)
 
     const formatDate = (date: Date) => {
         return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`
@@ -169,7 +197,6 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts }: Props) => {
             style={[styles.container, styles.scrollContent]} 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-
             {/* 상단 헤더 */}
             <View style={styles.headerCard}>
                 <View style={{ borderRadius: 16, overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
@@ -192,37 +219,37 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts }: Props) => {
                     </TouchableOpacity>
 
                     <Image source={require('../../../../assets/images/pinktape.png')} style={styles.tape} resizeMode="contain" />
-                    
-               <View>
-                    <TouchableOpacity onPress={isEditing ? openImagePicker : undefined} disabled={!isEditing}>
-                        <View style={styles.imageBackground} />
-                        <Image 
-                            source={{ uri: editImageUri ?? item.imageUrls?.[0] ?? item.image?.uri }} 
-                            style={styles.placeImage} 
-                            resizeMode="cover" 
-                        />
-                        {isEditing && (
-                            <View style={styles.editImageBadge}>
-                                <Ionicons name="camera-outline" size={14} color="#000000" />
-                            </View>
-                        )}
-                    </TouchableOpacity>
-                    {isEditing && (
-                        <TouchableOpacity 
-                            style={styles.coverBadge}
-                            onPress={() => setIsCover(!isCover)}
-                        >
-                            <Ionicons 
-                                name={isCover ? 'bookmark' : 'bookmark-outline'} 
-                                size={14} 
-                                color="#ffffff" 
+
+                    <View>
+                        <TouchableOpacity onPress={isEditing ? openImagePicker : undefined} disabled={!isEditing}>
+                            <View style={styles.imageBackground} />
+                            <Image 
+                                source={{ uri: editImageUri ?? item.imageUrls?.[0] ?? item.image?.uri }} 
+                                style={styles.placeImage} 
+                                resizeMode="cover" 
                             />
-                            <Text style={styles.coverBadgeText}>
-                                {isCover ? '대표 사진' : '대표 사진으로 설정'}
-                            </Text>
+                            {isEditing && (
+                                <View style={styles.editImageBadge}>
+                                    <Ionicons name="camera-outline" size={14} color="#000000" />
+                                </View>
+                            )}
                         </TouchableOpacity>
-                    )}
-                </View>
+                        {isEditing && (
+                            <TouchableOpacity 
+                                style={styles.coverBadge}
+                                onPress={() => setIsCover(!isCover)}
+                            >
+                                <Ionicons 
+                                    name={isCover ? 'bookmark' : 'bookmark-outline'} 
+                                    size={14} 
+                                    color="#ffffff" 
+                                />
+                                <Text style={styles.coverBadgeText}>
+                                    {isCover ? '대표 사진' : '대표 사진으로 설정'}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
 
                     <Image
                         source={STAMP_MAP[editCategory] ?? STAMP_MAP['📦 기타']}
@@ -232,7 +259,6 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts }: Props) => {
 
                     {/* 정보 */}
                     <View style={styles.infoArea}>
-                        {/* 카테고리 */}
                         <View style={styles.infoRow}>
                             {isEditing ? (
                                 <TouchableOpacity onPress={() => setCategoryOpen(true)} style={styles.infoEditButton}>
@@ -243,7 +269,6 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts }: Props) => {
                             )}
                         </View>
 
-                        {/* 위치 */}
                         <View style={styles.infoRow}>
                             <Image source={require('../../../../assets/icons/location.png')} style={styles.icon} resizeMode="contain"/>
                             {isEditing ? (
@@ -255,7 +280,6 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts }: Props) => {
                             )}
                         </View>
 
-                        {/* 날짜 */}
                         <View style={styles.infoRow}>
                             <Image source={require('../../../../assets/icons/calendar.png')} style={styles.icon} resizeMode="contain"/>
                             {isEditing ? (
@@ -263,7 +287,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts }: Props) => {
                                     <Text style={styles.infoText}>{formatDate(editDate)}</Text>
                                 </TouchableOpacity>
                             ) : (
-                                    <Text style={styles.infoText}>{formatDate(editDate)}</Text>
+                                <Text style={styles.infoText}>{formatDate(editDate)}</Text>
                             )}
                         </View>
 
@@ -283,7 +307,6 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts }: Props) => {
 
                 {/* 아랫부분 */}
                 <View style={styles.bottomHalf}>
-
                     {/* 리뷰 */}
                     <View style={styles.reviewBox}>
                         {isEditing ? (
@@ -300,63 +323,11 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts }: Props) => {
                     </View>
 
                     {/* 음악 */}
-                    {isEditing ? (
-                        <TouchableOpacity style={styles.musicBox} onPress={() => setMusicModalOpen(true)}>
-                            {editMusic ? (
-                            <>
-                                <Image source={{ uri: editMusic.artwork }} style={styles.musicImage} />
-                                <View>
-                                    <Text style={styles.musicTitle}>{editMusic.title}</Text>
-                                    <Text style={styles.artist}>{editMusic.artist}</Text>
-                                </View>
-                            </>
-                        ) : item.musicTitle ? (
-                            <>
-                                {musicArtwork ? (
-                                    <Image source={{ uri: musicArtwork }} style={styles.musicImage} />
-                                ) : (
-                                    <View style={[styles.musicImage, { backgroundColor: '#ddd' }]} />
-                                )}
-                                <View>
-                                    <Text style={styles.musicTitle}>{item.musicTitle}</Text>
-                                    <Text style={styles.artist}>{item.musicArtist}</Text>
-                                </View>
-                            </>
-                        ) : (
-                            <View style={{ marginLeft: 20 }}>
-                                <Text style={styles.musicTitle}>음악 없음</Text>
-                            </View>
-                        )}
-                        </TouchableOpacity>
-                    ) : (
-                        <View style={styles.musicBox}>
-                            {editMusic ? (
-                                <>
-                                    <Image source={{ uri: editMusic.artwork }} style={styles.musicImage} />
-                                    <View>
-                                        <Text style={styles.musicTitle}>{editMusic.title}</Text>
-                                        <Text style={styles.artist}>{editMusic.artist}</Text>
-                                    </View>
-                                </>
-                            ) : item.musicTitle ? (
-                                <>
-                                    {musicArtwork ? (
-                                        <Image source={{ uri: musicArtwork }} style={styles.musicImage} />
-                                    ) : (
-                                        <View style={[styles.musicImage, { backgroundColor: '#ddd' }]} />
-                                    )}
-                                    <View>
-                                        <Text style={styles.musicTitle}>{item.musicTitle}</Text>
-                                        <Text style={styles.artist}>{item.musicArtist}</Text>
-                                    </View>
-                                </>
-                            ) : (
-                                <View style={{ marginLeft: 20 }}>
-                                    <Text style={styles.musicTitle}>음악 없음</Text>
-                                </View>
-                            )}
-                        </View>
-                    )}
+                    <MusicBox
+                        music={displayMusic}
+                        onPress={isEditing ? () => setMusicModalOpen(true) : undefined}
+                        styles={styles}
+                    />
 
                     {/* edit / save 버튼 */}
                     <View style={styles.editBox}>
@@ -386,7 +357,6 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts }: Props) => {
                             </>
                         )}
                     </View>
-
                 </View>
             </View>
 
@@ -422,7 +392,6 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts }: Props) => {
                 onSelect={(place) => setEditSpaceName(place.place_name)}
                 onClose={() => setPlaceSearchOpen(false)}
             />
-
         </KeyboardAvoidingView>
     )
 }
@@ -438,10 +407,7 @@ const styles = StyleSheet.create({
 
     noiseOverlay: {
         position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+        top: 0, left: 0, right: 0, bottom: 0,
         opacity: 1,
     },
 
@@ -457,7 +423,6 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         padding: 20,
         marginTop: -20,
-        // overflow: 'hidden',
         alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 3, height: 4 },
@@ -482,7 +447,6 @@ const styles = StyleSheet.create({
         height: '77%',
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
-        // overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 3, height: 4 },
         shadowOpacity: 0.3,
@@ -529,8 +493,8 @@ const styles = StyleSheet.create({
 
     imageBackground: {
         position: 'absolute',
-        width: '55%',      
-        height: 260,        
+        width: '55%',
+        height: 260,
         left: 0,
         top: 5,
         backgroundColor: '#FFFFFF',
@@ -574,7 +538,7 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
         gap: 4,
     },
-
+    
     coverBadgeText: {
         fontSize: 11,
         color: '#ffffff',
@@ -697,26 +661,6 @@ const styles = StyleSheet.create({
         marginLeft: 10,
     },
 
-    coverRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginTop: 16,
-        paddingHorizontal: 4,
-    },
-
-    coverTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#222',
-    },
-
-    coverSub: {
-        fontSize: 12,
-        color: '#888',
-        marginTop: 2,
-    },
-
     editBox: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -777,67 +721,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
 
-    musicModalBox: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: '70%',
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        padding: 16,
-    },
-
-    musicSearchBox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#F0F0F0',
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        gap: 8,
-        marginBottom: 12,
-    },
-
-    musicSearchInput: {
-        flex: 1,
-        fontSize: 14,
-        color: '#222',
-    },
-
-    musicResultItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 10,
-        gap: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-    },
-
-    musicResultArt: {
-        width: 48,
-        height: 48,
-        borderRadius: 8,
-        backgroundColor: '#ddd',
-    },
-
-    musicResultInfo: {
-        flex: 1,
-        gap: 4,
-    },
-
-    musicResultTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#222',
-    },
-
-    musicResultArtist: {
-        fontSize: 12,
-        color: '#888',
-    },
-
     publicRow: {
         position: 'absolute',
         bottom: 0,
@@ -861,5 +744,4 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#888',
     },
-
 })
