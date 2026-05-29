@@ -7,19 +7,26 @@ import {
     Image,
     Dimensions,
     View,
-    Modal,
-    FlatList,
     Switch,
     Platform,
     ActivityIndicator,
+    KeyboardAvoidingView,
 } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { Shadow } from 'react-native-shadow-2'
 import { Ionicons } from '@expo/vector-icons'
-import DateTimePicker from '@react-native-community/datetimepicker'
+import DatePickerModal from '@/src/components/passport/DatePickerModal'
+import KakaoPlaceSearch from '@/src/components/passport/KakaoPlaceSearch'
+import MusicSearch from '@/src/components/passport/MusicSearch'
+
 import NoiseOverlay from '@/src/components/common/NoiseOverlay'
 import Dropdown from '@/src/components/common/Dropdown'
-import { REGIONS } from '@/src/constant/regions'
+import { REGIONS, DISTRICT_CATEGORY_MAP } from '@/src/constant/regions'
+
+// API
+import { generateAIDraft } from '@/src/api/passport/ai.api'  // AI 초안 생성
+import { getPresignedUrl, uploadToS3 } from '@/src/api/passport/image.api'  // 이미지 업로드
+import { createPassport, CATEGORY_MAP } from '@/src/api/passport/passport.api'  // 여권 생성
 
 const { width } = Dimensions.get('window')
 const CARD_WIDTH = width * 0.91
@@ -48,13 +55,15 @@ const InfoRow = ({ iconName, text, onPress }: { iconName: string; text: string; 
 
 type Props = {
     onBack: () => void
-    onComplete: (item: { id: string; name: string; image: any; district: string; date: string; category: string }) => void
+    onComplete: (item: any) => void
     photo: string | null
     description: string
     visitDate: Date | null
     locationAddress: string | null
     locationRegion: string | null
     locationName: string | null
+    latitude: number | null
+    longitude: number | null
 }
 
 const EditPlaceScreen = ({
@@ -65,6 +74,9 @@ const EditPlaceScreen = ({
     visitDate,
     locationRegion,
     locationName: initialLocationName,
+    latitude,
+    longitude,
+    locationAddress,
 }: Props) => {
 
     const [date, setDate] = useState(visitDate ?? new Date())
@@ -78,27 +90,22 @@ const EditPlaceScreen = ({
 
     // 구 목록 (장소 선택 시 도시에 맞게 자동 변경)
     const [availableDistricts, setAvailableDistricts] = useState<string[]>(
-        REGIONS[
-            Object.keys(REGIONS).find(city =>
-                locationRegion ? REGIONS[city].includes(locationRegion) : false
-            ) ?? '서울특별시'
-        ]
+        Object.values(REGIONS).flat()
     )
     const [region, setRegion] = useState<string>(locationRegion ?? '선택')
 
     // 장소 이름 (수동 검색으로 변경 가능)
     const [locationName, setLocationName] = useState(initialLocationName ?? '위치 정보 없음')
     const [placeSearchOpen, setPlaceSearchOpen] = useState(false)
-    const [placeQuery, setPlaceQuery] = useState('')
-    const [placeResults, setPlaceResults] = useState<any[]>([])
+    const [currentAddress, setCurrentAddress] = useState(locationAddress ?? '')
+    const [currentLat, setCurrentLat] = useState(latitude ?? 0)
+    const [currentLng, setCurrentLng] = useState(longitude ?? 0)
 
     const [content, setContent] = useState('')
     const [isGenerating, setIsGenerating] = useState(false)
     const [isPublic, setIsPublic] = useState(true)
 
     const [music, setMusic] = useState<{ title: string; artist: string; artwork: string } | null>(null)
-    const [musicSearch, setMusicSearch] = useState('')
-    const [musicResults, setMusicResults] = useState<any[]>([])
     const [musicModalOpen, setMusicModalOpen] = useState(false)
 
     useEffect(() => {
@@ -109,22 +116,7 @@ const EditPlaceScreen = ({
         if (!photo) return
         setIsGenerating(true)
         try {
-            const formData = new FormData()
-            formData.append('image', {
-                uri: photo,
-                type: 'image/jpeg',
-                name: 'photo.jpg',
-            } as any)
-            formData.append('text', description)
-
-            const aiResponse = await fetch('https://ai.lightrip.cloud/pipeline/generate', {
-                method: 'POST',
-                body: formData,
-            })
-
-            if (!aiResponse.ok) throw new Error(`API 오류: ${aiResponse.status}`)
-
-            const data = await aiResponse.json()
+            const data = await generateAIDraft(photo, description)
             if (data.draft) setContent(data.draft)
             if (data.category) {
                 const matched = PLACE_TYPES.find(type => type.includes(data.category))
@@ -138,53 +130,78 @@ const EditPlaceScreen = ({
         }
     }
 
-    // 카카오 키워드 장소 검색
-    const searchPlace = async (query: string) => {
-        if (!query.trim()) return
-        try {
-            const response = await fetch(
-                `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&size=10`,
-                {
-                    headers: {
-                        Authorization: `KakaoAK ${KAKAO_REST_API_KEY}`,
-                    },
-                }
-            )
-            const data = await response.json()
-            setPlaceResults(data.documents ?? [])
-        } catch (err) {
-            console.error('장소 검색 실패:', err)
-        }
-    }
 
     // 장소 선택 시 도시 감지 → 구 목록 자동 교체
     const handlePlaceSelect = (item: any) => {
         setLocationName(item.place_name)
+        setCurrentAddress(item.address_name ?? '')
+        setCurrentLat(parseFloat(item.y) ?? 0)  // 카카오: y가 위도
+        setCurrentLng(parseFloat(item.x) ?? 0)  // 카카오: x가 경도
 
         const address = item.address_name ?? ''
         const districts = findDistrictsByAddress(address)
         setAvailableDistricts(districts)
-
         const matchedDistrict = districts.find(r => address.includes(r))
         setRegion(matchedDistrict ?? '선택')
-
-        setPlaceSearchOpen(false)
-        setPlaceQuery('')
-        setPlaceResults([])
     }
 
-    // 아이튠즈 노래 검색
-    const searchMusic = async (query: string) => {
-        if (!query.trim()) return
-        const response = await fetch(
-            `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=10`
-        )
-        const data = await response.json()
-        setMusicResults(data.results)
+    const handleSubmit = async () => {
+        if (!photo) return alert('사진을 선택해주세요')
+        if (!content) return alert('내용을 입력해주세요')
+        if (region === '선택') return alert('방문 지역을 선택해주세요')
+
+        setIsGenerating(true)
+        try {
+            // 1. presigned URL 발급
+            const presignedRes = await getPresignedUrl('image/jpeg')
+            const presignedUrl = presignedRes.data?.presignedUrl
+            const imageUrl = presignedRes.data?.imageUrl
+
+            if (!presignedUrl) throw new Error('presignedUrl 없음')
+
+            // 2. S3 업로드
+            await uploadToS3(presignedUrl, photo!)
+
+            
+            // 3. 여권 등록
+            const res = await createPassport({
+                imageUrls: [imageUrl],
+                content,
+                latitude: currentLat,
+                longitude: currentLng,
+                address: currentAddress,
+                visitedAt: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+                category: CATEGORY_MAP[placeType] ?? 'ETC',
+                districtCategory: DISTRICT_CATEGORY_MAP[region] ?? region,
+                visibility: isPublic ? 'PUBLIC' : 'PRIVATE',
+                spaceName: locationName,
+                district: region !== '선택' ? region : undefined,
+                musicTitle: music?.title,
+                musicArtist: music?.artist,
+            })
+
+            const createdPassportId = res.data.data.passportId
+
+            onComplete({createdPassportId})
+        } catch (err: any) {
+            console.error('등록 실패 상세:', err.response?.data)
+            console.error('등록 실패 status:', err.response?.status)
+            console.error('등록 실패 message:', err.message)
+            console.error('등록 실패 요청 URL:', err.config?.url)
+            console.error('등록 실패 요청 data:', err.config?.data)
+            console.error('err 전체:', JSON.stringify(err, Object.getOwnPropertyNames(err)))
+            alert('등록에 실패했어요')
+        } finally {
+            setIsGenerating(false)
+        }
     }
+
 
     return (
-        <View style={styles.container}>
+        <KeyboardAvoidingView 
+            style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
             <Shadow
                 distance={6}
                 startColor={'#00000012'}
@@ -232,17 +249,12 @@ const EditPlaceScreen = ({
                             </View>
                         </TouchableOpacity>
 
-                        {showDatePicker && (
-                            <DateTimePicker
-                                value={date}
-                                mode="date"
-                                display={Platform.OS === 'ios' ? 'compact' : 'calendar'}
-                                onChange={(event, selectedDate) => {
-                                    setShowDatePicker(false)
-                                    if (selectedDate) setDate(selectedDate)
-                                }}
-                            />
-                        )}
+                        <DatePickerModal
+                            visible={showDatePicker}
+                            date={date}
+                            onChange={(newDate) => setDate(newDate)}
+                            onClose={() => setShowDatePicker(false)}
+                        />
                     </View>
 
                     <View style={styles.dropdownRow}>
@@ -287,8 +299,8 @@ const EditPlaceScreen = ({
                             <>
                                 <Image source={{ uri: music.artwork }} style={styles.albumArt} />
                                 <View style={styles.musicInfo}>
-                                    <Text style={styles.musicTitle}>{music.title}</Text>
-                                    <Text style={styles.musicArtist}>{music.artist}</Text>
+                                    <Text style={styles.musicTitle} numberOfLines={1}>{music.title}</Text>
+                                    <Text style={styles.musicArtist} numberOfLines={1}>{music.artist}</Text>
                                 </View>
                             </>
                         ) : (
@@ -300,117 +312,19 @@ const EditPlaceScreen = ({
                     </TouchableOpacity>
 
                     {/* 음악 검색 모달 */}
-                    <Modal
+                    <MusicSearch
                         visible={musicModalOpen}
-                        transparent
-                        animationType="slide"
-                        onRequestClose={() => setMusicModalOpen(false)}
-                    >
-                        <TouchableOpacity
-                            style={styles.modalBackdrop}
-                            onPress={() => setMusicModalOpen(false)}
-                            activeOpacity={1}
-                        >
-                            <View style={styles.musicModalBox}>
-                                <View style={styles.musicSearchBox}>
-                                    <Ionicons name="search-outline" size={18} color="#aaa" />
-                                    <TextInput
-                                        style={styles.musicSearchInput}
-                                        placeholder="곡 제목이나 아티스트 검색"
-                                        placeholderTextColor="#aaa"
-                                        value={musicSearch}
-                                        onChangeText={(text) => {
-                                            setMusicSearch(text)
-                                            searchMusic(text)
-                                        }}
-                                        autoFocus
-                                    />
-                                </View>
-                                <FlatList
-                                    data={musicResults}
-                                    keyExtractor={(item) => item.trackId.toString()}
-                                    renderItem={({ item }) => (
-                                        <TouchableOpacity
-                                            style={styles.musicResultItem}
-                                            onPress={() => {
-                                                setMusic({
-                                                    title: item.trackName,
-                                                    artist: item.artistName,
-                                                    artwork: item.artworkUrl100,
-                                                })
-                                                setMusicModalOpen(false)
-                                                setMusicSearch('')
-                                                setMusicResults([])
-                                            }}
-                                        >
-                                            <Image
-                                                source={{ uri: item.artworkUrl100 }}
-                                                style={styles.musicResultArt}
-                                            />
-                                            <View style={styles.musicResultInfo}>
-                                                <Text style={styles.musicResultTitle} numberOfLines={1}>
-                                                    {item.trackName}
-                                                </Text>
-                                                <Text style={styles.musicResultArtist} numberOfLines={1}>
-                                                    {item.artistName}
-                                                </Text>
-                                            </View>
-                                        </TouchableOpacity>
-                                    )}
-                                />
-                            </View>
-                        </TouchableOpacity>
-                    </Modal>
+                        onSelect={(item) => setMusic(item)}
+                        onClose={() => setMusicModalOpen(false)}
+                    />
 
                     {/* 장소 검색 모달 */}
-                    <Modal
+                    <KakaoPlaceSearch
                         visible={placeSearchOpen}
-                        transparent
-                        animationType="slide"
-                        onRequestClose={() => setPlaceSearchOpen(false)}
-                    >
-                        <TouchableOpacity
-                            style={styles.modalBackdrop}
-                            onPress={() => setPlaceSearchOpen(false)}
-                            activeOpacity={1}
-                        >
-                            <View style={styles.musicModalBox}>
-                                <View style={styles.musicSearchBox}>
-                                    <Ionicons name="search-outline" size={18} color="#aaa" />
-                                    <TextInput
-                                        style={styles.musicSearchInput}
-                                        placeholder="장소명 검색 (예: 스타벅스 이태원)"
-                                        placeholderTextColor="#aaa"
-                                        value={placeQuery}
-                                        onChangeText={(text) => {
-                                            setPlaceQuery(text)
-                                            searchPlace(text)
-                                        }}
-                                        autoFocus
-                                    />
-                                </View>
-                                <FlatList
-                                    data={placeResults}
-                                    keyExtractor={(item) => item.id}
-                                    renderItem={({ item }) => (
-                                        <TouchableOpacity
-                                            style={styles.musicResultItem}
-                                            onPress={() => handlePlaceSelect(item)}
-                                        >
-                                            <View style={styles.musicResultInfo}>
-                                                <Text style={styles.musicResultTitle} numberOfLines={1}>
-                                                    {item.place_name}
-                                                </Text>
-                                                <Text style={styles.musicResultArtist} numberOfLines={1}>
-                                                    {item.address_name}
-                                                </Text>
-                                            </View>
-                                        </TouchableOpacity>
-                                    )}
-                                />
-                            </View>
-                        </TouchableOpacity>
-                    </Modal>
+                        onSelect={(item) => handlePlaceSelect(item)}
+                        onClose={() => setPlaceSearchOpen(false)}
+                    />
+                    
 
                     <View style={styles.publicRow}>
                         <View>
@@ -429,18 +343,11 @@ const EditPlaceScreen = ({
 
             <TouchableOpacity
                 style={styles.clickContainer}
-                onPress={() => onComplete({
-                    id: Date.now().toString(),
-                    name: locationName,
-                    image: photo ? { uri: photo } : require('@/assets/images/mapo.png'),
-                    district: region !== '선택' ? region : '미정',
-                    date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
-                    category: placeType,
-                })}
+                onPress={handleSubmit}
             >
                 <Text style={styles.clickText}>등록하기</Text>
             </TouchableOpacity>
-        </View>
+        </KeyboardAvoidingView>
     )
 }
 
@@ -625,6 +532,8 @@ const styles = StyleSheet.create({
         borderColor: '#E0E0E0',
         backgroundColor: '#FFFFFF',
         padding: 12,
+        paddingRight: 20, 
+        marginTop: -10,
         marginBottom: 10,
         gap: 12,
     },
@@ -636,7 +545,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#ddd',
     },
 
-    musicInfo: { gap: 4 },
+    musicInfo: { 
+        gap: 4,
+        flex: 1,
+        maxWidth: '80%',
+        overflow: 'hidden',
+    },
 
     musicTitle: {
         fontSize: 15,

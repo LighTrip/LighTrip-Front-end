@@ -1,6 +1,5 @@
-import { BASE_URL } from "@/src/api/config";
+import { getFriends } from "@/src/api/socialApi";
 import { Ionicons } from "@expo/vector-icons";
-import * as Securestore from "expo-secure-store";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -9,30 +8,6 @@ import FriendDetailModal from "../components/FriendDetailModal";
 import FriendGrid from "../components/FriendGrid";
 import SocialSearchBar from "../components/SocialSearchBar";
 import { Friend } from "../types/social.types";
-
-type FriendApiItem = {
-    friendId: number;
-    userId: number;
-    nickname: string;
-    profileImg: string | null;
-    friendCode: string;
-    status: string;
-    createdAt: string;
-    stampCount: number;
-    passportCount: number;
-    mutualFriends: {
-        userId: number;
-        nickname: string;
-        profileImg: string | null;
-    }[];
-}
-
-type FriendListResponse = {
-    success: boolean;
-    code: string;
-    message: string;
-    data: FriendApiItem[];
-}
 
 export default function SocialView() {
     const [keyword, setKeyword] = useState("");
@@ -45,49 +20,15 @@ export default function SocialView() {
     // 친구 추가에서 선택
     const [isAddFriendOpen, setIsAddFriendOpen] = useState(false);
 
-    // 친구 목록 불러오기 API 연결
+    // 친구 목록 불러오기
     const fetchFriends = async () => {
-        const accessToken = await Securestore.getItemAsync("accessToken");
 
         try {
             setIsLoading(true);
             setErrorMessage("");
 
-            console.log("친구 목록 요청 URL:", `${BASE_URL}/api/v1/friends`);
-
-            const response = await fetch(`${BASE_URL}/api/v1/friends`, {
-                method: "GET",
-                headers : {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            });
-
-            const data: FriendListResponse = await response.json();
-
-            console.log("친구 목록 응답 상태:", response.status);
-            console.log("친구 목록 응답 데이터:",data);
-
-            if(!response.ok || !data.success) {
-                throw new Error(data.message || "친구 목록 조회에 실패했습니다.")
-            }
-
-            const mappedFriends: Friend[] = data.data.map((item) => ({
-                id: String(item.friendId),
-                friendId: item.friendId,
-                userId: item.userId,
-                name: item.nickname,
-                profileImg: item.profileImg,
-                friendCode: item.friendCode,
-                status: item.status,
-                createdAt: item.createdAt,
-
-                stampCount: item.stampCount,
-                passportCount: item.passportCount,
-                mutualFriends: item.mutualFriends ?? [],
-            }));
-
-            setFriends(mappedFriends);
+            const friendList = await getFriends();
+            setFriends(friendList);
         }catch(error) {
             console.log("친구 목록 조회 에러:", error)
             setErrorMessage("친구 목록을 불러오지 못했습니다.");
@@ -167,6 +108,7 @@ export default function SocialView() {
             <AddFriendModal
                 visible={isAddFriendOpen}
                 onClose={() => setIsAddFriendOpen(false)}
+                onFriendRequestSuccess={fetchFriends}
             />
         </SafeAreaView>
     );

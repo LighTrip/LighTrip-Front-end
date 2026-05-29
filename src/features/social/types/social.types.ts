@@ -1,4 +1,3 @@
-import { ImageSourcePropType } from "react-native";
 
 export type MutualFriend = {
     userId: number;
@@ -19,9 +18,6 @@ export type Friend = {
     stampCount: number; // 도장 개수
     passportCount: number; // 여권 개수
     mutualFriends?: MutualFriend[]; // 함께 아는 친구
-
-    image?: ImageSourcePropType; // 사진
-    isSelected?: boolean; // 카드 선택되었을 때
 };
 
 export type RecommendedFriend = {
@@ -35,5 +31,4 @@ export type RecommendedFriend = {
 
     stampCount?: number; // 도장 개수
     mutualFriends?: MutualFriend[]; // 함께 아는 친구
-    image?: ImageSourcePropType; // 사진
 }
