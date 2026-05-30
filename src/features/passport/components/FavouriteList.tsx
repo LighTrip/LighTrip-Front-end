@@ -71,7 +71,9 @@ const FavouriteList = <T,>({
                 }
                 renderItem={({ item }) => {
                     const thumbnailUrl = renderThumbnail?.(item)
-                    const dateText = renderDate ? formatDate(renderDate(item)) : ''
+                    const rawDate = renderDate?.(item)
+                    const dateText = formatDate(rawDate)
+                    const contentText = renderContent?.(item) ?? ""
 
                     return (
                         <TouchableOpacity
@@ -93,7 +95,7 @@ const FavouriteList = <T,>({
                                     </View>
                                 )}
 
-                                {dateText && (
+                                {dateText.length > 0 && (
                                     <View style={styles.dateBadge}>
                                         <Text style={styles.dateText}>
                                             {dateLabel} {dateText}
@@ -119,9 +121,9 @@ const FavouriteList = <T,>({
                                         {renderAddress(item)}
                                 </Text>
 
-                                {renderContent && (
+                                {contentText.length > 0 && (
                                     <Text style={styles.contentText} numberOfLines={2}>
-                                        {renderContent(item)}
+                                        {contentText}
                                     </Text>
                                 )}
 
