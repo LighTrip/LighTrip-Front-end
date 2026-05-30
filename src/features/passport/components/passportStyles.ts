@@ -1,4 +1,4 @@
-import { StyleSheet, Dimensions } from 'react-native'
+import { Dimensions, StyleSheet } from 'react-native'
 
 export const COVER_WIDTH = (Dimensions.get('window').width - 20 * 2 - 1) / 2
 export const COVER_HEIGHT = COVER_WIDTH * (4 / 3)
@@ -45,31 +45,28 @@ export const passportStyles = StyleSheet.create({
     },
     
     listContainer: {
-        paddingHorizontal: 16,
+        paddingHorizontal: 20,
         paddingBottom: 100,
     },
     
     listCard: {
-        width: Dimensions.get('window').width - 32,
-        height: 80,
-        flexDirection: 'row',
+        width: Dimensions.get('window').width - 40,
         backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        marginTop: 10,
-        marginBottom: 10,
-        alignItems: 'center',
-        shadowColor: '#1A3A6B',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.4,
-        shadowRadius: 5,
-        elevation: 4,
+        borderRadius: 18,
+        marginTop: 8,
+        marginBottom: 15,
+        overflow: "hidden",
+        shadowColor: '#4C4C4C',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.16,
+        shadowRadius: 10,
+        elevation: 5,
     },
 
     listName: {
-        color: '#000000',
+        color: '#111827',
         fontSize: 18,
-        fontWeight: '600',
-        marginBottom: 4,
+        fontWeight: '700',
     },
     
     stamp: {
@@ -89,9 +86,9 @@ export const passportStyles = StyleSheet.create({
     },
 
     meta: { 
-        color: '#000000', 
-        fontSize: 14, 
-        fontWeight: '500' 
+        color: '#6B7280', 
+        fontSize: 13,
+        marginBottom: 10,
     },
 
     dropdown: {
@@ -117,4 +114,99 @@ export const passportStyles = StyleSheet.create({
         fontSize: 14, 
         color: '#000' 
     },
+
+    thumbnailArea: {
+        width: '100%',
+        height: 155,
+        backgroundColor: '#E5E7EB',
+        position: 'relative',
+    },
+    
+    listThumbnail: {
+        width: '100%',
+        height: '100%',
+        resizeMode: 'cover',
+    },
+    
+    listThumbnailPlaceholder: {
+        width: '100%',
+        height: '100%',
+        backgroundColor: '#EAEAEA',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    
+    placeholderText: {
+        fontSize: 13,
+        color: '#999',
+        fontWeight: '600',
+    },
+    
+    dateBadge: {
+        position: 'absolute',
+        top: 12,
+        right: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.92)',
+        borderRadius: 10,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    
+    dateText: {
+        color: '#333333',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    
+    cardBody: {
+        paddingHorizontal: 22,
+        paddingTop: 18,
+        paddingBottom: 14,
+    },
+
+    placeTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 6,    
+    },
+
+    locationIcon: {
+        marginRight: 8,
+    },
+
+    contentText: {
+        color: '#374151',
+        fontSize: 14,
+        lineHeight: 20,
+        marginBottom: 10,
+    },
+    
+    divider: {
+        height: 1,
+        backgroundColor: '#E5E7EB',
+        marginBottom: 10,
+    },
+    
+    countRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    
+    countItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginRight: 18,
+    },
+    
+    countText: {
+        marginLeft: 8,
+        color: '#333333',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    
+    arrowIcon: {
+        marginLeft: 'auto',
+    },
+
 })

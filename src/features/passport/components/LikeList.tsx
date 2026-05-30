@@ -9,6 +9,12 @@ const LikeList = ({ onSelectPlace }: { onSelectPlace?: (item: LikePassport) => v
         onSelectPlace={onSelectPlace}
         renderName={(item) => item.spaceName}
         renderAddress={(item) => item.address}
+        renderThumbnail={(item) => item.thumbnailUrl}
+        renderContent={(item) => item.content}
+        renderDate={(item) => item.likeCreatedAt}
+        dateLabel='저장일'
+        renderLikeCount={(item) => item.likeCount}
+        renderScrapCount={(item) => item.scrapCount}
     />
 )
 
