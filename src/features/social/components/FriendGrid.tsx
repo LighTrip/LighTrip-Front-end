@@ -6,9 +6,10 @@ type FriendGridProps = {
     friends: Friend[];
     selectedFriendId: string | null;
     onPressFriend: (friend: Friend) => void;
+    onLongPressFriend: (Friend: Friend) => void;
 };
 
-export default function FriendGrid({friends, selectedFriendId, onPressFriend}: FriendGridProps) {
+export default function FriendGrid({friends, selectedFriendId, onPressFriend, onLongPressFriend}: FriendGridProps) {
     return (
     <FlatList<Friend>
         data={friends}
@@ -19,6 +20,7 @@ export default function FriendGrid({friends, selectedFriendId, onPressFriend}: F
             friend={item} 
             isSelected={item.id === selectedFriendId}
             onPress={() => onPressFriend(item)}
+            onLongPress={() => onLongPressFriend(item)}
         />}
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.contentContainer}

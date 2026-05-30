@@ -26,11 +26,16 @@ const getMutualFriendText = (
 type AddFriendProps = {
     friend: RecommendedFriend;
     onAdd: (friend: RecommendedFriend) => void;
+    onPress: (friend: RecommendedFriend) => void;
 };
 
-export default function AddFriendCard({friend, onAdd}: AddFriendProps) {
+export default function AddFriendCard({friend, onAdd, onPress}: AddFriendProps) {
     return (
-        <View style={styles.card}>
+        <TouchableOpacity 
+            style={styles.card}
+            activeOpacity={0.8}
+            onPress={() => onPress(friend)}
+        >
             <Image 
                 source={
                     friend.profileImg
@@ -50,7 +55,7 @@ export default function AddFriendCard({friend, onAdd}: AddFriendProps) {
             <TouchableOpacity style={styles.addButton} onPress={() => onAdd(friend)}>
                 <Text style={styles.addButtonText}>추가</Text>
             </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
     )
 }
 
