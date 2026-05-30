@@ -1,33 +1,33 @@
-import { 
-    StatusBar, 
-    StyleSheet, 
-    Text, 
-    View, 
-    TouchableOpacity, 
-    Image, 
-    Dimensions,
-    TextInput,
-    Modal,
-    FlatList,
-    Platform,
-    KeyboardAvoidingView,
-    Alert,
-} from 'react-native'
-import React, { useState, useEffect } from 'react'
-import { Ionicons } from '@expo/vector-icons'
 import KakaoPlaceSearch from '@/src/components/passport/KakaoPlaceSearch'
 import MusicSearch from '@/src/components/passport/MusicSearch'
+import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
+import React, { useEffect, useState } from 'react'
+import {
+    Alert,
+    Dimensions,
+    FlatList,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native'
 
 import NoiseOverlay from '@/src/components/common/NoiseOverlay'
 import DatePickerModal from '@/src/components/passport/DatePickerModal'
 
-import { 
-    deletePassport, 
-    updatePassport, 
-    updatePassportVisibility, 
-    PassportCategory, 
-    Visibility, 
+import {
+    deletePassport,
+    PassportCategory,
+    updatePassport,
+    updatePassportVisibility,
+    Visibility,
 } from '@/src/api/passport/passport.api'
 
 type Props = {
@@ -36,6 +36,7 @@ type Props = {
     onBack: () => void
     onNext?: () => void
     onPrev?: () => void
+    editable? :boolean
 }
 
 const STAMP_MAP: Record<string, any> = {
@@ -92,7 +93,7 @@ const MusicBox = ({ music, onPress, styles }: { music: MusicDisplayItem; onPress
     )
 }
 
-const PassportDetail = ({ item, onBack, onNext, onPrev, districts }: Props) => {
+const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable=true }: Props) => {
     const [isEditing, setIsEditing] = useState(false)
     const [editReview, setEditReview] = useState(item.content ?? '')
     const [editCategory, setEditCategory] = useState(CATEGORY_TO_KOREAN[item.category] ?? '선택')
@@ -348,9 +349,11 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts }: Props) => {
                                 <TouchableOpacity onPress={onPrev}>
                                     <Text style={styles.editText}>{'< < < < < < < < < < <'}</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => setIsEditing(true)}>
-                                    <Text style={styles.editText}>edit my passport</Text>
-                                </TouchableOpacity>
+                                {editable && (
+                                    <TouchableOpacity onPress={() => setIsEditing(true)}>
+                                        <Text style={styles.editText}>edit my passport</Text>
+                                    </TouchableOpacity>
+                                )}
                                 <TouchableOpacity onPress={onNext}>
                                     <Text style={styles.editText}>{'> > > > > > > > > > >'}</Text>
                                 </TouchableOpacity>
