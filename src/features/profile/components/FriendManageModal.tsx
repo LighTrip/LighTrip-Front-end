@@ -1,6 +1,9 @@
+import { getPendingFriends, respondFriendRequest } from "@/src/api/profileApi";
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+    ActivityIndicator,
+    Alert,
     FlatList,
     Image,
     Modal,
@@ -10,6 +13,7 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import { PendingFriend } from "../types/profile.types";
 
 type FriendManageModalProps = {
     visible: boolean;
@@ -24,68 +28,105 @@ type FriendRequest = {
     profileImg: string | null;
 }
 
-const friendRequestDummy: FriendRequest[] = [
-    {
-        id: "1",
-        name: "김지훈",
-        userId: "#12845",
-        location: "서울시 강남구",
-        profileImg: null,
-    },
-    {
-        id: "2",
-        name: "박서연",
-        userId: "#28934",
-        location: "서울시 마포구",
-        profileImg: null,
-    },
-    {
-        id: "3",
-        name: "이민준",
-        userId: "#39210",
-        location: "서울시 성동구",
-        profileImg: null,
-    },
-    {
-        id: "4",
-        name: "저희이제하조",
-        userId: "#12345",
-        location: "고양시 덕양구",
-        profileImg: null,
-    },
-]
-
 export default function FriendManageModal ({
     visible,
     onClose
 } : FriendManageModalProps ) {
 
     const [keyword, setKeyword] = useState("");
+    const [requests, setRequests] = useState<PendingFriend[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [processingFriendId, setProcessingFriendId] = useState<number | null>(null);
 
+    // 받은 친구 요청 목록 조회회
+    const fetchPendingFriends = async () => {
+        try {
+            setIsLoading(true);
+
+            const data = await getPendingFriends();
+            setRequests(data);
+        }catch(error) {
+            console.log("받은 친구 요청 목록 조회 에러:", error);
+        }finally {
+            setIsLoading(false);
+        }
+    }
+
+    useEffect(() => {
+        if(visible) {
+            fetchPendingFriends();
+        }
+    }, [visible]);
+
+    // 친구 검색
     const filteredRequests = useMemo(() => {
         const trimmedKeyword = keyword.trim();
 
         if(trimmedKeyword.length === 0) {
-            return friendRequestDummy;
+            return requests;
         }
 
-        return friendRequestDummy.filter((friend) => {
+        return requests.filter((friend) => {
             return (
-                friend.userId.includes(trimmedKeyword)
+                String(friend.userId).includes(trimmedKeyword)
             );
         });
-    },[keyword])
+    },[keyword, requests])
 
     const handleSearchFriend = () => {
         console.log("친구 검색:", keyword)
     };
 
-    const handleAccept = (friend:FriendRequest) => {
-        console.log("친구 요청 수락:", friend);
+    // 친구 요청 수락
+    const handleAccept = async (friend: PendingFriend) => {
+        try {
+            setProcessingFriendId(friend.friendId);
+            
+            await respondFriendRequest(friend.friendId, "ACCEPT");
+
+            setRequests((prev) =>
+                prev.filter((request) => request.friendId !== friend.friendId) 
+            );
+
+            Alert.alert("친구 요청 수락", "친구 요청을 수락했습니다.")
+        } catch(error) {
+            console.log("친구 요청 수락 에러:",error)
+
+            Alert.alert(
+                "수락 실패",
+                error instanceof Error
+                    ? error.message
+                    :"친구 요청 수락 중 문제가 발생했습니다."
+            )
+        }finally {
+            setProcessingFriendId(null);
+        }
     };
 
-    const handleReject = (friend: FriendRequest) => {
-        console.log("친구 요청 거절:", friend);
+    // 친구 요청 거절
+    const handleReject = async (friend: PendingFriend) => {
+        try {
+            setProcessingFriendId(friend.friendId);
+
+            await respondFriendRequest(friend.friendId, "REJECT");
+
+            setRequests((prev) =>
+                prev.filter((request) => request.friendId !== friend.friendId)
+            )
+
+            Alert.alert("친구 요청 거절", "친구 요청을 거절했습니다.")
+        }catch(error) {
+            console.log("친구 요청 거절 에러", error)
+
+            Alert.alert(
+                "거절 실패",
+                error instanceof Error
+                    ? error.message
+                    :"친구 요청 거절절 중 문제가 발생했습니다."
+            )
+        }finally {
+            setProcessingFriendId(null);
+        }
     };
 
     return(
@@ -147,83 +188,99 @@ export default function FriendManageModal ({
                     {/*나에게로 온 요청*/}
                     <Text style={styles.requestTitle}>나에게 온 요청</Text>
 
-                    <FlatList
-                        data={filteredRequests}
-                        keyExtractor={(item) => item.userId}
-                        style={styles.requestList}
-                        contentContainerStyle={styles.requestListContent}
-                        showsVerticalScrollIndicator={false}
-                        nestedScrollEnabled={true}
-                        ListEmptyComponent={
-                            <View style={styles.emptyBox}>
-                                <Text style={styles.emptyText}>
-                                    받은 친구 요청이 없습니다.
-                                </Text>
-                            </View>
-                        }
-                        renderItem={({item}) => (
-                            <View style={styles.requestCard}>
-                                <View style={styles.friendInfoRow}>
-                                    <View style={styles.profileCircle}>
-                                        {item.profileImg ? (
-                                            <Image
-                                                source={{uri: item.profileImg}}
-                                                style={styles.profileImage}
-                                            />
-                                        ) : (
-                                            <Ionicons
-                                                name="person"
-                                                size={22}
-                                                color="#FFFFFF"
-                                            />
-                                        )}
-                                    </View>
+                    {isLoading ? (
+                        <View style={styles.loadingBox}>
+                            <ActivityIndicator size="small" color="#1A3A6B" />
+                            <Text style={styles.loadingText}>요청 목록을 불러오는 중입니다.</Text>
+                        </View>
+                    ) : (
+                        <FlatList
+                            data={filteredRequests}
+                            keyExtractor={(item) => String(item.userId)}
+                            style={styles.requestList}
+                            contentContainerStyle={styles.requestListContent}
+                            showsVerticalScrollIndicator={false}
+                            nestedScrollEnabled={true}
+                            ListEmptyComponent={
+                                <View style={styles.emptyBox}>
+                                    <Text style={styles.emptyText}>
+                                        받은 친구 요청이 없습니다.
+                                    </Text>
+                                </View>
+                            }
+                            renderItem={({item}) => (
+                                <View style={styles.requestCard}>
+                                    <View style={styles.friendInfoRow}>
+                                        <View style={styles.profileCircle}>
+                                            {item.profileImg ? (
+                                                <Image
+                                                    source={{uri: item.profileImg}}
+                                                    style={styles.profileImage}
+                                                />
+                                            ) : (
+                                                <Ionicons
+                                                    name="person"
+                                                    size={22}
+                                                    color="#FFFFFF"
+                                                />
+                                            )}
+                                        </View>
 
-                                    <View style={styles.friendTextBox}>
-                                        <Text style={styles.friendName}>
-                                            {item.name}{" "}
-                                            <Text style={styles.friendId}>
-                                                {item.userId}
+                                        <View style={styles.friendTextBox}>
+                                            <Text style={styles.friendName}>
+                                                {item.nickname}{" "}
+                                                <Text style={styles.friendId}>
+                                                    #{item.userId}
+                                                </Text>
                                             </Text>
-                                        </Text>
 
-                                        <View style={styles.locationRow}>
-                                            <Ionicons
-                                                name="location-outline"
-                                                size={13}
-                                                color="#A0A0A0"
-                                            />
-                                            <Text style={styles.friendLocation}>
-                                                {item.location}
-                                            </Text>
+                                            <View style={styles.locationRow}>
+                                                <Ionicons
+                                                    name="location-outline"
+                                                    size={13}
+                                                    color="#A0A0A0"
+                                                />
+                                                <Text style={styles.friendLocation}>
+                                                    {item.location}
+                                                </Text>
+                                            </View>
                                         </View>
                                     </View>
-                                </View>
 
-                                <View style={styles.buttonRow}>
-                                    <TouchableOpacity
-                                        activeOpacity={0.8}
-                                        style={styles.acceptButton}
-                                        onPress={() => handleAccept(item)}
-                                    >
-                                        <Text style={styles.acceptButtonText}>
-                                            수락
-                                        </Text>
-                                    </TouchableOpacity>
+                                    {/*친구 요청 수락/거절 버튼*/}
+                                    <View style={styles.buttonRow}>
+                                        <TouchableOpacity
+                                            activeOpacity={0.8}
+                                            style={[
+                                                styles.acceptButton,
+                                                processingFriendId === item.friendId && styles.disabledButton,
+                                            ]}
+                                            disabled={processingFriendId === item.friendId}
+                                            onPress={() => handleAccept(item)}
+                                        >
+                                            <Text style={styles.acceptButtonText}>
+                                                {processingFriendId === item.friendId ? "처리 중" : "수락"}
+                                            </Text>
+                                        </TouchableOpacity>
 
-                                    <TouchableOpacity
-                                        activeOpacity={0.8}
-                                        style={styles.rejectButton}
-                                        onPress={() => handleReject(item)}
-                                    >
-                                        <Text style={styles.rejectButtonText}>
-                                            거절
-                                        </Text>
-                                    </TouchableOpacity>
+                                        <TouchableOpacity
+                                            activeOpacity={0.8}
+                                            style={[
+                                                styles.rejectButton,
+                                                processingFriendId === item.friendId && styles.disabledButton,
+                                            ]}
+                                            disabled={processingFriendId === item.friendId}
+                                            onPress={() => handleReject(item)}
+                                        >
+                                            <Text style={styles.rejectButtonText}>
+                                                {processingFriendId === item.friendId ? "처리 중" : "거절"}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
-                            </View>
+                            )}
+                        />
                         )}
-                    />
                 </View>
             </View>
         </Modal>
@@ -421,5 +478,21 @@ const styles = StyleSheet.create ({
         color: "#777777",
         fontSize: 13,
         fontWeight: "600",
+    },
+    loadingBox: {
+        height: 120,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "#F0F2F5",
+        borderRadius: 12, 
+    },
+    loadingText: {
+        marginTop: 8,
+        color: "#777777",
+        fontSize: 13,
+        fontWeight: "600",
+    },
+    disabledButton: {
+        opacity: 0.6,
     },
 })

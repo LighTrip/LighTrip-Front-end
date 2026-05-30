@@ -1,6 +1,9 @@
 import * as Securestore from "expo-secure-store";
 import {
+    FriendRequestAction,
+    FriendRequestActionRequest,
     MyProfileResponse,
+    PendingFriendResponse,
     PresignedUrlRequest,
     PresignedUrlResponse,
     ProfileEditForm,
@@ -201,7 +204,7 @@ export const logout = async (): Promise<void> => {
     const response = await fetch(`${BASE_URL}/auth/logout`, {
         method: "POST",
         headers: {
-            Autorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${accessToken}`,
         }
     })
 
@@ -219,5 +222,63 @@ export const logout = async (): Promise<void> => {
         }
 
         throw new Error(errorMessage);
+    }
+}
+
+// 7. 받은 친구 요청 목록 조회
+export const getPendingFriends = async (): Promise<PendingFriendResponse["data"]> => {
+    const accessToken = await getAccessToken();
+
+    const response = await fetch(`${BASE_URL}/api/v1/friends/pending`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+        }
+    });
+
+    const result: PendingFriendResponse = await response.json();
+
+    console.log("받은 친구 요청 목록 조회 상태:", response.status);
+    console.log("받은 친구 요청 목록 조회 응답:", result);
+
+    if(!response.ok || !result.success) {
+        throw new Error(result.message || "받은 친구 요청 목록 조회 실패");
+    }
+
+    return result.data;
+}
+
+// 8. 친구 요청 수락/거절
+export const respondFriendRequest = async (
+    friendId: number,
+    action: FriendRequestAction
+): Promise<void> => {
+    const accessToken = await getAccessToken();
+
+    const response = await fetch(`${BASE_URL}/api/v1/friends/${friendId}`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+            action,
+        } satisfies FriendRequestActionRequest),
+    })
+
+    console.log("친구 요청 응답 처리 상태:", response.status);
+
+    if(!response.ok) {
+        let errorMessage = "친구 요청 처리 실패";
+
+        try {
+            const result = await response.json();
+            console.log("친구 요청 응답 처리 에러 응답:", result);
+        }catch{
+            console.log("친구 요청 응답 body 없음")
+        }
+
+        throw new Error(errorMessage)
     }
 }
