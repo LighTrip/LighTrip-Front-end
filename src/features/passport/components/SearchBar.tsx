@@ -7,12 +7,13 @@ import { passportStyles } from './passportStyles'
 type Props = {
     label?: string
     onSortChange?: (option: string) => void
+    onSearchChange?: (text: string) => void
 }
 
-const SearchBar = ({ label }: Props) => {
+const SearchBar = ({ label, onSortChange, onSearchChange }: Props) => {
     const [searchSelected, setSearchSelected] = useState(false)
     const [sortVisible, setSortVisible] = useState(false)
-    const [sortOption, setSortOption] = useState('최근 방문순')
+    const [sortOption, setSortOption] = useState('최근 등록순')
 
     return (
         <View style={passportStyles.searchRow}>
@@ -23,6 +24,7 @@ const SearchBar = ({ label }: Props) => {
                         placeholder="기억에 남았던 장소를 입력하세요."
                         placeholderTextColor="#000000"
                         autoFocus
+                        onChangeText={onSearchChange}
                     />
                     <TouchableOpacity
                         style={[passportStyles.iconButton, passportStyles.iconButtonActive]}
@@ -33,7 +35,7 @@ const SearchBar = ({ label }: Props) => {
                 </>
             ) : (
                 <>
-                    <Text style={{ color: '#4c4c4c', fontSize: 16, fontWeight: '600', marginTop: 8, flex: 1 }}>
+                    <Text style={{ color: '#4c4c4c', fontSize: 16, fontWeight: '600', marginTop: 10, flex: 1 }}>
                         {label ?? sortOption}
                     </Text>
                     <View>
@@ -42,11 +44,15 @@ const SearchBar = ({ label }: Props) => {
                         </TouchableOpacity>
                         {sortVisible && (
                             <View style={passportStyles.dropdown}>
-                                {['최근 방문순', '오래된 순', '이름순'].map((option) => (
+                                {['최근 등록순', '이름순'].map((option) => (
                                     <TouchableOpacity
                                         key={option}
                                         style={passportStyles.dropdownOption}
-                                        onPress={() => { setSortOption(option); setSortVisible(false) }}
+                                        onPress={() => { 
+                                            setSortOption(option)
+                                            setSortVisible(false) 
+                                            onSortChange?.(option)
+                                        }}
                                     >
                                         <Text style={passportStyles.dropdownText}>{option}</Text>
                                     </TouchableOpacity>

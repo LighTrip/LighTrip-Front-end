@@ -5,6 +5,7 @@ type FriendCardProps = {
     friend: Friend;
     isSelected: boolean;
     onPress: () => void;
+    onLongPress: () => void;
 };
 
 const defaultProfile = require("../../../../assets/images/default_profile.png");
@@ -23,7 +24,7 @@ const getMutualFriendText = (
     return `${mutualFriends[0].nickname} 외 ${mutualFriends.length -1}명과 함께 `;
 };
 
-export default function FriendCard({friend, isSelected, onPress}: FriendCardProps) {
+export default function FriendCard({friend, isSelected, onPress, onLongPress}: FriendCardProps) {
     return(
         <TouchableOpacity
             activeOpacity={0.8}
@@ -32,13 +33,17 @@ export default function FriendCard({friend, isSelected, onPress}: FriendCardProp
                 isSelected && styles.selectedCard,
             ]}
             onPress={onPress}
+            onLongPress={onLongPress}
+            delayLongPress={500}
         >
             <Image 
                 source={
                     friend.profileImg
                         ? {uri: friend.profileImg}
                         : defaultProfile
-                } style={styles.profileImage} />
+                } 
+                style={styles.profileImage} 
+            />
             <Text style={styles.name}>{friend.name}</Text>
             <Text style={styles.stampText}>도장 {friend.stampCount ?? 0}개</Text>
             <Text style={styles.togetherText}>

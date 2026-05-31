@@ -29,6 +29,8 @@ export default function FriendDetailModal({
     const snapPoints = useMemo(() => ["70%", "95%"], []);
     const bottomSheetRef = useRef<BottomSheet>(null);
 
+    const defaultProfile = require("../../../../assets/images/default_profile.png");
+
     if (!visible || !friend) return null;
 
     return (
@@ -62,7 +64,14 @@ export default function FriendDetailModal({
                     <Ionicons name="close" size={28} color="#FFFFFF" />
                 </TouchableOpacity>
                 <View style={styles.profileArea}>
-                    <Image source={friend.image} style={styles.profileImage} />
+                    <Image 
+                        source={
+                            friend.profileImg
+                                ? {uri: friend.profileImg}
+                                : defaultProfile
+                        } 
+                        style={styles.profileImage} 
+                    />
 
                     <View style={styles.profileTextArea}>
                         <Text style={styles.name}>

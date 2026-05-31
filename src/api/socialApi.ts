@@ -1,0 +1,234 @@
+import {
+    Friend,
+    MutualFriend,
+    PublicUserProfile,
+    RecommendedFriend
+} from "@/src/features/social/types/social.types";
+import * as Securestore from "expo-secure-store";
+import { BASE_URL } from "./config";
+
+// 친구 타입
+type FriendApiItem = {
+    friendId: number;
+    userId: number;
+    nickname: string;
+    profileImg: string | null;
+    friendCode: string;
+    status: string;
+    createdAt: string;
+    stampCount: number;
+    passportCount: number;
+    mutualFriends: MutualFriend[];
+};
+
+// 친구 목록 타입
+type FriendListResponse = {
+    success: boolean;
+    code: string;
+    message: string;
+    data: FriendApiItem[];
+}
+
+// 추천 친구 목록 타입
+type RecommendedFriendResponse = {
+    success: boolean;
+    code: string;
+    message: string;
+    data: RecommendedFriend[];
+};
+
+// 친구 검색 타입
+type SearchFriendResponse = {
+    success: boolean;
+    code: string;
+    message: string;
+    data: RecommendedFriend;
+};
+
+// 친구 추가 타입
+type FriendRequestResponse = {
+    success: boolean;
+    code: string;
+    message: string;
+    data: unknown;
+}
+
+// 친구 삭제 타입
+type DeleteFriendResponse = {
+    success: boolean;
+    code: string;
+    message: string;
+    data: unknown;
+}
+
+// 공개 프로필 타입
+type PublicUserProfileResponse = {
+    success: boolean;
+    code: string;
+    message: string;
+    data : {
+        userId: number;
+        nickname: string;
+        profileImg: string | null;
+    }
+}
+
+// 1. 토큰 발급
+const getAccessToken = async () => {
+    const accessToken = await Securestore.getItemAsync("accessToken");
+
+    if(!accessToken) {
+        throw new Error("로그인 토큰이 없습니다.");
+    }
+
+    return accessToken;
+}
+const authHeaders = async () => {
+    const accessToken = await getAccessToken();
+
+    return {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+    }
+}
+
+// 2. 백엔드 response 프론트 타입과 매핑
+const mapFriendApiItemToFriend = (item: FriendApiItem): Friend => {
+    return {
+        id: String(item.friendId),
+        friendId: item.friendId,
+        userId: item.userId,
+        name: item.nickname,
+        profileImg: item.profileImg,
+        friendCode: item.friendCode,
+        status: item.status,
+        createdAt: item.createdAt,
+
+        stampCount: item.stampCount,
+        passportCount: item.passportCount,
+        mutualFriends: item.mutualFriends ?? [],
+    }
+}
+
+// 3. 친구 목록 조회
+export const getFriends = async (): Promise<Friend[]> => {
+    const response = await fetch(`${BASE_URL}/api/v1/friends`, {
+        method: "GET",
+        headers: await authHeaders()
+    });
+
+    const data: FriendListResponse = await response.json();
+
+    console.log("친구 목록 응답 상태:", response.status);
+    console.log("친구 목록 응답 데이터:", data);
+
+    if(!response.ok || !data.success) {
+        throw new Error(data.message || "친구 목록 조회에 실패했습니다.");
+    }
+
+    return data.data.map(mapFriendApiItemToFriend);
+};
+
+// 4. 추천 친구 목록 조회
+export const getRecommendedFriends = async (): Promise<RecommendedFriend[]> => {
+    const response = await fetch(`${BASE_URL}/api/v1/friends/recommendations`, {
+        method: "GET",
+        headers: await authHeaders()
+    })
+
+    const data: RecommendedFriendResponse = await response.json();
+
+    console.log("추천 친구 응답 상태:", response.status);
+    console.log("추천 친구 응답 데이터:", data);
+
+    if(!response.ok || !data.success) {
+        throw new Error(data.message || "추천 친구 목록 조회 실패");
+    }
+
+    return data.data;
+};
+
+// 5. 친구 코드 검색
+export const searchFriendByCode = async (
+    code: string
+): Promise<RecommendedFriend> => {
+    const requestUrl = `${BASE_URL}/api/v1/friends/search?code=${encodeURIComponent(code)}`;
+
+    const response = await fetch(requestUrl, {
+        method: "GET",
+        headers: await authHeaders(),
+    });
+
+    const data: SearchFriendResponse = await response.json();
+
+    console.log("친구 코드 검색 응답 상태:", response.status);
+    console.log("친구 코드 검색 응답 데이터:", data);
+
+    if (!response.ok || !data.success) {
+        throw new Error(data.message || "친구 검색 실패");
+    }
+
+    return data.data;
+};
+
+// 6. 친구 요청 보내기
+export const requestFriend = async (friendCode: string) => {
+    const response = await fetch(`${BASE_URL}/api/v1/friends/request`, {
+        method: "POST",
+        headers: await authHeaders(),
+        body: JSON.stringify({
+            friendCode,
+        }),
+    });
+
+    const data: FriendRequestResponse = await response.json();
+
+    console.log("친구 요청 응답 상태:", response.status);
+    console.log("친구 요청 응답 데이터:", data);
+
+    if (!response.ok || !data.success) {
+        throw new Error(data.message || "친구 요청에 실패했습니다.");
+    }
+
+    return data.data;
+};
+
+// 7. 친구 삭제
+export const deleteFriend = async (friendId: number) => {
+    const response = await fetch(`${BASE_URL}/api/v1/friends/${friendId}`, {
+        method: "DELETE",
+        headers: await authHeaders(),
+    });
+
+    const data: DeleteFriendResponse = await response.json();
+
+    console.log("친구 삭제 응답 상태:", response.status);
+    console.log("친구 삭제 응답 데이터:", data);
+
+    if(!response.ok || !data.success) {
+        throw new Error(data.message || "친구 삭제에 실패했습니다.");
+    }
+
+    return data.data;
+}
+
+// 8. 다른 사용자 공개 프로필 조회
+export const getPublicUserProfile = async (
+    userId: number
+): Promise<PublicUserProfile> => {
+    const response = await fetch(`${BASE_URL}/api/v1/users/${userId}`, {
+        method: "GET",
+        headers: await authHeaders(),
+    });
+
+    const data: PublicUserProfileResponse = await response.json()
+
+    console.log("공개 프로필 조회 응답 상태:", response.status);
+    console.log("공개 프로필 조회 응답 데이터:", data);
+
+    if(!response.ok || !data.success) {
+        throw new Error(data.message || "사용자 프로필 조회에 실패했습니다.")
+    }
+
+    return data.data;
+}

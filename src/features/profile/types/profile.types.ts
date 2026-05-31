@@ -72,3 +72,35 @@ export type PresignedUrlResponse = {
     presignedUrl: string;
     imageUrl: string;
 };
+
+// 받은 친구 요청 목록 응답 타입
+export type PendingFriendResponse = {
+    success: boolean;
+    code: string;
+    message: string;
+    data: PendingFriend[];
+};
+
+export type PendingFriend = {
+    friendId: number;
+    userId: number;
+    nickname: string;
+    profileImg: string | null;
+    friendCode: string;
+    location: null;
+    status: string;
+    createdAt: string;
+    passportCount: number;
+    mutualFriends: {
+        userId: number;
+        nickname: string;
+        profileImg: string | null;
+    }[];
+}
+
+// 친구 요청 거절/수락
+export type FriendRequestAction = "ACCEPT" | "REJECT";
+
+export type FriendRequestActionRequest = {
+    action: FriendRequestAction;
+}
