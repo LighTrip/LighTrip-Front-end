@@ -193,13 +193,15 @@ const styles = StyleSheet.create({
         marginHorizontal: 5,
         borderRadius: 10,
         backgroundColor: '#FFFFFF',
-        borderWidth: 2,
-        borderColor: '#1A3A6B',
+        shadowColor: '#1A3A6B',
+        shadowOffset: { width: 1, height: 1 },
+        shadowOpacity: 0.4,
+        shadowRadius: 2,
+        elevation: 4,
     },
 
     tabButtonActive: {
         backgroundColor: '#1A3A6B',
-        borderColor: '#1A3A6B',
     },
 
     tabText: {
@@ -226,6 +228,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-start',
         gap: 11,
     },
+
     passportCover: {
         width: COVER_WIDTH,
         height: COVER_HEIGHT * 0.98,

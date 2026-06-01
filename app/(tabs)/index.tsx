@@ -97,6 +97,7 @@ export default function MapScreen() {
   const { bottom: safeBottom } = useSafeAreaInsets();
   const [showDiscovery, setShowDiscovery] = useState(true);
   const [showRegisterBtn, setShowRegisterBtn] = useState(false);
+  const [showAddPlace, setShowAddPlace] = useState(false); // 장소 등록
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -146,6 +147,10 @@ export default function MapScreen() {
       duration: 500,
     });
   };
+
+  if (showAddPlace) {
+      return <AddPlaceScreen />
+  }
 
   return (
     <View style={styles.container}>
