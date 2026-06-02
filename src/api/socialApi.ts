@@ -1,11 +1,13 @@
 import {
     Friend,
     MutualFriend,
-    RecommendedFriend,
+    PublicUserProfile,
+    RecommendedFriend
 } from "@/src/features/social/types/social.types";
 import * as Securestore from "expo-secure-store";
 import { BASE_URL } from "./config";
 
+// 친구 타입
 type FriendApiItem = {
     friendId: number;
     userId: number;
@@ -19,6 +21,7 @@ type FriendApiItem = {
     mutualFriends: MutualFriend[];
 };
 
+// 친구 목록 타입
 type FriendListResponse = {
     success: boolean;
     code: string;
@@ -26,6 +29,7 @@ type FriendListResponse = {
     data: FriendApiItem[];
 }
 
+// 추천 친구 목록 타입
 type RecommendedFriendResponse = {
     success: boolean;
     code: string;
@@ -33,6 +37,7 @@ type RecommendedFriendResponse = {
     data: RecommendedFriend[];
 };
 
+// 친구 검색 타입
 type SearchFriendResponse = {
     success: boolean;
     code: string;
@@ -40,11 +45,32 @@ type SearchFriendResponse = {
     data: RecommendedFriend;
 };
 
+// 친구 추가 타입
 type FriendRequestResponse = {
     success: boolean;
     code: string;
     message: string;
     data: unknown;
+}
+
+// 친구 삭제 타입
+type DeleteFriendResponse = {
+    success: boolean;
+    code: string;
+    message: string;
+    data: unknown;
+}
+
+// 공개 프로필 타입
+type PublicUserProfileResponse = {
+    success: boolean;
+    code: string;
+    message: string;
+    data : {
+        userId: number;
+        nickname: string;
+        profileImg: string | null;
+    }
 }
 
 // 1. 토큰 발급
@@ -166,3 +192,43 @@ export const requestFriend = async (friendCode: string) => {
 
     return data.data;
 };
+
+// 7. 친구 삭제
+export const deleteFriend = async (friendId: number) => {
+    const response = await fetch(`${BASE_URL}/api/v1/friends/${friendId}`, {
+        method: "DELETE",
+        headers: await authHeaders(),
+    });
+
+    const data: DeleteFriendResponse = await response.json();
+
+    console.log("친구 삭제 응답 상태:", response.status);
+    console.log("친구 삭제 응답 데이터:", data);
+
+    if(!response.ok || !data.success) {
+        throw new Error(data.message || "친구 삭제에 실패했습니다.");
+    }
+
+    return data.data;
+}
+
+// 8. 다른 사용자 공개 프로필 조회
+export const getPublicUserProfile = async (
+    userId: number
+): Promise<PublicUserProfile> => {
+    const response = await fetch(`${BASE_URL}/api/v1/users/${userId}`, {
+        method: "GET",
+        headers: await authHeaders(),
+    });
+
+    const data: PublicUserProfileResponse = await response.json()
+
+    console.log("공개 프로필 조회 응답 상태:", response.status);
+    console.log("공개 프로필 조회 응답 데이터:", data);
+
+    if(!response.ok || !data.success) {
+        throw new Error(data.message || "사용자 프로필 조회에 실패했습니다.")
+    }
+
+    return data.data;
+}

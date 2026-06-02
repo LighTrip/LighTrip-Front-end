@@ -32,3 +32,9 @@ export type RecommendedFriend = {
     stampCount?: number; // 도장 개수
     mutualFriends?: MutualFriend[]; // 함께 아는 친구
 }
+
+export type PublicUserProfile = {
+    userId: number;
+    nickname: string;
+    profileImg: string | null;
+}
