@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.LighTrip"
+      "bundleIdentifier": "com.lightrip.LighTrip"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +24,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.LighTrip"
+      "package": "com.lightrip.LighTrip"
     },
     "web": {
       "bundler": "metro",
