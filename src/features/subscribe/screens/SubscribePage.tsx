@@ -6,27 +6,88 @@ import {
     Platform,
     Modal,
     Alert,
+    Linking,
 } from "react-native";
-import Animated, { useSharedValue, withTiming, useAnimatedRef, scrollTo, runOnUI } from 'react-native-reanimated'
+import Animated, { useAnimatedRef, scrollTo, runOnUI } from 'react-native-reanimated'
 import { WebView } from 'react-native-webview'
 import { useRouter } from 'expo-router'
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
+import { createOrder, confirmPayment, getMyPremium } from '@/src/api/payment/payment.api'
 
-import { subscribeStyles as styles } from './subscribeStyles';
+import { subscribeStyles as styles } from '../components/subscribeStyles';
 
 export default function SubscribePage() {
     const router = useRouter()
 
+    const [webViewUrl, setWebViewUrl] = useState<string | null>(null)
+    const [isPremium, setIsPremium] = useState(false)
+    const TOSS_CLIENT_KEY = process.env.EXPO_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY ?? ''
+    const SUCCESS_URL = 'https://lightrip.app/payment/success'
+    const FAIL_URL = 'https://lightrip.app/payment/fail'
+
+    const [paidIndex, setPaidIndex] = useState<number | null>(null)
     const plans = ['기본 플랜', '월간 구독', '연간 구독']
     const planLabels = ['ECONOMY CLASS', 'BUSINESS CLASS', 'BUSINESS CLASS']
     const bannerColors = ['#FFD9A7', '#8FB88A', '#8FB88A']
 
-    const [selectedIndex, setSelectedIndex] = useState<number | null>(0)
+    const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
     const [qnaVisible, setQnaVisible] = useState(false)
     const [subscribeBoxY, setSubscribeBoxY] = useState(0)
 
     const animatedRef = useAnimatedRef<Animated.ScrollView>()
+
+    useEffect(() => {
+        const fetchPremium = async () => {
+            try {
+                const res = await getMyPremium()
+                if (res.data.data.premium) {
+                    setIsPremium(true)
+                    setPaidIndex(1)  
+                }
+            } catch (err) {}
+        }
+        fetchPremium()
+    }, [])
+
+    const handlePayment = async () => {
+        console.log('selectedIndex:', selectedIndex)
+        if (selectedIndex === 0) {
+            Alert.alert('안내', '기본 플랜은 무료예요!')
+            return
+        }
+        const productType = selectedIndex === 1 ? 'PREMIUM_1MONTH' : 'PREMIUM_1YEAR'
+        try {
+            const res = await createOrder(productType)
+            console.log('주문 생성 응답:', JSON.stringify(res.data))
+            const { orderId, amount, orderName } = res.data.data
+            const params = new URLSearchParams({
+                ck: TOSS_CLIENT_KEY,
+                amount: String(amount),
+                orderId,
+                orderName,
+                successUrl: SUCCESS_URL,
+                failUrl: FAIL_URL,
+            })
+            setWebViewUrl(`https://glittery-queijadas-dc180c.netlify.app/checkout.html?${params.toString()}`)
+        } catch (err) {
+            Alert.alert('오류', '주문 생성에 실패했어요.')
+        }
+    }
+
+    const handleConfirmPayment = async (paymentKey: string, orderId: string, amount: number) => {
+        try {
+            await confirmPayment(paymentKey, orderId, amount)
+            const res = await getMyPremium()
+            setIsPremium(res.data.data.premium)
+            setPaidIndex(selectedIndex)  // 추가
+            setWebViewUrl(null)
+            Alert.alert('결제 완료', '구독이 시작되었어요! 🎉')
+        } catch (err) {
+            Alert.alert('오류', '결제 확인에 실패했어요.')
+            setWebViewUrl(null)
+        }
+    }
 
     const handleScrollTo = (y: number) => {
         runOnUI(() => {
@@ -60,8 +121,8 @@ export default function SubscribePage() {
 
                 <View style={styles.classLine}>
                     <Text style={styles.classText}>클래스</Text>
-                    <View style={[styles.classBanner, { backgroundColor: bannerColors[selectedIndex ?? 0] }]}>
-                        <Text style={styles.classBannerText}>{planLabels[selectedIndex ?? 0]}</Text>
+                    <View style={[styles.classBanner, { backgroundColor: bannerColors[paidIndex ?? 0] }]}>
+                        <Text style={styles.classBannerText}>{planLabels[paidIndex ?? 0]}</Text>
                     </View>
                 </View>
             </View>
@@ -91,14 +152,14 @@ export default function SubscribePage() {
                                 <View style={ticket.header}>
                                     <Text style={styles.ticketHeaderText}>{ticket.label}</Text>
                                 </View>
-                                <Image source={require('../../../assets/ticket/barcode.png')} style={styles.barcode} />
+                                <Image source={require('../../../../assets/ticket/barcode.png')} style={styles.barcode} />
                                 <Text style={styles.ticketText}>{ticket.text}</Text>
                                 <View style={styles.tearTop} />
                                 <View style={styles.tearDown} />
                                 <View style={styles.tearLine} />
-                                {selectedIndex === index && (
+                                {(selectedIndex !== null ? selectedIndex === index : paidIndex === index) && (
                                     <Image
-                                        source={require('../../../assets/icons/paymentStamp.png')}
+                                        source={require('../../../../assets/icons/paymentStamp.png')}
                                         style={styles.checkBadge}
                                     />
                                 )}
@@ -169,22 +230,62 @@ export default function SubscribePage() {
                 </View>
             </Animated.ScrollView>
 
-            <TouchableOpacity 
+            <Modal
+                visible={!!webViewUrl}
+                animationType="slide"
+                onRequestClose={() => setWebViewUrl(null)}
+            >
+                <View style={{ flex: 1 }}>
+                    <TouchableOpacity
+                        onPress={() => setWebViewUrl(null)}
+                        style={{ padding: 10, paddingTop: 50, backgroundColor: '#ffffff' }}
+                    >
+                    </TouchableOpacity>
+                    <WebView
+                        source={{ uri: webViewUrl ?? '' }}
+                        javaScriptEnabled={true}
+                        domStorageEnabled={true}
+                        onError={(e) => console.log('WebView 에러:', e.nativeEvent)}
+                        onHttpError={(e) => console.log('HTTP 에러:', e.nativeEvent.statusCode)}
+                        injectedJavaScript={`
+                            window.onerror = function(msg, src, line, col, err) {
+                                window.ReactNativeWebView.postMessage('JS Error: ' + msg + ' at ' + src + ':' + line);
+                            };
+                            true;
+                        `}
+                        onMessage={(e) => console.log('WebView 메시지:', e.nativeEvent.data)}
+                        onShouldStartLoadWithRequest={(req) => {
+                            const url = req.url
+                            if (url.startsWith(SUCCESS_URL)) {
+                                const params = new URL(url).searchParams
+                                handleConfirmPayment(
+                                    params.get('paymentKey') ?? '',
+                                    params.get('orderId') ?? '',
+                                    Number(params.get('amount'))
+                                )
+                                return false
+                            }
+                            if (url.startsWith(FAIL_URL)) {
+                                setWebViewUrl(null)
+                                Alert.alert('결제 실패', '결제가 취소되었어요')
+                                return false
+                            }
+                            if (!url.startsWith('http') && !url.startsWith('about:')) {
+                                Linking.openURL(url)
+                                return false
+                            }
+                            return true
+                        }}
+                    />
+                </View>
+            </Modal>
+
+            <TouchableOpacity
                 style={styles.payButton}
-                onPress={() => {
-                    if (selectedIndex === 0) {
-                        Alert.alert('안내', '기본 플랜은 무료예요!')
-                        return
-                    }
-                    Alert.alert(
-                        '결제 준비 중',
-                        `${plans[selectedIndex ?? 0]} 결제 기능은 준비 중이에요.`,
-                        [{ text: '확인' }]
-                    )
-                }}
+                onPress={handlePayment}
             >
                 <Text style={styles.payButtonText}>결제하기</Text>
-            </TouchableOpacity>     
+            </TouchableOpacity>
         </View>
     )
 }

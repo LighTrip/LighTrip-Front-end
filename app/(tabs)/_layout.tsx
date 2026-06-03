@@ -87,6 +87,16 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="subscribe"
+        options={{
+          title: "구독",
+          tabBarItemStyle: { marginTop: 10 },
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="star" size={24} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }
