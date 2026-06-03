@@ -1,3 +1,4 @@
+import AddPlaceScreen from "@/src/features/place/screens/AddPlaceScreen";
 import {
   NaverMapMarkerOverlay,
   NaverMapView,
@@ -6,10 +7,9 @@ import * as Location from "expo-location";
 import { useRef, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import AddPlaceScreen from '@/src/features/place/screens/AddPlaceScreen'
 
 const NAVY = "#0F2744";
-const TAB_BAR_HEIGHT = 80;
+const TAB_BAR_HEIGHT = 70;
 
 function ExplorationLegend() {
   return (
@@ -31,7 +31,6 @@ function ExplorationLegend() {
   );
 }
 
-// 현재 위치 표시용 SVG 스타일 마커 (파란 점 + 외곽 원)
 function UserLocationMarker() {
   return (
     <View style={styles.userLocationMarker}>
@@ -97,6 +96,7 @@ export default function MapScreen() {
   const { bottom: safeBottom } = useSafeAreaInsets();
   const [showDiscovery, setShowDiscovery] = useState(true);
   const [showRegisterBtn, setShowRegisterBtn] = useState(false);
+  const [showAddPlace, setShowAddPlace] = useState(false);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -107,7 +107,6 @@ export default function MapScreen() {
   const baseBottom = TAB_BAR_HEIGHT + safeBottom + 12;
 
   const handleConfirm = () => {
-    // 여권 기록 시 현재 발견된 장소를 핀으로 추가
     setPassportPins((prev) => [
       ...prev,
       {
@@ -131,14 +130,11 @@ export default function MapScreen() {
       alert("위치 권한이 필요합니다.");
       return;
     }
-
     const location = await Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.High,
     });
-
     const { latitude, longitude } = location.coords;
     setUserLocation({ latitude, longitude });
-
     mapRef.current?.animateCameraTo({
       latitude,
       longitude,
@@ -153,8 +149,8 @@ export default function MapScreen() {
         ref={mapRef}
         style={styles.map}
         camera={{ latitude: 37.5665, longitude: 126.978, zoom: 14 }}
+        isShowZoomControls={true}
       >
-        {/* 현재 위치 마커 (파란 점) */}
         {userLocation && (
           <NaverMapMarkerOverlay
             latitude={userLocation.latitude}
@@ -166,8 +162,6 @@ export default function MapScreen() {
             <UserLocationMarker />
           </NaverMapMarkerOverlay>
         )}
-
-        {/* 여권 기록된 장소 핀들 */}
         {passportPins.map((pin, index) => (
           <NaverMapMarkerOverlay
             key={index}
@@ -178,45 +172,49 @@ export default function MapScreen() {
         ))}
       </NaverMapView>
 
-      {/* 탐험 범례 */}
+      {/* 탐험 진행도 — 하단 버튼 위에 위치 */}
       <View
-        style={[styles.legendWrapper, { bottom: baseBottom }]}
+        style={[styles.legendWrapper, { bottom: baseBottom + 64 }]}
         pointerEvents="none"
       >
         <ExplorationLegend />
       </View>
 
-      {/* 현재 위치 버튼 */}
-      <TouchableOpacity
-        style={[styles.locationButton, { bottom: baseBottom }]}
-        activeOpacity={0.8}
-        onPress={handleLocationPress}
-      >
-        <Text style={styles.locationButtonIcon}>◎</Text>
-      </TouchableOpacity>
+      {/* 현위치 버튼 + 나만의 장소 등록하기 한 줄 */}
+      <View style={[styles.bottomBar, { bottom: baseBottom }]}>
+        <TouchableOpacity
+          style={styles.locationButton}
+          activeOpacity={0.8}
+          onPress={handleLocationPress}
+        >
+          <Text style={styles.locationButtonIcon}>◎</Text>
+        </TouchableOpacity>
 
-      {/* 나만의 장소 등록하기 버튼 */}
-      {showRegisterBtn && (
-        <View style={[styles.registerButtonWrapper, { bottom: baseBottom }]}>
+        {showRegisterBtn && (
           <TouchableOpacity
             style={styles.registerButton}
             activeOpacity={0.85}
-            onPress={() => setShowRegisterBtn(false)}
+            onPress={() => setShowAddPlace(true)}
           >
             <Text style={styles.registerButtonText}>나만의 장소 등록하기</Text>
           </TouchableOpacity>
-        </View>
-      )}
+        )}
+      </View>
 
-      {/* 장소 발견 팝업 */}
       {showDiscovery && (
-        <View style={[styles.discoveryWrapper, { bottom: baseBottom - 4 }]}>
+        <View style={[styles.discoveryWrapper, { bottom: baseBottom + 60 }]}>
           <DiscoveryCard
             placeName="스타벅스 OO점"
             district="서울시 영등포구"
             onConfirm={handleConfirm}
             onDismiss={handleDismiss}
           />
+        </View>
+      )}
+
+      {showAddPlace && (
+        <View style={StyleSheet.absoluteFill}>
+          <AddPlaceScreen />
         </View>
       )}
     </View>
@@ -227,7 +225,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
 
-  // 현재 위치 마커 스타일
   userLocationMarker: {
     width: 40,
     height: 40,
@@ -258,6 +255,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
+  // 탐험 진행도 — 오른쪽, 버튼보다 위
   legendWrapper: {
     position: "absolute",
     right: 16,
@@ -284,12 +282,20 @@ const styles = StyleSheet.create({
   legendDot: { width: 12, height: 12, borderRadius: 3 },
   legendLabel: { fontSize: 11, color: "#475569" },
 
-  locationButton: {
+  // 현위치 + 등록 버튼 한 줄
+  bottomBar: {
     position: "absolute",
     left: 16,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    right: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  locationButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "white",
     justifyContent: "center",
     alignItems: "center",
@@ -299,26 +305,25 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
-  locationButtonIcon: { fontSize: 20, color: "#334155" },
+  locationButtonIcon: { fontSize: 22, color: "#334155" },
 
-  registerButtonWrapper: {
-    position: "absolute",
-    left: 70,
-    right: 70,
-    alignItems: "center",
-  },
   registerButton: {
+    flex: 1,
     backgroundColor: "white",
-    paddingVertical: 12,
-    paddingHorizontal: 22,
-    borderRadius: 24,
+    paddingVertical: 14,
+    borderRadius: 28,
+    alignItems: "center",
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 5,
   },
-  registerButtonText: { fontSize: 14, fontWeight: "600", color: "#1E293B" },
+  registerButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1E293B",
+  },
 
   discoveryWrapper: {
     position: "absolute",
