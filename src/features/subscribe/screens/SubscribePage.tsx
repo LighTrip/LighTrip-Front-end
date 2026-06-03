@@ -27,7 +27,6 @@ export default function SubscribePage() {
     const FAIL_URL = 'https://lightrip.app/payment/fail'
 
     const [paidIndex, setPaidIndex] = useState<number | null>(null)
-    const plans = ['기본 플랜', '월간 구독', '연간 구독']
     const planLabels = ['ECONOMY CLASS', 'BUSINESS CLASS', 'BUSINESS CLASS']
     const bannerColors = ['#FFD9A7', '#8FB88A', '#8FB88A']
 
@@ -45,7 +44,7 @@ export default function SubscribePage() {
                     setIsPremium(true)
                     setPaidIndex(1)  
                 }
-            } catch (err) {}
+            } catch (_err) {}
         }
         fetchPremium()
     }, [])
@@ -70,7 +69,7 @@ export default function SubscribePage() {
                 failUrl: FAIL_URL,
             })
             setWebViewUrl(`https://glittery-queijadas-dc180c.netlify.app/checkout.html?${params.toString()}`)
-        } catch (err) {
+        } catch (_err) {
             Alert.alert('오류', '주문 생성에 실패했어요.')
         }
     }
@@ -83,7 +82,7 @@ export default function SubscribePage() {
             setPaidIndex(selectedIndex)  // 추가
             setWebViewUrl(null)
             Alert.alert('결제 완료', '구독이 시작되었어요! 🎉')
-        } catch (err) {
+        } catch (_err) {
             Alert.alert('오류', '결제 확인에 실패했어요.')
             setWebViewUrl(null)
         }
@@ -187,7 +186,7 @@ export default function SubscribePage() {
                         'AI 초안 기능 무제한',
                         '팀 만들기',
                     ].map((item, index, arr) => (
-                        <View key={index}>
+                        <View key={item}>
                             <View style={styles.subscribeItem}>
                                 <Text style={styles.subscribeItemText}>{item}</Text>
                             </View>
