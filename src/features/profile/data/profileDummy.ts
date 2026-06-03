@@ -34,7 +34,8 @@ export const settingMenuDummy: ProfileMenuItem[] = [
         id: "scrap",
         title: "스크랩",
         description: "스크랩 누른 장소 모아보기",
-        icon: "heart",
+        icon: "bookmark",
+        route: "/profile/scrap"
     },
     {
         id: "theme",
@@ -61,6 +62,7 @@ export const accountMenuDummy: ProfileMenuItem[] = [
         id: "subscribe",
         title: "구독하기",
         icon: "storefront",
+        route: "/profile/subscribe"
     },
     {
         id: "logout",
