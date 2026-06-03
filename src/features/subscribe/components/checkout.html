@@ -1,0 +1,29 @@
+<!DOCTYPE html><html lang="ko"><head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+</head><body>
+<div id="status" style="padding:20px;font-size:16px;">로딩 중...</div>
+<script>
+  var script = document.createElement('script');
+  script.src = 'https://js.tosspayments.com/v1/payment';
+  script.onload = function() {
+    document.getElementById('status').innerText = ' ';
+    var p = new URLSearchParams(location.search);
+    try {
+      TossPayments(p.get('ck')).requestPayment('카드', {
+        amount: Number(p.get('amount')),
+        orderId: p.get('orderId'),
+        orderName: p.get('orderName'),
+        customerName: p.get('customerName') || '사용자',
+        successUrl: p.get('successUrl'),
+        failUrl: p.get('failUrl'),
+      });
+    } catch(e) {
+      document.getElementById('status').innerText = '에러: ' + e.message;
+    }
+  };
+  script.onerror = function() {
+    document.getElementById('status').innerText = 'SDK 로드 실패';
+  };
+  document.head.appendChild(script);
+</script></body></html>

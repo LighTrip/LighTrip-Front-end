@@ -65,7 +65,13 @@ export const API_ENDPOINTS = {
   DISTRICTCOVER:{
     TEXT: (coverId: number) => `/api/v1/district-covers/${coverId}/text-color`,
     IMAGE: (coverId: number) => `/api/v1/district-covers/${coverId}/image`,
-  }
+  },
+
+  PAYMENT: {
+    CREATE_ORDER: '/api/v1/payments/orders',
+    CONFIRM: '/api/v1/payments/confirm',
+    GET_MY_PREMIUM: '/api/v1/payments/me/premium',
+  },
 } as const;
 
 export default API_ENDPOINTS;
