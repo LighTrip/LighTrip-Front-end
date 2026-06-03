@@ -42,7 +42,9 @@ export default function SubscribePage() {
                 if (res.data.data.premium) {
                     setPaidIndex(1)  
                 }
-            } catch (_err) {}
+            } catch (_err) {
+                // intentionally ignored
+            }
         }
         fetchPremium()
     }, [])
@@ -75,7 +77,7 @@ export default function SubscribePage() {
     const handleConfirmPayment = async (paymentKey: string, orderId: string, amount: number) => {
         try {
             await confirmPayment(paymentKey, orderId, amount)
-            const res = await getMyPremium()
+            await getMyPremium()
             setPaidIndex(selectedIndex)
             setWebViewUrl(null)
             Alert.alert('결제 완료', '구독이 시작되었어요! 🎉')
