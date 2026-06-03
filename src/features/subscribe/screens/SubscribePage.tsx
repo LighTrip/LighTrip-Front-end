@@ -21,7 +21,6 @@ export default function SubscribePage() {
     const router = useRouter()
 
     const [webViewUrl, setWebViewUrl] = useState<string | null>(null)
-    const [isPremium, setIsPremium] = useState(false)
     const TOSS_CLIENT_KEY = process.env.EXPO_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY ?? ''
     const SUCCESS_URL = 'https://lightrip.app/payment/success'
     const FAIL_URL = 'https://lightrip.app/payment/fail'
@@ -41,7 +40,6 @@ export default function SubscribePage() {
             try {
                 const res = await getMyPremium()
                 if (res.data.data.premium) {
-                    setIsPremium(true)
                     setPaidIndex(1)  
                 }
             } catch (_err) {}
@@ -78,8 +76,7 @@ export default function SubscribePage() {
         try {
             await confirmPayment(paymentKey, orderId, amount)
             const res = await getMyPremium()
-            setIsPremium(res.data.data.premium)
-            setPaidIndex(selectedIndex)  // 추가
+            setPaidIndex(selectedIndex)
             setWebViewUrl(null)
             Alert.alert('결제 완료', '구독이 시작되었어요! 🎉')
         } catch (_err) {
@@ -97,6 +94,7 @@ export default function SubscribePage() {
     const qnaUrl = Platform.OS === 'ios'
         ? 'https://support.apple.com/ko-kr/118428'
         : 'https://support.google.com/googleplay/answer/7018481'
+
 
     return (
         <View style={styles.container}>
@@ -140,31 +138,35 @@ export default function SubscribePage() {
                         { header: styles.economyticketHeader, label: 'ECONOMY CLASS                                                   LTP', text: '기본 플랜' },
                         { header: styles.businessticketHeader, label: 'BUSINESS CLASS                                                   LTP', text: '월간 구독: 4,900원' },
                         { header: styles.businessticketHeader, label: 'BUSINESS CLASS                                                   LTP', text: '연간 구독: 49,000' },
-                    ].map((ticket, index) => (
-                        <TouchableOpacity
-                            key={index}
-                            style={{ width: '100%', alignItems: 'center' }}
-                            onPress={() => setSelectedIndex(index === selectedIndex ? null : index)}
-                            activeOpacity={0.8}
-                        >
-                            <View style={styles.ticketBox}>
-                                <View style={ticket.header}>
-                                    <Text style={styles.ticketHeaderText}>{ticket.label}</Text>
+                    ].map((ticket, index) => {
+                        const isStamped = selectedIndex !== null ? selectedIndex === index : paidIndex === index
+
+                        return (
+                            <TouchableOpacity
+                                key={ticket.text}
+                                style={{ width: '100%', alignItems: 'center' }}
+                                onPress={() => setSelectedIndex(index === selectedIndex ? null : index)}
+                                activeOpacity={0.8}
+                            >
+                                <View style={styles.ticketBox}>
+                                    <View style={ticket.header}>
+                                        <Text style={styles.ticketHeaderText}>{ticket.label}</Text>
+                                    </View>
+                                    <Image source={require('../../../../assets/ticket/barcode.png')} style={styles.barcode} />
+                                    <Text style={styles.ticketText}>{ticket.text}</Text>
+                                    <View style={styles.tearTop} />
+                                    <View style={styles.tearDown} />
+                                    <View style={styles.tearLine} />
+                                    {isStamped && (
+                                        <Image
+                                            source={require('../../../../assets/icons/paymentStamp.png')}
+                                            style={styles.checkBadge}
+                                        />
+                                    )}
                                 </View>
-                                <Image source={require('../../../../assets/ticket/barcode.png')} style={styles.barcode} />
-                                <Text style={styles.ticketText}>{ticket.text}</Text>
-                                <View style={styles.tearTop} />
-                                <View style={styles.tearDown} />
-                                <View style={styles.tearLine} />
-                                {(selectedIndex !== null ? selectedIndex === index : paidIndex === index) && (
-                                    <Image
-                                        source={require('../../../../assets/icons/paymentStamp.png')}
-                                        style={styles.checkBadge}
-                                    />
-                                )}
-                            </View>
-                        </TouchableOpacity>
-                    ))}
+                            </TouchableOpacity>
+                        )
+                    })}
                 </View>
 
                 <TouchableOpacity
