@@ -62,6 +62,7 @@ export const accountMenuDummy: ProfileMenuItem[] = [
         id: "subscribe",
         title: "구독하기",
         icon: "storefront",
+        route: "/profile/subscribe"
     },
     {
         id: "logout",
