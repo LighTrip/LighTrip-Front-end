@@ -1,6 +1,9 @@
+import { createTeam, joinTeam } from "@/src/api/profileApi";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {
+    ActivityIndicator,
+    Alert,
     Modal,
     Pressable,
     StyleSheet,
@@ -26,21 +29,61 @@ export default function TeamManageModal({
 
     const [teamName, setTeamName] = useState("");
     const [inviteCode, setInviteCode] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const isCreateMode = mode === "create";
 
-    const handleSubmit = () => {
-        if (isCreateMode) {
-            console.log("팀 생성:", {
-                teamName,
-            });
-            return;
-        }
+    // 팀 생성/팀 가입 호출
+    const handleSubmit = async () => {
+        if (isSubmitting) return;
 
-        console.log("팀 가입:", {
-            inviteCode,
-        })
+        try {
+            setIsSubmitting(true);
+
+            if(isCreateMode) {
+                const trimmedTeamName = teamName.trim();
+
+                const result = await createTeam(trimmedTeamName);
+
+                Alert.alert(
+                    "팀 생성 완료",
+                    `${result.teamName} 팀이 생성되었습니다.\n팀 코드: ${result.teamCode}`
+                );
+
+                setTeamName("");
+                onClose();
+                return;
+            }
+
+            const trimmedTeamCode = inviteCode.trim();
+
+            const result = await joinTeam(trimmedTeamCode);
+
+            Alert.alert(
+                "팀 가입 완료",
+                `${result.teamName} 팀에 가입되었습니다.`
+            )
+
+            setInviteCode("");
+            onClose();
+        } catch(error) {
+            console.log("팀 처리 에러:", error);
+
+            Alert.alert(
+                isCreateMode ? "팀 생성 실패" : "팀 가입 실패",
+                error instanceof Error
+                    ? error.message
+                    : "팀 처리 중 문제가 발생했습니다."
+            );
+        }finally {
+            setIsSubmitting(false);
+        }
     }
+
+
+    const isDisabled = isCreateMode
+        ? teamName.trim().length === 0 || isSubmitting
+        : inviteCode.trim().length === 0 || isSubmitting;
 
     return (
         <Modal
@@ -58,6 +101,7 @@ export default function TeamManageModal({
                             activeOpacity={0.8}
                             onPress={onClose}
                             style={styles.closeButton}
+                            disabled={isSubmitting}
                         >
                             <Ionicons name="close" size={22} color="#333333" />
                         </TouchableOpacity>
@@ -72,6 +116,7 @@ export default function TeamManageModal({
                                 isCreateMode && styles.activeTabButton,
                             ]}
                             onPress={() => setMode("create")}
+                            disabled={isSubmitting}
                         >
                             <Text
                                 style={[
@@ -91,6 +136,7 @@ export default function TeamManageModal({
                                 !isCreateMode && styles.activeTabButton,
                             ]}
                             onPress={() => setMode("join")}
+                            disabled={isSubmitting}
                         >
                             <Text
                                 style={[
@@ -114,6 +160,7 @@ export default function TeamManageModal({
                                     placeholderTextColor="#A0A0A0"
                                     value={teamName}
                                     onChangeText={setTeamName}
+                                    editable={!isSubmitting}
                                 />
                             </View>
 
@@ -121,12 +168,18 @@ export default function TeamManageModal({
                                 activeOpacity={0.8}
                                 style={[
                                     styles.submitButton,
-                                    teamName.trim().length === 0 && styles.disableButton,
+                                    isDisabled && styles.disableButton,
                                 ]}
                                 onPress={handleSubmit}
-                                disabled={teamName.trim().length === 0}
+                                disabled={isDisabled}
                             >
-                                <Text style={styles.submitButtonText}>팀 생성하기</Text>
+                                {isSubmitting ? (
+                                    <ActivityIndicator color="#FFFFFF" />
+                                ) : (
+                                    <Text style={styles.submitButtonText}>
+                                        팀 생성하기
+                                    </Text>
+                                )}
                             </TouchableOpacity>
                         </View>
                     ) : (
@@ -141,6 +194,7 @@ export default function TeamManageModal({
                                     value={inviteCode}
                                     onChangeText={setInviteCode}
                                     autoCapitalize="characters"
+                                    editable={!isSubmitting}
                                 />
                             </View>
 
@@ -152,12 +206,18 @@ export default function TeamManageModal({
                                 activeOpacity={0.8}
                                 style={[
                                     styles.submitButton,
-                                    inviteCode.trim().length === 0 && styles.disableButton,
+                                    isDisabled && styles.disableButton,
                                 ]}
                                 onPress={handleSubmit}
-                                disabled={inviteCode.trim().length === 0}
+                                disabled={isDisabled}
                             >
-                                <Text style={styles.submitButtonText}>팀 합류하기</Text>
+                                {isSubmitting ? (
+                                    <ActivityIndicator color="#FFFFFF" />
+                                ) : (
+                                    <Text style={styles.submitButtonText}>
+                                        팀 합류하기
+                                    </Text>
+                                )}
                             </TouchableOpacity>
 
                         </View>
