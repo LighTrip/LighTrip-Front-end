@@ -1,5 +1,6 @@
 import { getMyProfile, logout } from "@/src/api/profileApi";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Securestore from "expo-secure-store";
 import { useCallback, useState } from "react";
@@ -24,6 +25,7 @@ import { ProfileMenuItem, ProfileUser } from "../types/profile.types";
 
 export default function ProfileView() {
     const router = useRouter();
+    const tabBarHeight = useBottomTabBarHeight();
 
     const [isTeam, setIsTeam] = useState(false);
     const [user, setUser] = useState<ProfileUser>(profileUserDummy);
@@ -110,167 +112,179 @@ export default function ProfileView() {
         )
     }
 
-    return(
+    return (
         <View style={styles.container}>
-        <ScrollView contentContainerStyle={styles.content}>
-            <Text style={styles.headerTitle}>마이페이지</Text>
-
-            {/*프로필 카드*/}
-            <View style={styles.profileCard}>
-                <View style={styles.profileLeft}>
-                    <Image 
-                        source={
-                            user.profileImage
-                                ? {uri: user.profileImage}
-                                : require("@/assets/images/default_profile.png")
-                        } 
-                        style={styles.profileImage} 
-                    />
-                    <View>
-                        <Text style={styles.userName}>{user.name}</Text>
-                        <View style={styles.locationSection}>
-                            <Ionicons name="location-outline" size={16} color="#FFFFFF" />
-                            <Text style={styles.userLocation}>{user.location}</Text>
+            {/* 고정 영역 */}
+            <View style={styles.fixedHeader}>
+                <Text style={styles.headerTitle}>마이페이지</Text>
+    
+                {/* 프로필 카드 */}
+                <View style={styles.profileCard}>
+                    <View style={styles.profileLeft}>
+                        <Image
+                            source={
+                                user.profileImage
+                                    ? { uri: user.profileImage }
+                                    : require("@/assets/images/default_profile.png")
+                            }
+                            style={styles.profileImage}
+                        />
+    
+                        <View style={styles.profileInfo}>
+                            <View style={styles.nameRow}>
+                                <Text style={styles.userName}>{user.name}</Text>
+                            </View>
+    
+                            <View style={styles.locationSection}>
+                                <Ionicons name="location-outline" size={16} color="#FFFFFF" />
+                                <Text style={styles.userLocation}>{user.location}</Text>
+                            </View>
+    
+                            <Text style={styles.userStatus}>
+                                불빛: {user.passportCount} | 장소: {user.districtCount} | 좋아요: {user.totallike}
+                            </Text>
                         </View>
-                        <Text style={styles.userStatus}>
-                            불빛: {user.passportCount} | 장소: {user.districtCount} | 좋아요: {user.totallike}
-                        </Text>
+                    </View>
+    
+                    <View style={styles.idNumberBox}>
+                        <Text style={styles.idNumberText}>{user.id}</Text>
                     </View>
                 </View>
-
-                <View style={styles.idNumberBox}>
-                    <Text style={styles.idNumberText}>{user.id}</Text>
-                </View>
             </View>
-
-            {/*프리미엄*/}
-            <View style={styles.premiumSection}>
-            <MaterialCommunityIcons name="crown-outline" size={16} color="#B38E06" />
-                <Text style={styles.premium}>프리미엄</Text>
-            </View>
-            <TouchableOpacity style={styles.bannerCard} activeOpacity={0.8}>
-                <View style={styles.bannerTextBox}>
-                    <Text style={styles.bannerTitle}>실물 여권 제작 신청</Text>
-                    <Text style={styles.bannerSubtitle}>나만의 탐험 기록을 실물 책으로</Text>
+    
+            {/* 스크롤 영역 */}
+            <ScrollView
+                style={[styles.scrollArea, {marginBottom: tabBarHeight}]}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                contentInsetAdjustmentBehavior="never"
+            >
+                {/* 프리미엄 */}
+                <View style={styles.premiumSection}>
+                    <MaterialCommunityIcons name="crown-outline" size={16} color="#B38E06" />
+                    <Text style={styles.premium}>프리미엄</Text>
                 </View>
-                <View style={styles.bannerIcon}>
-                    <MaterialCommunityIcons name="map" size={24} color="#333333" />
-                </View>
-            </TouchableOpacity>
-
-            {/*설정*/}
-            <View style={styles.sectionSet}>
-                <View style={styles.menuBox}>
-
-                    {/*팀 or 개인 설정*/}
-                    <View style={[styles.menuItem, styles.menuItemBorder]}>
-                        <View style={styles.menuLeft}>
-                            <View style={styles.iconBox}>
-                                <Ionicons name="return-down-back" size={22} color="#FFFFFF" />
+    
+                <TouchableOpacity style={styles.bannerCard} activeOpacity={0.8}>
+                    <View style={styles.bannerTextBox}>
+                        <Text style={styles.bannerTitle}>실물 여권 제작 신청</Text>
+                        <Text style={styles.bannerSubtitle}>나만의 탐험 기록을 실물 책으로</Text>
+                    </View>
+    
+                    <View style={styles.bannerIcon}>
+                        <MaterialCommunityIcons name="map" size={24} color="#333333" />
+                    </View>
+                </TouchableOpacity>
+    
+                {/* 설정 */}
+                <View style={styles.sectionSet}>
+                    <View style={styles.menuBox}>
+                        <View style={[styles.menuItem, styles.menuItemBorder]}>
+                            <View style={styles.menuLeft}>
+                                <View style={styles.iconBox}>
+                                    <Ionicons name="return-down-back" size={22} color="#FFFFFF" />
+                                </View>
+    
+                                <View>
+                                    <Text style={styles.menuTitle}>팀으로 전환</Text>
+                                    <Text style={styles.menuDescription}>
+                                        현재 접속 모드: {isTeam ? "팀" : "개인"}
+                                    </Text>
+                                </View>
                             </View>
-                            <View>
-                                <Text style={styles.menuTitle}>팀으로 전환</Text>
-                                <Text style={styles.menuDescription}>
-                                    현재 접속 모드: {isTeam ? "팀" : "개인"}
-                                </Text>
-                            </View>
-                        </View>
-                        <TouchableOpacity
-                            activeOpacity={0.8}
-                            style={[
-                                styles.teamToggle,
-                                isTeam ? styles.teamToggleOn : styles.teamToggleOff,
-                            ]}
-                            onPress={() => setIsTeam(!isTeam)}
-                        >
-                            <View
+    
+                            <TouchableOpacity
+                                activeOpacity={0.8}
                                 style={[
-                                    styles.teamToggleCircle,
-                                    isTeam ? styles.teamToggleCircleOn : styles.teamToggleCircleOff,
+                                    styles.teamToggle,
+                                    isTeam ? styles.teamToggleOn : styles.teamToggleOff,
                                 ]}
-                            />
-                        </TouchableOpacity>
-                    </View>
-
-                    {/*나머지*/}
-                    {settingMenuDummy.map((item, index) => (
-                        <TouchableOpacity
-                            key={item.id}
-                            style={[
-                                styles.menuItem,
-                                index !== settingMenuDummy.length -1 && styles.menuItemBorder,
-                            ]}
-                            activeOpacity={0.8}
-                            onPress={() => handleMenuPress(item)}
-                        >
-                            <View style={styles.menuLeft}>
-                                <View style={styles.iconBox}>
-                                <Ionicons name={item.icon as any} size={22} color="#FFFFFF" />
+                                onPress={() => setIsTeam(!isTeam)}
+                            >
+                                <View
+                                    style={[
+                                        styles.teamToggleCircle,
+                                        isTeam ? styles.teamToggleCircleOn : styles.teamToggleCircleOff,
+                                    ]}
+                                />
+                            </TouchableOpacity>
+                        </View>
+    
+                        {settingMenuDummy.map((item, index) => (
+                            <TouchableOpacity
+                                key={item.id}
+                                style={[
+                                    styles.menuItem,
+                                    index !== settingMenuDummy.length - 1 && styles.menuItemBorder,
+                                ]}
+                                activeOpacity={0.8}
+                                onPress={() => handleMenuPress(item)}
+                            >
+                                <View style={styles.menuLeft}>
+                                    <View style={styles.iconBox}>
+                                        <Ionicons name={item.icon as any} size={22} color="#FFFFFF" />
+                                    </View>
+    
+                                    <View>
+                                        <Text style={styles.menuTitle}>{item.title}</Text>
+                                        {item.description && (
+                                            <Text style={styles.menuDescription}>{item.description}</Text>
+                                        )}
+                                    </View>
                                 </View>
-
-                                <View>
-                                    <Text style={styles.menuTitle}>{item.title}</Text>
-                                    {item.description && (
-                                        <Text style={styles.menuDescription}>{item.description}</Text>
-                                    )}
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-                    ))}
-                    </View>
-                </View>
-
-            {/*계정*/}
-            <View style={styles.sectionAccount}>
-                <View style={styles.menuBox}>
-                    {/*세부 내용*/}
-                    {accountMenuDummy.map((item, index) => (
-                        <TouchableOpacity
-                            key={item.id}
-                            style={[
-                                styles.menuItem,
-                                index !== accountMenuDummy.length -1 && styles.menuItemBorder,
-                            ]}
-                            activeOpacity={0.8}
-                            onPress={() => {
-                                if(item.id === "logout") {
-                                    handleLogout();
-                                    return;
-                                }
-                                
-                                if(item.route) {
-                                    router.push(item.route as any);
-                                }
-                            }}
-                        >
-                            <View style={styles.menuLeft}>
-                                <View style={styles.iconBox}>
-                                    <Ionicons name={item.icon as any} size={22} color="#FFFFFF" />
-                                </View>
-
-                                <View>
-                                    <Text style={styles.menuTitle}>{item.title}</Text>
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-                    ))}
+                            </TouchableOpacity>
+                        ))}
                     </View>
                 </View>
-        </ScrollView> 
-
-        {/*팀 관리 모달*/}
-        <TeamManageModal 
-            visible={isTeamModalOpen}
-            onClose={() => setIsTeamModalOpen(false)}
-        />
-
-        {/*친구 관리 모달*/}
-        <FriendManageModal
-            visible = {isFriendModalOpen}
-            onClose={() => setIsFriendModalOpen(false)}
-        />
+    
+                {/* 계정 */}
+                <View style={styles.sectionAccount}>
+                    <View style={styles.menuBox}>
+                        {accountMenuDummy.map((item, index) => (
+                            <TouchableOpacity
+                                key={item.id}
+                                style={[
+                                    styles.menuItem,
+                                    index !== accountMenuDummy.length - 1 && styles.menuItemBorder,
+                                ]}
+                                activeOpacity={0.8}
+                                onPress={() => {
+                                    if (item.id === "logout") {
+                                        handleLogout();
+                                        return;
+                                    }
+    
+                                    if (item.route) {
+                                        router.push(item.route as any);
+                                    }
+                                }}
+                            >
+                                <View style={styles.menuLeft}>
+                                    <View style={styles.iconBox}>
+                                        <Ionicons name={item.icon as any} size={22} color="#FFFFFF" />
+                                    </View>
+    
+                                    <View>
+                                        <Text style={styles.menuTitle}>{item.title}</Text>
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+            </ScrollView>
+    
+            <TeamManageModal
+                visible={isTeamModalOpen}
+                onClose={() => setIsTeamModalOpen(false)}
+            />
+    
+            <FriendManageModal
+                visible={isFriendModalOpen}
+                onClose={() => setIsFriendModalOpen(false)}
+            />
         </View>
-    )
+    );
 }
 
 
@@ -279,12 +293,20 @@ const styles = StyleSheet.create({
         flex: 1, 
         backgroundColor: "#F8FAFD",
     },
-    content: {
+    fixedHeader: {
         paddingHorizontal: 20,
-        padding: 20,
-        paddingBottom: 40,
+        backgroundColor: "#F8FAFD",
     },
-
+    scrollArea: {
+        flex: 1,
+    },
+    scrollContent: {
+        paddingHorizontal: 20,
+        paddingBottom:  50,
+    },
+    sectionAccount: {
+        marginBottom: 0,
+    },
     /*사용자 정보*/
     headerTitle: {
         color: "#000000",
@@ -305,6 +327,12 @@ const styles = StyleSheet.create({
     profileLeft: {
         flexDirection: "row",
         alignItems: "center",
+        flexShrink: 1,
+        minWidth: 0,
+    },
+    profileInfo: {
+        flex: 1,
+        minWidth: 0,
     },
     profileImage: {
         width: 63.99,
@@ -313,11 +341,14 @@ const styles = StyleSheet.create({
         backgroundColor: "#D9D9D9",
         marginRight: 12,
     },
+    nameRow: {
+        flexDirection: "row",
+        alignItems: "center",
+    },
     userName: {
         color: "#FFFFFF",
         fontSize: 24,
         fontWeight: "700",
-        marginBottom: 8,
     },
     locationSection: {
         flexDirection: "row",
@@ -340,13 +371,15 @@ const styles = StyleSheet.create({
         marginLeft: 3,
     },
     idNumberBox: {
-        justifyContent: "center",
-        alignItems: "center",
+        marginLeft: 8,
+        alignItems: "flex-end",
+        flexShrink: 0,
     },
     idNumberText: {
         color: "#FFFFFF",
         fontSize: 14,
         marginTop: 8,
+        textAlign: "right",
     },
     loadingContainer: {
         flex: 1,
@@ -397,9 +430,6 @@ const styles = StyleSheet.create({
     /*설정, 계정*/
     sectionSet: {
         marginBottom: 20,
-    },
-    sectionAccount: {
-        marginBottom: 130,
     },
     teamToggle: {
         width: 45,
