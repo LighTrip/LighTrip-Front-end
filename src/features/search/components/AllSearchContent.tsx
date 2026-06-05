@@ -319,7 +319,7 @@ export default function AllSearchContent({
                     keyExtractor={(item) => String(item.passportId)}
                     renderItem={({ item }) => (
                         <View style={[styles.reelsPage, { height: listHeight }]}>
-                            <View style={[styles.card, { height: listHeight - 16 }]}>
+                            <View style={styles.card}>
                                 <Image
                                     source={require("@/assets/images/noise.png")}
                                     style={styles.noiseBackground}
@@ -423,12 +423,10 @@ const styles = StyleSheet.create({
         zIndex: 0,
     },
     cardContent: {
-        flex: 1,
         position: "relative",
         zIndex: 1,
     },
     passportDetailArea: {
-        flex: 1,
         position: "relative",
         width: "100%",
         marginTop: -8,
