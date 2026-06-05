@@ -1,12 +1,12 @@
 import { ProfileMenuItem, ProfileUser } from "../types/profile.types";
 
 export const profileUserDummy: ProfileUser = {
-    id: "#30421",
+    id: "#2026",
     name: "저희이제하조",
     location: "고양시 덕양구",
-    passportCount: 12,
-    districtCount: 23,
-    totallike: 320,
+    passportCount: 0,
+    districtCount: 0,
+    totallike: 0,
     profileImage: null,
 };
 
