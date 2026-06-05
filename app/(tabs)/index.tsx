@@ -41,6 +41,15 @@ function UserLocationMarker() {
   );
 }
 
+/** 지도 중앙에 고정되는 핀 */
+function CenterPin() {
+  return (
+    <View style={styles.centerPinWrapper} pointerEvents="none">
+      <Text style={styles.centerPinEmoji}>📍</Text>
+    </View>
+  );
+}
+
 interface DiscoveryCardProps {
   placeName: string;
   district: string;
@@ -86,10 +95,57 @@ function DiscoveryCard({
   );
 }
 
+/** 위치 확인 카드 — 핀 고정 후 "이 위치가 맞습니까?" */
+interface LocationConfirmCardProps {
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function LocationConfirmCard({
+  onConfirm,
+  onCancel,
+}: LocationConfirmCardProps) {
+  return (
+    <View style={styles.discoveryCard}>
+      <View style={styles.placeNameBar}>
+        <Text style={styles.placeNameText}>위치 확인</Text>
+      </View>
+      <View style={styles.discoveryBody}>
+        <Text style={styles.discoveryTitle}>이 위치가 맞습니까?</Text>
+        <Text style={styles.locationText}>
+          핀이 가리키는 위치에 장소를 등록합니다.
+        </Text>
+        <View style={[styles.discoveryActions, { marginTop: 10 }]}>
+          <TouchableOpacity
+            style={styles.confirmButton}
+            onPress={onConfirm}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.confirmButtonText}>예</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.dismissButton}
+            onPress={onCancel}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.dismissButtonText}>아니요</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 interface PassportPin {
   latitude: number;
   longitude: number;
   placeName: string;
+}
+
+// 지도 중앙 좌표를 가져오기 위한 카메라 상태 타입
+interface CameraState {
+  latitude: number;
+  longitude: number;
 }
 
 export default function MapScreen() {
@@ -102,10 +158,22 @@ export default function MapScreen() {
     longitude: number;
   } | null>(null);
   const [passportPins, setPassportPins] = useState<PassportPin[]>([]);
+
+  // 장소 직접 선택 모드
+  const [pickingLocation, setPickingLocation] = useState(false);
+  // 핀 위치 확인 카드 표시
+  const [showLocationConfirm, setShowLocationConfirm] = useState(false);
+  // 현재 카메라(지도 중앙) 좌표
+  const [cameraCenter, setCameraCenter] = useState<CameraState>({
+    latitude: 37.5665,
+    longitude: 126.978,
+  });
+
   const mapRef = useRef<any>(null);
 
   const baseBottom = TAB_BAR_HEIGHT + safeBottom + 12;
 
+  // Discovery card: "나만의 여권 만들기"
   const handleConfirm = () => {
     setPassportPins((prev) => [
       ...prev,
@@ -119,9 +187,41 @@ export default function MapScreen() {
     setShowAddPlace(true);
   };
 
+  // Discovery card: "아니요"
   const handleDismiss = () => {
     setShowDiscovery(false);
     setShowRegisterBtn(true);
+  };
+
+  // "나만의 장소 등록하기" 버튼 → 위치 선택 모드 진입
+  const handleRegisterPress = () => {
+    setShowRegisterBtn(false);
+    setPickingLocation(true);
+  };
+
+  // 지도 카메라 이동 이벤트 → 중앙 좌표 갱신
+  const handleCameraChanged = (event: any) => {
+    const { latitude, longitude } = event;
+    if (latitude && longitude) {
+      setCameraCenter({ latitude, longitude });
+    }
+  };
+
+  // 위치 선택 모드에서 "위치 고정" 버튼
+  const handlePinLocation = () => {
+    setShowLocationConfirm(true);
+  };
+
+  // 위치 확인 카드: "예" → AddPlace로
+  const handleLocationConfirm = () => {
+    setPickingLocation(false);
+    setShowLocationConfirm(false);
+    setShowAddPlace(true);
+  };
+
+  // 위치 확인 카드: "아니요" → 다시 조정
+  const handleLocationCancel = () => {
+    setShowLocationConfirm(false);
   };
 
   const handleLocationPress = async () => {
@@ -149,7 +249,8 @@ export default function MapScreen() {
         ref={mapRef}
         style={styles.map}
         camera={{ latitude: 37.5665, longitude: 126.978, zoom: 14 }}
-        isShowZoomControls={true}
+        isShowZoomControls={!pickingLocation}
+        onCameraChanged={handleCameraChanged}
       >
         {userLocation && (
           <NaverMapMarkerOverlay
@@ -172,35 +273,87 @@ export default function MapScreen() {
         ))}
       </NaverMapView>
 
-      {/* 탐험 진행도 — 하단 버튼 위에 위치 */}
-      <View
-        style={[styles.legendWrapper, { bottom: baseBottom + 64 }]}
-        pointerEvents="none"
-      >
-        <ExplorationLegend />
-      </View>
+      {/* 위치 선택 모드: 화면 중앙 고정 핀 */}
+      {pickingLocation && <CenterPin />}
 
-      {/* 현위치 버튼 + 나만의 장소 등록하기 한 줄 */}
-      <View style={[styles.bottomBar, { bottom: baseBottom }]}>
-        <TouchableOpacity
-          style={styles.locationButton}
-          activeOpacity={0.8}
-          onPress={handleLocationPress}
+      {/* 탐험 진행도 */}
+      {!pickingLocation && (
+        <View
+          style={[styles.legendWrapper, { bottom: baseBottom + 64 }]}
+          pointerEvents="none"
         >
-          <Text style={styles.locationButtonIcon}>◎</Text>
-        </TouchableOpacity>
+          <ExplorationLegend />
+        </View>
+      )}
 
-        {showRegisterBtn && (
+      {/* 하단 바: 현위치 버튼 + 장소 등록 버튼 */}
+      {!pickingLocation && (
+        <View style={[styles.bottomBar, { bottom: baseBottom }]}>
           <TouchableOpacity
-            style={styles.registerButton}
-            activeOpacity={0.85}
-            onPress={() => setShowAddPlace(true)}
+            style={styles.locationButton}
+            activeOpacity={0.8}
+            onPress={handleLocationPress}
           >
-            <Text style={styles.registerButtonText}>나만의 장소 등록하기</Text>
+            <Text style={styles.locationButtonIcon}>◎</Text>
           </TouchableOpacity>
-        )}
-      </View>
 
+          {showRegisterBtn && (
+            <TouchableOpacity
+              style={styles.registerButton}
+              activeOpacity={0.85}
+              onPress={handleRegisterPress}
+            >
+              <Text style={styles.registerButtonText}>
+                나만의 장소 등록하기
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* 위치 선택 모드 안내 + 위치 고정 버튼 */}
+      {pickingLocation && !showLocationConfirm && (
+        <>
+          {/* 상단 안내 */}
+          <View style={styles.pickingGuideWrapper}>
+            <View style={styles.pickingGuideCard}>
+              <Text style={styles.pickingGuideText}>
+                지도를 움직여 핀을 원하는 위치에 맞추세요
+              </Text>
+            </View>
+          </View>
+
+          {/* 하단: 현위치 버튼 + 위치 고정 버튼 */}
+          <View style={[styles.bottomBar, { bottom: baseBottom }]}>
+            <TouchableOpacity
+              style={styles.locationButton}
+              activeOpacity={0.8}
+              onPress={handleLocationPress}
+            >
+              <Text style={styles.locationButtonIcon}>◎</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.registerButton}
+              activeOpacity={0.85}
+              onPress={handlePinLocation}
+            >
+              <Text style={styles.registerButtonText}>이 위치로 고정</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+
+      {/* 위치 확인 카드 */}
+      {pickingLocation && showLocationConfirm && (
+        <View style={[styles.discoveryWrapper, { bottom: baseBottom + 60 }]}>
+          <LocationConfirmCard
+            onConfirm={handleLocationConfirm}
+            onCancel={handleLocationCancel}
+          />
+        </View>
+      )}
+
+      {/* Discovery 카드 */}
       {showDiscovery && (
         <View style={[styles.discoveryWrapper, { bottom: baseBottom + 60 }]}>
           <DiscoveryCard
@@ -212,6 +365,7 @@ export default function MapScreen() {
         </View>
       )}
 
+      {/* AddPlaceScreen */}
       {showAddPlace && (
         <View style={StyleSheet.absoluteFill}>
           <AddPlaceScreen />
@@ -255,7 +409,41 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
-  // 탐험 진행도 — 오른쪽, 버튼보다 위
+  // 화면 중앙 고정 핀
+  centerPinWrapper: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    marginLeft: -16,
+    marginTop: -40,
+    zIndex: 10,
+  },
+  centerPinEmoji: {
+    fontSize: 36,
+  },
+
+  // 위치 선택 모드 상단 안내
+  pickingGuideWrapper: {
+    position: "absolute",
+    top: 60,
+    left: 16,
+    right: 16,
+    alignItems: "center",
+    zIndex: 10,
+  },
+  pickingGuideCard: {
+    backgroundColor: "rgba(15, 39, 68, 0.85)",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+  },
+  pickingGuideText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+
   legendWrapper: {
     position: "absolute",
     right: 16,
@@ -282,7 +470,6 @@ const styles = StyleSheet.create({
   legendDot: { width: 12, height: 12, borderRadius: 3 },
   legendLabel: { fontSize: 11, color: "#475569" },
 
-  // 현위치 + 등록 버튼 한 줄
   bottomBar: {
     position: "absolute",
     left: 16,
