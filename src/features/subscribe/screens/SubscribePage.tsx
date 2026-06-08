@@ -7,11 +7,12 @@ import {
     Modal,
     Alert,
     Linking,
+    Animated as RNAnimated,
 } from "react-native";
 import Animated, { useAnimatedRef, scrollTo, runOnUI } from 'react-native-reanimated'
 import { WebView } from 'react-native-webview'
 import { useRouter } from 'expo-router'
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { createOrder, confirmPayment, getMyPremium } from '@/src/api/payment/payment.api'
 
@@ -33,6 +34,9 @@ export default function SubscribePage() {
     const [qnaVisible, setQnaVisible] = useState(false)
     const [subscribeBoxY, setSubscribeBoxY] = useState(0)
 
+    const [businessExpanded, setBusinessExpanded] = useState(false)
+    const expandAnim = useRef(new RNAnimated.Value(0)).current
+
     const animatedRef = useAnimatedRef<Animated.ScrollView>()
 
     useEffect(() => {
@@ -40,7 +44,7 @@ export default function SubscribePage() {
             try {
                 const res = await getMyPremium()
                 if (res.data.data.premium) {
-                    setPaidIndex(1)  
+                    setPaidIndex(1)
                 }
             } catch (_err) {
                 // intentionally ignored
@@ -49,8 +53,21 @@ export default function SubscribePage() {
         fetchPremium()
     }, [])
 
+    const toggleBusiness = () => {
+        const toValue = businessExpanded ? 0 : 1
+        setBusinessExpanded(!businessExpanded)
+        RNAnimated.spring(expandAnim, {
+            toValue,
+            useNativeDriver: false,
+        }).start()
+    }
+
+    const cardHeight = expandAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, 190],
+    })
+
     const handlePayment = async () => {
-        console.log('selectedIndex:', selectedIndex)
         if (selectedIndex === 0) {
             Alert.alert('안내', '기본 플랜은 무료예요!')
             return
@@ -58,7 +75,6 @@ export default function SubscribePage() {
         const productType = selectedIndex === 1 ? 'PREMIUM_1MONTH' : 'PREMIUM_1YEAR'
         try {
             const res = await createOrder(productType)
-            console.log('주문 생성 응답:', JSON.stringify(res.data))
             const { orderId, amount, orderName } = res.data.data
             const params = new URLSearchParams({
                 ck: TOSS_CLIENT_KEY,
@@ -97,7 +113,6 @@ export default function SubscribePage() {
         ? 'https://support.apple.com/ko-kr/118428'
         : 'https://support.google.com/googleplay/answer/7018481'
 
-
     return (
         <View style={styles.container}>
             <View style={styles.topBox}>
@@ -119,7 +134,6 @@ export default function SubscribePage() {
                 </View>
 
                 <View style={styles.classLine}>
-                    <Text style={styles.classText}>클래스</Text>
                     <View style={[styles.classBanner, { backgroundColor: bannerColors[paidIndex ?? 0] }]}>
                         <Text style={styles.classBannerText}>{planLabels[paidIndex ?? 0]}</Text>
                     </View>
@@ -131,51 +145,124 @@ export default function SubscribePage() {
                 style={{ width: '100%', marginBottom: -20 }}
                 contentContainerStyle={{ alignItems: 'center', paddingBottom: 25 }}
             >
-                <View style={styles.textContainer}>
-                    <Text style={styles.textContent}>구독</Text>
+                <View style={styles.textContainerTop}>
+                    <Text style={styles.textContentBottom}>구독</Text>
                 </View>
 
                 <View style={styles.ticketContainer}>
                     {[
-                        { header: styles.economyticketHeader, label: 'ECONOMY CLASS                                                   LTP', text: '기본 플랜' },
-                        { header: styles.businessticketHeader, label: 'BUSINESS CLASS                                                   LTP', text: '월간 구독: 4,900원' },
-                        { header: styles.businessticketHeader, label: 'BUSINESS CLASS                                                   LTP', text: '연간 구독: 49,000' },
+                        { header: styles.economyticketHeader, label: 'ECONOMY CLASS', plan: '기본', ticketIndex: 0 },
+                        { header: styles.businessticketHeader, label: 'BUSINESS CLASS', plan: '구독', ticketIndex: 1 },
                     ].map((ticket, index) => {
-                        const isStamped = selectedIndex !== null ? selectedIndex === index : paidIndex === index
+                        const isStamped = selectedIndex !== null
+                            ? (ticket.ticketIndex === 1 ? (selectedIndex === 1 || selectedIndex === 2) : selectedIndex === index)
+                            : (ticket.ticketIndex === 1 ? (paidIndex === 1 || paidIndex === 2) : paidIndex === index)
 
                         return (
-                            <TouchableOpacity
-                                key={ticket.text}
-                                style={{ width: '100%', alignItems: 'center' }}
-                                onPress={() => setSelectedIndex(index === selectedIndex ? null : index)}
-                                activeOpacity={0.8}
-                            >
-                                <View style={styles.ticketBox}>
-                                    <View style={ticket.header}>
-                                        <Text style={styles.ticketHeaderText}>{ticket.label}</Text>
+                            <View key={ticket.plan} style={{ width: '100%', alignItems: 'center' }}>
+                                <TouchableOpacity
+                                    style={{ width: '100%', alignItems: 'center' }}
+                                    onPress={() => {
+                                        if (ticket.ticketIndex === 1) {
+                                            toggleBusiness()
+                                        } else {
+                                            setSelectedIndex(index === selectedIndex ? null : index)
+                                        }
+                                    }}
+                                    activeOpacity={0.8}
+                                >
+                                    <View style={styles.ticketBox}>
+                                        <View style={ticket.header}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                                    <Text style={styles.ticketHeaderText}>{ticket.label}</Text>
+                                                    {(ticket.ticketIndex === 1 ? (paidIndex === 1 || paidIndex === 2) : paidIndex === index) && (
+                                                        <View style={{
+                                                            backgroundColor: '#ffffff',
+                                                            borderRadius: 10,
+                                                            paddingHorizontal: 8,
+                                                            paddingVertical: 2,
+                                                        }}>
+                                                            <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#1A3A6B' }}>현재 플랜</Text>
+                                                        </View>
+                                                    )}
+                                                </View>
+                                                <Text style={styles.ticketHeaderText}>LTP</Text>
+                                            </View>
+                                        </View>
+                                        <Image source={require('../../../../assets/ticket/barcode.png')} style={styles.barcode} />
+                                        <Text style={styles.ticketText}>{ticket.plan}</Text>
+                                        <Image source={require('../../../../assets/ticket/logo_ticket.png')} style={styles.ticketLogo} />
+                                        <View style={styles.tearLine} />
+                                        {isStamped && (
+                                            <Image
+                                                source={require('../../../../assets/icons/paymentStamp.png')}
+                                                style={styles.stampBadge}
+                                            />
+                                        )}
                                     </View>
-                                    <Image source={require('../../../../assets/ticket/barcode.png')} style={styles.barcode} />
-                                    <Text style={styles.ticketText}>{ticket.text}</Text>
                                     <View style={styles.tearTop} />
                                     <View style={styles.tearDown} />
-                                    <View style={styles.tearLine} />
-                                    {isStamped && (
-                                        <Image
-                                            source={require('../../../../assets/icons/paymentStamp.png')}
-                                            style={styles.checkBadge}
-                                        />
-                                    )}
-                                </View>
-                            </TouchableOpacity>
+                                </TouchableOpacity>
+
+                                {ticket.ticketIndex === 1 && (
+                                    <RNAnimated.View style={{
+                                        width: '90%',
+                                        height: cardHeight,
+                                        overflow: 'hidden',
+                                    }}>
+                                        <View style={styles.ticketChoiceBox}>
+                                            {[
+                                                { label: '월간 구독', desc: '4,900원/월', idx: 1 },
+                                                { label: '연간 구독', desc: '49,000원/년', idx: 2 },
+                                            ].map((plan) => (
+                                                <TouchableOpacity
+                                                    key={plan.label}
+                                                    style={{
+                                                        borderColor: selectedIndex === plan.idx ? '#1A3A6B' : '#d1d1d1',
+                                                        borderWidth: selectedIndex === plan.idx ? 2 : 1,
+                                                        borderRadius: 15,                                                       
+                                                        padding: 16,
+                                                        backgroundColor: '#FFFFFF',
+                                                    }}
+                                                    onPress={() => setSelectedIndex(plan.idx)}
+                                                >
+                                                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1A3A6B' }}>{plan.label}</Text>
+                                                    <Text style={{ fontSize: 14, color: '#666666', marginTop: 4 }}>{plan.desc}</Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    </RNAnimated.View>
+                                )}
+                            </View>
                         )
                     })}
                 </View>
 
                 <TouchableOpacity
-                    style={styles.textContainer}
+                    style={styles.textContainerMiddle}
                     onPress={() => handleScrollTo(subscribeBoxY - 22)}
                 >
-                    <Text style={styles.textContent}>구독 기능 상세보기</Text>
+                    <View style={{
+                        width: '90%',
+                        alignItems: 'center',
+                        gap: 12,
+                        marginBottom: 10,
+                    }}>
+                        <Text style={styles.subscribeSummary}>LighTrip을 더 자유롭게 ✈️</Text>
+                        <View style={styles.subscribeBanner}>
+                            {['광고 없음', 'AI 무제한', '테마 변경', '사진 여러 장', '팀 만들기'].map((badge) => (
+                                <View key={badge} style={{
+                                    backgroundColor: '#EEF2FA',
+                                    borderRadius: 20,
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 6,
+                                }}>
+                                    <Text style={{ fontSize: 13, color: '#1A3A6B', fontWeight: 'bold' }}>{badge}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
                     <Ionicons name="caret-down" size={16} color="#000" style={{ marginTop: 5 }} />
                 </TouchableOpacity>
 
@@ -242,8 +329,7 @@ export default function SubscribePage() {
                     <TouchableOpacity
                         onPress={() => setWebViewUrl(null)}
                         style={{ padding: 10, paddingTop: 50, backgroundColor: '#ffffff' }}
-                    >
-                    </TouchableOpacity>
+                    />
                     <WebView
                         source={{ uri: webViewUrl ?? '' }}
                         javaScriptEnabled={true}
