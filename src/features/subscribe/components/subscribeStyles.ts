@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native'
+import { Platform, StyleSheet } from 'react-native'
 
 export const subscribeStyles = StyleSheet.create({
     container: {
@@ -7,7 +7,7 @@ export const subscribeStyles = StyleSheet.create({
         justifyContent: "flex-start",
         alignItems: "center",
         marginTop: 50,
-        marginBottom: 90,
+        paddingBottom: 86,
     },
 
     topBox: {
@@ -17,6 +17,10 @@ export const subscribeStyles = StyleSheet.create({
         borderBottomLeftRadius: 30,
         borderBottomRightRadius: 30,
         marginTop: -60,
+        shadowColor: '#1A3A6B',
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.5,
+        shadowRadius: 7,
     },
 
     topLine: {
@@ -76,8 +80,8 @@ export const subscribeStyles = StyleSheet.create({
     },
 
     classBanner: {
-        width: 250,
-        height: 25,
+        width: '80%',
+        height: 28,
         backgroundColor: '#FFD9A7',
         alignItems: 'center',
         justifyContent: 'center',
@@ -89,6 +93,7 @@ export const subscribeStyles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#000000',
         fontFamily: 'Freesentation-200',
+        letterSpacing: Platform.OS === 'ios' ? 1.5 : 0.5,
     },
 
     topText: {
@@ -106,14 +111,28 @@ export const subscribeStyles = StyleSheet.create({
         zIndex: 10,
     },
 
-    textContainer: {
+    textContainerTop: {
         width: '90%',
-        height: 60,
+        height: 70,
         alignItems: 'center',
         justifyContent: 'center',
     },
 
-    textContent: {
+    textContainerMiddle: {
+        width: '90%',
+        height: 180,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    textContentTop: {
+        fontSize: 14,
+        fontWeight: 'semibold',
+        color: '#000000',
+    },
+
+    textContentBottom: {
+        marginTop: 10,
         fontSize: 18,
         fontWeight: 'bold',
         color: '#000000',
@@ -123,26 +142,36 @@ export const subscribeStyles = StyleSheet.create({
         width: '100%',
         justifyContent: 'center',
         alignItems: 'center',
-        gap: 22,
+        gap: 15,
         marginBottom: 15,
     },
 
     ticketBox: {
         width: '90%',
-        height: 115,
+        height: 125,
         backgroundColor: '#FFFFFF',
-        borderRadius: 10,
+        borderRadius: 15,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#1A3A6B',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.5,
-        shadowRadius: 2,
+        overflow: 'hidden',
+        borderColor: '#d1d1d1',
+        borderWidth: 1,
+    },
+    
+    ticketChoiceBox: {  
+        position: 'absolute',
+        height: '50%',
+        width: '100%',
+        top: 10,
+        left: 0,
+        gap: 10,
+        borderRadius: 15,
+        padding: 10,
     },
 
     tearLine: {
         position: 'absolute',
-        right: 80,
+        right: 89,
         top: 0,
         bottom: 0,
         width: 1,
@@ -153,7 +182,7 @@ export const subscribeStyles = StyleSheet.create({
 
     tearTop: {
         position: 'absolute',
-        right: 71,
+        right: 100,
         top: -12,
         width: 20,
         height: 20,
@@ -164,7 +193,7 @@ export const subscribeStyles = StyleSheet.create({
 
     tearDown: {
         position: 'absolute',
-        right: 71,
+        right: 100,
         bottom: -12,
         width: 20,
         height: 20,
@@ -174,21 +203,23 @@ export const subscribeStyles = StyleSheet.create({
     },
 
     economyticketHeader: {
+        position: 'absolute',
         width: '100%',
         backgroundColor: '#FFD9A7',
         paddingHorizontal: 12,
         paddingVertical: 8,
-        top: -30,
+        top: 0,
         borderTopLeftRadius: 10,
         borderTopRightRadius: 10,
     },
 
     businessticketHeader: {
+        position: 'absolute',
         width: '100%',
         backgroundColor: '#8FB88A',
         paddingHorizontal: 12,
         paddingVertical: 8,
-        top: -30,
+        top: 0,
         borderTopLeftRadius: 10,
         borderTopRightRadius: 10,
     },
@@ -203,24 +234,54 @@ export const subscribeStyles = StyleSheet.create({
     barcode: {
         position: 'absolute',
         width: 17,
-        height: 60,
+        height: 68,
         left: 10,
         top: 44,
     },
 
-    ticketText: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#000000',
-        fontFamily: 'Freesentation',
-    },
-
-    checkBadge: {
+    ticketLogo: {
         position: 'absolute',
-        top: 65,
-        right: -10,
         width: 70,
         height: 70,
+        right: -5,
+        top: 55,
+        opacity: 0.3,
+    },
+
+    ticketText: {
+        position: 'absolute',
+        top: 55,
+        left: 125,
+        fontSize: 40,
+        fontWeight: 'regular',
+        color: '#000000',
+        fontFamily: 'Freesentation-700',
+    },
+
+    ticketPriceText: {
+        position: 'absolute',
+        left: 285,
+        top: 80,
+        fontSize: 16,
+        color: '#000000',
+        fontFamily: 'Freesentation-400',
+    },
+
+    ticketBenefitText: {
+        position: 'absolute',
+        left: -140,
+        top: 22,
+        fontSize: 12,
+        color: '#000000',
+        fontFamily: 'Freesentation-400',
+    },
+
+    stampBadge: {
+        position: 'absolute',
+        top: 42,
+        right: 5,
+        width: 75,
+        height: 75,
         borderRadius: 12,
     },
 
@@ -251,6 +312,20 @@ export const subscribeStyles = StyleSheet.create({
         height: 120,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+
+    subscribeSummary: { 
+        fontSize: 15, 
+        fontWeight: 'bold', 
+        color: '#1A3A6B',
+        marginBottom: 15,
+    },
+
+    subscribeBanner: { 
+        flexDirection: 'row', 
+        gap: 10, 
+        flexWrap: 'wrap', 
+        justifyContent: 'center',
     },
 
     subscribeItemText: {
