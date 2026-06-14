@@ -20,6 +20,7 @@ export default function RootLayout() {
 
     const checkAuth = async () => {
       const token = await SecureStore.getItemAsync("accessToken");
+      console.log("[Auth] accessToken:", token);
       if (token) {
         router.replace("/(tabs)");
       } else {
