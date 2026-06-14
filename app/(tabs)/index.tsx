@@ -1,3 +1,4 @@
+import AddPlaceScreen from "@/src/features/place/screens/AddPlaceScreen";
 import {
   NaverMapMarkerOverlay,
   NaverMapView,
@@ -6,10 +7,9 @@ import * as Location from "expo-location";
 import { useRef, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import AddPlaceScreen from '@/src/features/place/screens/AddPlaceScreen'
 
 const NAVY = "#0F2744";
-const TAB_BAR_HEIGHT = 80;
+const TAB_BAR_HEIGHT = 70;
 
 function ExplorationLegend() {
   return (
@@ -31,13 +31,21 @@ function ExplorationLegend() {
   );
 }
 
-// 현재 위치 표시용 SVG 스타일 마커 (파란 점 + 외곽 원)
 function UserLocationMarker() {
   return (
     <View style={styles.userLocationMarker}>
       <View style={styles.userLocationOuter}>
         <View style={styles.userLocationInner} />
       </View>
+    </View>
+  );
+}
+
+/** 지도 중앙에 고정되는 핀 */
+function CenterPin() {
+  return (
+    <View style={styles.centerPinWrapper} pointerEvents="none">
+      <Text style={styles.centerPinEmoji}>📍</Text>
     </View>
   );
 }
@@ -87,27 +95,86 @@ function DiscoveryCard({
   );
 }
 
+/** 위치 확인 카드 — 핀 고정 후 "이 위치가 맞습니까?" */
+interface LocationConfirmCardProps {
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function LocationConfirmCard({
+  onConfirm,
+  onCancel,
+}: LocationConfirmCardProps) {
+  return (
+    <View style={styles.discoveryCard}>
+      <View style={styles.placeNameBar}>
+        <Text style={styles.placeNameText}>위치 확인</Text>
+      </View>
+      <View style={styles.discoveryBody}>
+        <Text style={styles.discoveryTitle}>이 위치가 맞습니까?</Text>
+        <Text style={styles.locationText}>
+          핀이 가리키는 위치에 장소를 등록합니다.
+        </Text>
+        <View style={[styles.discoveryActions, { marginTop: 10 }]}>
+          <TouchableOpacity
+            style={styles.confirmButton}
+            onPress={onConfirm}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.confirmButtonText}>예</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.dismissButton}
+            onPress={onCancel}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.dismissButtonText}>아니요</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 interface PassportPin {
   latitude: number;
   longitude: number;
   placeName: string;
 }
 
+// 지도 중앙 좌표를 가져오기 위한 카메라 상태 타입
+interface CameraState {
+  latitude: number;
+  longitude: number;
+}
+
 export default function MapScreen() {
   const { bottom: safeBottom } = useSafeAreaInsets();
   const [showDiscovery, setShowDiscovery] = useState(true);
   const [showRegisterBtn, setShowRegisterBtn] = useState(false);
+  const [showAddPlace, setShowAddPlace] = useState(false);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
   } | null>(null);
   const [passportPins, setPassportPins] = useState<PassportPin[]>([]);
+
+  // 장소 직접 선택 모드
+  const [pickingLocation, setPickingLocation] = useState(false);
+  // 핀 위치 확인 카드 표시
+  const [showLocationConfirm, setShowLocationConfirm] = useState(false);
+  // 현재 카메라(지도 중앙) 좌표
+  const [cameraCenter, setCameraCenter] = useState<CameraState>({
+    latitude: 37.5665,
+    longitude: 126.978,
+  });
+
   const mapRef = useRef<any>(null);
 
   const baseBottom = TAB_BAR_HEIGHT + safeBottom + 12;
 
+  // Discovery card: "나만의 여권 만들기"
   const handleConfirm = () => {
-    // 여권 기록 시 현재 발견된 장소를 핀으로 추가
     setPassportPins((prev) => [
       ...prev,
       {
@@ -120,9 +187,41 @@ export default function MapScreen() {
     setShowAddPlace(true);
   };
 
+  // Discovery card: "아니요"
   const handleDismiss = () => {
     setShowDiscovery(false);
     setShowRegisterBtn(true);
+  };
+
+  // "나만의 장소 등록하기" 버튼 → 위치 선택 모드 진입
+  const handleRegisterPress = () => {
+    setShowRegisterBtn(false);
+    setPickingLocation(true);
+  };
+
+  // 지도 카메라 이동 이벤트 → 중앙 좌표 갱신
+  const handleCameraChanged = (event: any) => {
+    const { latitude, longitude } = event;
+    if (latitude && longitude) {
+      setCameraCenter({ latitude, longitude });
+    }
+  };
+
+  // 위치 선택 모드에서 "위치 고정" 버튼
+  const handlePinLocation = () => {
+    setShowLocationConfirm(true);
+  };
+
+  // 위치 확인 카드: "예" → AddPlace로
+  const handleLocationConfirm = () => {
+    setPickingLocation(false);
+    setShowLocationConfirm(false);
+    setShowAddPlace(true);
+  };
+
+  // 위치 확인 카드: "아니요" → 다시 조정
+  const handleLocationCancel = () => {
+    setShowLocationConfirm(false);
   };
 
   const handleLocationPress = async () => {
@@ -131,14 +230,11 @@ export default function MapScreen() {
       alert("위치 권한이 필요합니다.");
       return;
     }
-
     const location = await Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.High,
     });
-
     const { latitude, longitude } = location.coords;
     setUserLocation({ latitude, longitude });
-
     mapRef.current?.animateCameraTo({
       latitude,
       longitude,
@@ -153,8 +249,9 @@ export default function MapScreen() {
         ref={mapRef}
         style={styles.map}
         camera={{ latitude: 37.5665, longitude: 126.978, zoom: 14 }}
+        isShowZoomControls={!pickingLocation}
+        onCameraChanged={handleCameraChanged}
       >
-        {/* 현재 위치 마커 (파란 점) */}
         {userLocation && (
           <NaverMapMarkerOverlay
             latitude={userLocation.latitude}
@@ -166,8 +263,6 @@ export default function MapScreen() {
             <UserLocationMarker />
           </NaverMapMarkerOverlay>
         )}
-
-        {/* 여권 기록된 장소 핀들 */}
         {passportPins.map((pin, index) => (
           <NaverMapMarkerOverlay
             key={index}
@@ -178,45 +273,102 @@ export default function MapScreen() {
         ))}
       </NaverMapView>
 
-      {/* 탐험 범례 */}
-      <View
-        style={[styles.legendWrapper, { bottom: baseBottom }]}
-        pointerEvents="none"
-      >
-        <ExplorationLegend />
-      </View>
+      {/* 위치 선택 모드: 화면 중앙 고정 핀 */}
+      {pickingLocation && <CenterPin />}
 
-      {/* 현재 위치 버튼 */}
-      <TouchableOpacity
-        style={[styles.locationButton, { bottom: baseBottom }]}
-        activeOpacity={0.8}
-        onPress={handleLocationPress}
-      >
-        <Text style={styles.locationButtonIcon}>◎</Text>
-      </TouchableOpacity>
-
-      {/* 나만의 장소 등록하기 버튼 */}
-      {showRegisterBtn && (
-        <View style={[styles.registerButtonWrapper, { bottom: baseBottom }]}>
-          <TouchableOpacity
-            style={styles.registerButton}
-            activeOpacity={0.85}
-            onPress={() => setShowRegisterBtn(false)}
-          >
-            <Text style={styles.registerButtonText}>나만의 장소 등록하기</Text>
-          </TouchableOpacity>
+      {/* 탐험 진행도 */}
+      {!pickingLocation && (
+        <View
+          style={[styles.legendWrapper, { bottom: baseBottom + 64 }]}
+          pointerEvents="none"
+        >
+          <ExplorationLegend />
         </View>
       )}
 
-      {/* 장소 발견 팝업 */}
+      {/* 하단 바: 현위치 버튼 + 장소 등록 버튼 */}
+      {!pickingLocation && (
+        <View style={[styles.bottomBar, { bottom: baseBottom }]}>
+          <TouchableOpacity
+            style={styles.locationButton}
+            activeOpacity={0.8}
+            onPress={handleLocationPress}
+          >
+            <Text style={styles.locationButtonIcon}>◎</Text>
+          </TouchableOpacity>
+
+          {showRegisterBtn && (
+            <TouchableOpacity
+              style={styles.registerButton}
+              activeOpacity={0.85}
+              onPress={handleRegisterPress}
+            >
+              <Text style={styles.registerButtonText}>
+                나만의 장소 등록하기
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* 위치 선택 모드 안내 + 위치 고정 버튼 */}
+      {pickingLocation && !showLocationConfirm && (
+        <>
+          {/* 상단 안내 */}
+          <View style={styles.pickingGuideWrapper}>
+            <View style={styles.pickingGuideCard}>
+              <Text style={styles.pickingGuideText}>
+                지도를 움직여 핀을 원하는 위치에 맞추세요
+              </Text>
+            </View>
+          </View>
+
+          {/* 하단: 현위치 버튼 + 위치 고정 버튼 */}
+          <View style={[styles.bottomBar, { bottom: baseBottom }]}>
+            <TouchableOpacity
+              style={styles.locationButton}
+              activeOpacity={0.8}
+              onPress={handleLocationPress}
+            >
+              <Text style={styles.locationButtonIcon}>◎</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.registerButton}
+              activeOpacity={0.85}
+              onPress={handlePinLocation}
+            >
+              <Text style={styles.registerButtonText}>이 위치로 고정</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+
+      {/* 위치 확인 카드 */}
+      {pickingLocation && showLocationConfirm && (
+        <View style={[styles.discoveryWrapper, { bottom: baseBottom + 60 }]}>
+          <LocationConfirmCard
+            onConfirm={handleLocationConfirm}
+            onCancel={handleLocationCancel}
+          />
+        </View>
+      )}
+
+      {/* Discovery 카드 */}
       {showDiscovery && (
-        <View style={[styles.discoveryWrapper, { bottom: baseBottom - 4 }]}>
+        <View style={[styles.discoveryWrapper, { bottom: baseBottom + 60 }]}>
           <DiscoveryCard
             placeName="스타벅스 OO점"
             district="서울시 영등포구"
             onConfirm={handleConfirm}
             onDismiss={handleDismiss}
           />
+        </View>
+      )}
+
+      {/* AddPlaceScreen */}
+      {showAddPlace && (
+        <View style={StyleSheet.absoluteFill}>
+          <AddPlaceScreen />
         </View>
       )}
     </View>
@@ -227,7 +379,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
 
-  // 현재 위치 마커 스타일
   userLocationMarker: {
     width: 40,
     height: 40,
@@ -258,6 +409,41 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
+  // 화면 중앙 고정 핀
+  centerPinWrapper: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    marginLeft: -16,
+    marginTop: -40,
+    zIndex: 10,
+  },
+  centerPinEmoji: {
+    fontSize: 36,
+  },
+
+  // 위치 선택 모드 상단 안내
+  pickingGuideWrapper: {
+    position: "absolute",
+    top: 60,
+    left: 16,
+    right: 16,
+    alignItems: "center",
+    zIndex: 10,
+  },
+  pickingGuideCard: {
+    backgroundColor: "rgba(15, 39, 68, 0.85)",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+  },
+  pickingGuideText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+
   legendWrapper: {
     position: "absolute",
     right: 16,
@@ -284,12 +470,19 @@ const styles = StyleSheet.create({
   legendDot: { width: 12, height: 12, borderRadius: 3 },
   legendLabel: { fontSize: 11, color: "#475569" },
 
-  locationButton: {
+  bottomBar: {
     position: "absolute",
     left: 16,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    right: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  locationButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "white",
     justifyContent: "center",
     alignItems: "center",
@@ -299,26 +492,25 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
-  locationButtonIcon: { fontSize: 20, color: "#334155" },
+  locationButtonIcon: { fontSize: 22, color: "#334155" },
 
-  registerButtonWrapper: {
-    position: "absolute",
-    left: 70,
-    right: 70,
-    alignItems: "center",
-  },
   registerButton: {
+    flex: 1,
     backgroundColor: "white",
-    paddingVertical: 12,
-    paddingHorizontal: 22,
-    borderRadius: 24,
+    paddingVertical: 14,
+    borderRadius: 28,
+    alignItems: "center",
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 5,
   },
-  registerButtonText: { fontSize: 14, fontWeight: "600", color: "#1E293B" },
+  registerButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1E293B",
+  },
 
   discoveryWrapper: {
     position: "absolute",

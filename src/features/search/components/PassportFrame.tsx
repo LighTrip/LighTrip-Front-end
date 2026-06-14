@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import type { PassportFeedItem } from "../types/passport.types";
 
@@ -5,9 +6,53 @@ type PassportFrameProps = {
   item: PassportFeedItem;
 };
 
+const STAMP_MAP: Record<string, any> = {
+  'CAFE': require('@/assets/stamps/cafe.png'),
+  'RESTAURANT': require('@/assets/stamps/restaurant.png'),
+  'BAR': require('@/assets/stamps/bar.png'),
+  'NATURE': require('@/assets/stamps/park.png'),
+  'CULTURE': require('@/assets/stamps/culture.png'),
+  'ACTIVITY': require('@/assets/stamps/fitness.png'),
+  'SHOPPING': require('@/assets/stamps/shopping.png'),
+  'ETC': require('@/assets/stamps/etc.png'),
+}
+
 export default function PassportFrame({item}: PassportFrameProps) {
 
   const placeImageUrl = item.imageUrls?.[0];
+
+  const [musicArtwork, setMusicArtwork] = useState<string | null>(null);
+
+  // 음악 사진 불러오기
+  useEffect(() => {
+    if(!item.musicTitle || !item.musicArtist) {
+      setMusicArtwork(null);
+      return;
+    }
+
+    const fetchMusicArtwork = async () => {
+      try {
+        const keyword = `${item.musicTitle} ${item.musicArtist}`;
+        const url = `https://itunes.apple.com/search?term=${encodeURIComponent(keyword)}&media=music&limit=1`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        const artwork = data.results?.[0]?.artworkUrl100;
+
+        if(artwork) {
+          setMusicArtwork(artwork);
+        } else {
+          setMusicArtwork(null);
+        }
+      } catch(error) {
+        console.log("음악 이미지 조회 실패:", error);
+        setMusicArtwork(null);
+      }
+    };
+
+    fetchMusicArtwork();
+  }, [item.musicTitle, item.musicArtist])
 
   return (
     <View style={styles.passportCard}>
@@ -20,30 +65,36 @@ export default function PassportFrame({item}: PassportFrameProps) {
       <View style={styles.passportContent}>
         {/*여권 위쪽 부분*/}
         <View style={styles.topHalf}>
-          <Image 
-            source={require("@/assets/images/pinktape.png")}
-            style={styles.tape}
-            resizeMode="contain"
-          />
-          <Image 
-            source={
-              placeImageUrl
-                ? { uri: placeImageUrl}
-                : require("@/assets/images/default_profile.png")
-            }
-            style={styles.placeImage}
-            resizeMode="cover"
-          />
-          <Image 
-            source={require("@/assets/images/StampSeal.png")}
-            style={styles.stampImage}
-            resizeMode="contain"
-          />
+          <View style={styles.photoArea}>
+            <Image 
+              source={require("@/assets/images/pinktape.png")}
+              style={styles.tape}
+              resizeMode="contain"
+            />
 
-          <View style={styles.infoArea}>
-            <Text style={styles.infoRow}>🏷 {item.categoryDisplayName || item.category}</Text>
-            <Text style={styles.infoRow}>📍 {item.spaceName}</Text>
-            <Text style={styles.infoRow}>🗓 {item.visitedAt}</Text>
+            <Image 
+              source={
+                placeImageUrl
+                  ? { uri: placeImageUrl}
+                  : require("@/assets/images/default_profile.png")
+              }  
+              style={styles.placeImage}
+              resizeMode="cover"
+            />
+          </View>
+
+          <View style={styles.rightArea}>
+            <Image 
+              source={STAMP_MAP[item.category] ?? STAMP_MAP.ETC}
+              style={styles.stampImage}
+              resizeMode="contain"
+            />
+
+            <View style={styles.infoArea}>
+              <Text style={styles.infoRow} numberOfLines={1} ellipsizeMode="tail">🏷 {item.categoryDisplayName || item.category}</Text>
+              <Text style={styles.infoRow} numberOfLines={1} ellipsizeMode="tail">📍 {item.spaceName}</Text>
+              <Text style={styles.infoRow} numberOfLines={1} ellipsizeMode="tail">🗓 {item.visitedAt}</Text>
+            </View>
           </View>
         </View>
 
@@ -64,7 +115,11 @@ export default function PassportFrame({item}: PassportFrameProps) {
 
           <View style={styles.musicBox}>
             <Image 
-              source={require("@/assets/images/default_profile.png")}
+              source={
+                musicArtwork
+                  ? {uri:musicArtwork}
+                  : require("@/assets/images/default_profile.png")
+              }
               style={styles.musicImage}
             />
 
@@ -89,7 +144,6 @@ export default function PassportFrame({item}: PassportFrameProps) {
 
 const styles = StyleSheet.create({
   passportCard: {
-    flex: 1,
     width: "100%",
     position: "relative",
     backgroundColor: "#F8FAFD",
@@ -103,19 +157,32 @@ const styles = StyleSheet.create({
     opacity: 1,
   },
   passportContent: {
-    flex: 1,
     position: "relative",
     zIndex: 1,
   },
   topHalf: {
-    flex: 1.05,
+    minHeight: 245,
+    flexDirection:"row",
     position: "relative",
     paddingTop: 28,
+    paddingHorizontal: 24,
+    paddingBottom: 18,
+  },
+  photoArea: {
+    width: 165,
+    height: 190,
+    position: "relative",
+  },
+  rightArea: {
+    flex: 1,
+    alignItems: "flex-end",
+    justifyContent: "flex-end",
+    paddingTop: 8,
   },
   tape: {
     position: "absolute",
-    top: 28,
-    left: "40%",
+    top: 0,
+    left: 100,
     width: 70,
     height: 50,
     zIndex: 10,
@@ -123,8 +190,8 @@ const styles = StyleSheet.create({
   },
   placeImage: {
     position: "absolute",
-    left: 28,
-    top: 45,
+    left: 0,
+    top: 18,
     width: 150,
     height: 150,
     transform: [{rotate: "-7deg"}], 
@@ -132,23 +199,24 @@ const styles = StyleSheet.create({
     borderColor: "#FFFFFF",
   },
   stampImage: {
-    position: "absolute",
-    right: 5,
-    top: 55,
-    width: 120,
-    height: 120,
+    width: 140,
+    height: 140,
+    marginRight: -6,
+    marginBottom: -4,
+    transform: [{rotate: "-10deg"}]
   },
   infoArea: {
-    position: "absolute",
-    right: 24,
-    bottom: 28,
     gap: 8,
+    alignItems: "flex-start",
+    maxWidth: 140,
   },
   infoRow: {
+    width: "100%",
     fontSize: 12,
     color: "#222222",
     fontWeight: "600",
     fontFamily: 'Griun_Gellyroll',
+    textAlign: "left",
   },
   dividerRow: {
     height: 15,
@@ -181,7 +249,6 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   bottomHalf: {
-    flex: 0.95,
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 12,

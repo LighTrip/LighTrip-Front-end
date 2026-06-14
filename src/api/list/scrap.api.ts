@@ -13,9 +13,20 @@ export type ScrapPassport = {
     scrapCount: number
 }
 
+export type MyScrapsResponse = {
+    success: boolean;
+    code: string;
+    message: string;
+    data: {
+        content: ScrapPassport[];
+        hasNext: boolean;
+        nextCursor: number | null;
+    }
+}
+
 // 내 스크랩 목록 조회
 export const getMyScraps = (params?: { cursor?: number; size?: number }) =>
-    axiosInstance.get(API_ENDPOINTS.SCRAP.GET_MY_SCRAPS, { params })
+    axiosInstance.get<MyScrapsResponse>(API_ENDPOINTS.SCRAP.GET_MY_SCRAPS, { params })
 
 // 스크랩
 export const scrapPassport = (passportId: number) =>

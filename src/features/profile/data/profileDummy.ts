@@ -1,12 +1,12 @@
 import { ProfileMenuItem, ProfileUser } from "../types/profile.types";
 
 export const profileUserDummy: ProfileUser = {
-    id: "#30421",
+    id: "#2026",
     name: "저희이제하조",
     location: "고양시 덕양구",
-    passportCount: 12,
-    districtCount: 23,
-    totallike: 320,
+    passportCount: 0,
+    districtCount: 0,
+    totallike: 0,
     profileImage: null,
 };
 
@@ -34,7 +34,8 @@ export const settingMenuDummy: ProfileMenuItem[] = [
         id: "scrap",
         title: "스크랩",
         description: "스크랩 누른 장소 모아보기",
-        icon: "heart",
+        icon: "bookmark",
+        route: "/profile/scrap"
     },
     {
         id: "theme",
@@ -61,6 +62,7 @@ export const accountMenuDummy: ProfileMenuItem[] = [
         id: "subscribe",
         title: "구독하기",
         icon: "storefront",
+        route: "/profile/subscribe"
     },
     {
         id: "logout",
