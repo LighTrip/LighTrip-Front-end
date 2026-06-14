@@ -4,6 +4,7 @@ import PassportDetail from "@/src/features/passport/screens/PassportDetail";
 import AddPlaceScreen from "@/src/features/place/screens/AddPlaceScreen";
 import {
   NaverMapMarkerOverlay,
+  NaverMapPolygonOverlay,
   NaverMapView,
 } from "@mj-studio/react-native-naver-map";
 import * as Location from "expo-location";
@@ -40,6 +41,11 @@ interface BBox {
   maxLat: number;
   minLng: number;
   maxLng: number;
+}
+
+interface PolygonCoord {
+  latitude: number;
+  longitude: number;
 }
 
 interface PickedLocation {
@@ -357,6 +363,10 @@ export default function MapScreen() {
   );
   const [addressLoading, setAddressLoading] = useState(false);
 
+  const [polygonCoords, setPolygonCoords] = useState<PolygonCoord[] | null>(
+    null,
+  );
+
   const mapRef = useRef<any>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const baseBottom = TAB_BAR_HEIGHT + safeBottom + 12;
@@ -367,7 +377,64 @@ export default function MapScreen() {
     try {
       const res = await getMyLights(bbox);
       const data = res.data.data;
-      setLights(Array.isArray(data) ? data : []);
+      const items: LightItem[] = Array.isArray(data) ? data : [];
+
+      // ── 디버그 로그 ──────────────────────────────────────────────────
+      console.log(
+        `[Lights] BBox: minLat=${bbox.minLat.toFixed(4)}, maxLat=${bbox.maxLat.toFixed(4)}, minLng=${bbox.minLng.toFixed(4)}, maxLng=${bbox.maxLng.toFixed(4)}`,
+      );
+      console.log(`[Lights] 총 ${items.length}개 마커`);
+      items.forEach((item, i) => {
+        if (item.isCluster) {
+          console.log(
+            `  [${i}] 클러스터 | 개수=${item.count} | lat=${item.centerLatitude}, lng=${item.centerLongitude}`,
+          );
+        } else {
+          console.log(
+            `  [${i}] 단일 | passportId=${item.passportId} | spaceName=${item.spaceName} | lat=${item.latitude}, lng=${item.longitude}`,
+          );
+        }
+      });
+      // ────────────────────────────────────────────────────────────────
+
+      setLights(items);
+      if (items.length >= 2) {
+        const coords: PolygonCoord[] = items.map((item) => ({
+          latitude: item.isCluster
+            ? (item.centerLatitude ?? item.latitude)
+            : item.latitude,
+          longitude: item.isCluster
+            ? (item.centerLongitude ?? item.longitude)
+            : item.longitude,
+        }));
+        if (coords.length === 2) {
+          // 2개: 두 점으로 사각형 구성
+          const [a, b] = coords;
+          setPolygonCoords([
+            {
+              latitude: Math.max(a.latitude, b.latitude),
+              longitude: Math.min(a.longitude, b.longitude),
+            },
+            {
+              latitude: Math.max(a.latitude, b.latitude),
+              longitude: Math.max(a.longitude, b.longitude),
+            },
+            {
+              latitude: Math.min(a.latitude, b.latitude),
+              longitude: Math.max(a.longitude, b.longitude),
+            },
+            {
+              latitude: Math.min(a.latitude, b.latitude),
+              longitude: Math.min(a.longitude, b.longitude),
+            },
+          ]);
+        } else {
+          // 3개 이상: 마커 좌표 그대로 폴리곤
+          setPolygonCoords(coords);
+        }
+      } else {
+        setPolygonCoords(null);
+      }
     } catch (e: any) {
       console.error("lights fetch 실패:", e.message);
       setLights([]);
@@ -388,7 +455,14 @@ export default function MapScreen() {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
       debounceTimer.current = setTimeout(() => {
         const bbox = cameraToBBox(event);
-        if (bbox) loadLights(bbox);
+        if (bbox) {
+          // ── 디버그 로그 ────────────────────────────────────────────
+          console.log(
+            `[Camera] BBox 갱신: minLat=${bbox.minLat.toFixed(4)}, maxLat=${bbox.maxLat.toFixed(4)}, minLng=${bbox.minLng.toFixed(4)}, maxLng=${bbox.maxLng.toFixed(4)}`,
+          );
+          // ──────────────────────────────────────────────────────────
+          loadLights(bbox);
+        }
       }, 400);
     },
     [pickingLocation, loadLights],
@@ -510,6 +584,15 @@ export default function MapScreen() {
         isShowZoomControls={!pickingLocation}
         onCameraChanged={handleCameraChanged}
       >
+        {polygonCoords && (
+          <NaverMapPolygonOverlay
+            coords={polygonCoords}
+            color="rgba(15, 39, 68, 0.18)"
+            outlineColor="rgba(15, 39, 68, 0.45)"
+            outlineWidth={1.5}
+          />
+        )}
+
         {userLocation && (
           <NaverMapMarkerOverlay
             latitude={userLocation.latitude}
