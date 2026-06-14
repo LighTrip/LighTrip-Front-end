@@ -10,7 +10,7 @@ import { InferenceSession, Tensor } from 'onnxruntime-react-native';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import paletteData from './palette.json';
-import { MODEL_INPUT_SHAPE } from './preprocess';
+import { MODEL_INPUT_SHAPE, buildRGBTensor, buildTitleMask, buildModelInput, TitleMaskOptions } from './preprocess';
 
 // ---------------------------------------------------------------------------
 // 모델 파일 경로 확보 (asset -> 파일시스템 복사)
@@ -24,20 +24,18 @@ let modelPathPromise: Promise<string> | null = null;
  * cover_ai/Student_FP16_PTQ_top1.onnx 가 같은 폴더에 있어야 한다.
  */
 export function getModelPath(): Promise<string> {
-  if (!modelPathPromise) {
-    modelPathPromise = (async () => {
-      const asset = Asset.fromModule(require('./Student_FP16_PTQ_top1.onnx'));
-      await asset.downloadAsync();
+  modelPathPromise ??= (async () => {
+    const asset = Asset.fromModule(require('./Student_FP16_PTQ_top1.onnx'));
+    await asset.downloadAsync();
 
-      const dest = `${FileSystem.documentDirectory}Student_FP16_PTQ_top1.onnx`;
-      const info = await FileSystem.getInfoAsync(dest);
-      if (!info.exists) {
-        await FileSystem.copyAsync({ from: asset.localUri!, to: dest });
-      }
+    const dest = `${FileSystem.documentDirectory}Student_FP16_PTQ_top1.onnx`;
+    const info = await FileSystem.getInfoAsync(dest);
+    if (!info.exists) {
+      await FileSystem.copyAsync({ from: asset.localUri!, to: dest });
+    }
 
-      return dest;
-    })();
-  }
+    return dest;
+  })();
   return modelPathPromise;
 }
 
@@ -80,9 +78,7 @@ let sessionPromise: Promise<InferenceSession> | null = null;
  * modelPath는 앱에 bundle된 모델 파일의 실제 경로/URI로 교체할 것.
  */
 export function getSession(modelPath: string): Promise<InferenceSession> {
-  if (!sessionPromise) {
-    sessionPromise = InferenceSession.create(modelPath);
-  }
+  sessionPromise ??= InferenceSession.create(modelPath);
   return sessionPromise;
 }
 
@@ -114,7 +110,7 @@ export async function runInference(
 
   const session = await getSession(modelPath);
 
-  const tensor = new Tensor('float32', inputData, MODEL_INPUT_SHAPE as unknown as number[]);
+  const tensor = new Tensor('float32', inputData, [...MODEL_INPUT_SHAPE]);
 
   const results = await session.run({ input: tensor });
 
@@ -123,9 +119,9 @@ export async function runInference(
     throw new Error("runInference: output 'top1_index' not found in results");
   }
 
-  // int64 -> number (BigInt 또는 number로 올 수 있음)
+  // int64 -> number (onnxruntime이 BigInt로 반환할 수 있음)
   const raw = outputTensor.data[0];
-  const top1Index = typeof raw === 'bigint' ? Number(raw) : Number(raw);
+  const top1Index = Number(raw);
 
   return {
     top1Index,
@@ -136,8 +132,6 @@ export async function runInference(
 // ---------------------------------------------------------------------------
 // End-to-end 헬퍼
 // ---------------------------------------------------------------------------
-
-import { buildRGBTensor, buildTitleMask, buildModelInput, TitleMaskOptions } from './preprocess';
 
 export interface PredictTitleColorParams {
   /** 생략 시 getModelPath()로 자동 로드 */

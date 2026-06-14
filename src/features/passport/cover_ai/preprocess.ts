@@ -35,25 +35,23 @@ let freesentationTypefacePromise: Promise<SkTypeface | null> | null = null;
  * 로드 실패 시 null을 반환하며, 이 경우 Skia.Font(undefined, ...)로 폴백한다.
  */
 export function getFreesentationTypeface(): Promise<SkTypeface | null> {
-  if (!freesentationTypefacePromise) {
-    freesentationTypefacePromise = (async () => {
-      try {
-        const asset = Asset.fromModule(require('../../assets/fonts/Freesentation-4Regular.ttf'));
-        await asset.downloadAsync();
+  freesentationTypefacePromise ??= (async () => {
+    try {
+      const asset = Asset.fromModule(require('../../assets/fonts/Freesentation-4Regular.ttf'));
+      await asset.downloadAsync();
 
-        const uri = asset.localUri ?? asset.uri;
-        const base64 = await FileSystem.readAsStringAsync(uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
+      const uri = asset.localUri ?? asset.uri;
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
 
-        const data = Skia.Data.fromBase64(base64);
-        return Skia.Typeface.MakeFreeTypeFaceFromData(data);
-      } catch (e) {
-        console.warn('getFreesentationTypeface: failed to load font, falling back to default', e);
-        return null;
-      }
-    })();
-  }
+      const data = Skia.Data.fromBase64(base64);
+      return Skia.Typeface.MakeFreeTypeFaceFromData(data);
+    } catch (e) {
+      console.warn('getFreesentationTypeface: failed to load font, falling back to default', e);
+      return null;
+    }
+  })();
   return freesentationTypefacePromise;
 }
 
@@ -165,9 +163,9 @@ export function buildRGBTensor(pixels: Uint8Array, w = ROI_W, h = ROI_H): Float3
       const pi = (y * w + x) * 4; // RGBA index
       const idx = y * w + x; // CHW spatial index
 
-      tensor[0 * plane + idx] = pixels[pi] / 255.0; // R
-      tensor[1 * plane + idx] = pixels[pi + 1] / 255.0; // G
-      tensor[2 * plane + idx] = pixels[pi + 2] / 255.0; // B
+      tensor[0 * plane + idx] = pixels[pi] / 255; // R
+      tensor[1 * plane + idx] = pixels[pi + 1] / 255; // G
+      tensor[2 * plane + idx] = pixels[pi + 2] / 255; // B
     }
   }
 
@@ -264,7 +262,6 @@ export async function buildTitleMask(
   } = options;
 
   const cardWidth = card?.width ?? 150;
-  const cardHeight = card?.height ?? 200;
   const cardLeft = card?.left ?? 0;
   const cardRight = card?.right ?? 0;
   const cardTop = card?.top ?? 0;
@@ -318,7 +315,7 @@ export async function buildTitleMask(
   const mask = new Float32Array(w * h);
   for (let i = 0; i < w * h; i++) {
     const alpha = pixels[i * 4 + 3];
-    mask[i] = alpha > alphaThreshold ? 1.0 : 0.0;
+    mask[i] = alpha > alphaThreshold ? 1 : 0;
   }
 
   return mask; // length = 36 * 136 = 4896
