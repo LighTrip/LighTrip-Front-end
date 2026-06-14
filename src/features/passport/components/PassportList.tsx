@@ -161,9 +161,9 @@ const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange }: Prop
             </View>
 
             <SearchBar 
-            label={selectedDistrict ? `${selectedDistrict}구` : undefined} 
-            onSortChange={selected === 'cover' ? setCoverSortOrder : setListSortOrder}
-            onSearchChange={setSearchQuery}
+                label={selectedDistrict ? `${selectedDistrict}구` : undefined} 
+                onSortChange={selected === 'cover' ? setCoverSortOrder : setListSortOrder}
+                onSearchChange={setSearchQuery}
             />
 
             {selected === 'cover' ? coverContent : (
@@ -228,6 +228,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-start',
         gap: 11,
     },
+
 
     passportCover: {
         width: COVER_WIDTH,
