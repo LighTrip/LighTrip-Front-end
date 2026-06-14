@@ -335,6 +335,19 @@ export const editStyles = StyleSheet.create({
         color: '#FFFFFF',
         fontWeight: 'bold',
     },
+
+    visibilityButton: {
+        backgroundColor: '#1A3A6B',
+        borderRadius: 10,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+    },
+
+    visibilityButtonText: {
+        color: '#ffffff',
+        fontSize: 13,
+        fontWeight: '600',
+    },
 })
 
 

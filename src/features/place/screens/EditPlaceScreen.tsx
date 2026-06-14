@@ -6,7 +6,6 @@ import {
     Image,
     Dimensions,
     View,
-    Switch,
     Platform,
     KeyboardAvoidingView,
 } from 'react-native'
@@ -24,7 +23,7 @@ import { editStyles as styles } from '../components/placeStyles'
 
 // API
 import { getPresignedUrl, uploadToS3 } from '@/src/api/passport/image.api'  // 이미지 업로드
-import { createPassport, CATEGORY_MAP } from '@/src/api/passport/passport.api'  // 여권 생성
+import { createPassport, CATEGORY_MAP, Visibility } from '@/src/api/passport/passport.api'  // 여권 생성
 
 const { width } = Dimensions.get('window')
 const CARD_WIDTH = width * 0.91
@@ -103,7 +102,19 @@ const EditPlaceScreen = ({
 
     const [content, setContent] = useState('')
     const [isGenerating, setIsGenerating] = useState(false)
-    const [isPublic, setIsPublic] = useState(true)
+    const [visibility, setVisibility] = useState<Visibility>('PUBLIC')
+
+    const VISIBILITY_CYCLE: Visibility[] = ['PUBLIC', 'FRIENDS_ONLY', 'PRIVATE']
+    const VISIBILITY_LABEL: Record<Visibility, string> = {
+        PUBLIC: '공개',
+        FRIENDS_ONLY: '친구만',
+        PRIVATE: '비공개',
+    }
+    const VISIBILITY_SUB: Record<Visibility, string> = {
+        PUBLIC: '모든 사람이 볼 수 있어요',
+        FRIENDS_ONLY: '친구만 볼 수 있어요',
+        PRIVATE: '나만 볼 수 있어요',
+    }
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
 
 
@@ -161,7 +172,7 @@ const EditPlaceScreen = ({
                 visitedAt: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
                 category: CATEGORY_MAP[placeType] ?? 'ETC',
                 districtCategory: DISTRICT_CATEGORY_MAP[region] ?? region,
-                visibility: isPublic ? 'PUBLIC' : 'PRIVATE',
+                visibility: visibility,
                 spaceName: locationName,
                 district: region !== '선택' ? region : undefined,
                 musicTitle: music?.title,
@@ -346,14 +357,17 @@ const EditPlaceScreen = ({
                     <View style={styles.publicRow}>
                         <View>
                             <Text style={styles.publicTitle}>여권 공개 여부</Text>
-                            <Text style={styles.publicSub}>{isPublic ? '모든 사람이 볼 수 있어요' : '나만 볼 수 있어요'}</Text>
+                            <Text style={styles.publicSub}>{VISIBILITY_SUB[visibility]}</Text>
                         </View>
-                        <Switch
-                            value={isPublic}
-                            onValueChange={setIsPublic}
-                            trackColor={{ false: '#D0D0D0', true: '#1A3A6B' }}
-                            thumbColor={'#FFFFFF'}
-                        />
+                        <TouchableOpacity
+                            style={styles.visibilityButton}
+                            onPress={() => {
+                                const idx = VISIBILITY_CYCLE.indexOf(visibility)
+                                setVisibility(VISIBILITY_CYCLE[(idx + 1) % 3])
+                            }}
+                        >
+                            <Text style={styles.visibilityButtonText}>{VISIBILITY_LABEL[visibility]}</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </Shadow>
@@ -369,3 +383,4 @@ const EditPlaceScreen = ({
 }
 
 export default EditPlaceScreen
+

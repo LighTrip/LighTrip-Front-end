@@ -40,7 +40,7 @@ const PlaceListView = ({ data, onSelectPlace }: Props) => {
     }
 
     return (
-        <View style={{ flex: 1, marginTop: 5 }}>
+        <View style={{ flex: 1, marginTop: 5, paddingBottom: 100 }}>
             
             <FlatList
                 data={data}
@@ -61,8 +61,18 @@ const PlaceListView = ({ data, onSelectPlace }: Props) => {
                         <View style={styles.textArea}>
                             <Text style={styles.listName}>{item.spaceName}</Text>
                             <View style={styles.metaRow}>
-                                <Text style={styles.meta}>📍{item.districtDisplayName}</Text>
-                                <Text style={styles.meta}>📅 {item.visitedAt}</Text>
+                                <Image 
+                                    source={require('@/assets/icons/location.png')} 
+                                    style={{ width: 14, height: 14 }} 
+                                    resizeMode="contain"
+                                />
+                                <Text style={styles.metaLocation}>{item.districtDisplayName}</Text>
+                                <Image 
+                                    source={require('@/assets/icons/calendar.png')} 
+                                    style={{ width: 14, height: 14, }} 
+                                    resizeMode="contain"
+                                />
+                                <Text style={styles.metaDate}> {item.visitedAt}</Text>
                             </View>
                         </View>
                     </TouchableOpacity>

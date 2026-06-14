@@ -124,3 +124,6 @@ export const getMyPassportDistricts = () =>
 export const getDistrictsPassports = (districtCategory: string) =>
     axiosInstance.get(API_ENDPOINTS.PASSPORT.GET_DISTRICT_PASSPORTS(districtCategory))
 
+// 여권 공개 범위 수정
+export const changePassportVisibility = (passportId: number, visibility: Visibility) =>
+    axiosInstance.patch(API_ENDPOINTS.PASSPORT.UPDATE_VISIBILITY(passportId), { visibility })

@@ -26,8 +26,9 @@ import {
     deletePassport,
     PassportCategory,
     updatePassport,
-    updatePassportVisibility,
+    changePassportVisibility,
     Visibility,
+    CATEGORY_MAP,
 } from '@/src/api/passport/passport.api'
 
 type Props = {
@@ -36,7 +37,7 @@ type Props = {
     onBack: () => void
     onNext?: () => void
     onPrev?: () => void
-    editable? :boolean
+    editable?: boolean
 }
 
 const STAMP_MAP: Record<string, any> = {
@@ -62,6 +63,13 @@ const CATEGORY_TO_KOREAN: Record<string, string> = {
 }
 
 const PLACE_TYPES = ['☕ 카페', '🍽️ 식당', '🍶 술집', '🏞️ 공원', '🎬 문화', '🏋️ 운동', '🛍️ 쇼핑', '📦 기타']
+
+const VISIBILITY_CYCLE: Visibility[] = ['PUBLIC', 'FRIENDS_ONLY', 'PRIVATE']
+const VISIBILITY_LABEL: Record<Visibility, string> = {
+    PUBLIC: '공개',
+    FRIENDS_ONLY: '친구만',
+    PRIVATE: '비공개',
+}
 
 const { width } = Dimensions.get('window')
 
@@ -93,7 +101,7 @@ const MusicBox = ({ music, onPress, styles }: { music: MusicDisplayItem; onPress
     )
 }
 
-const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable=true }: Props) => {
+const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = true }: Props) => {
     const [isEditing, setIsEditing] = useState(false)
     const [editReview, setEditReview] = useState(item.content ?? '')
     const [editCategory, setEditCategory] = useState(CATEGORY_TO_KOREAN[item.category] ?? '선택')
@@ -102,7 +110,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable=true
     const [editMusic, setEditMusic] = useState<{ title: string; artist: string; artwork: string } | null>(null)
     const [musicArtwork, setMusicArtwork] = useState<string | null>(null)
     const [isCover, setIsCover] = useState(false)
-    const [isPublic, setIsPublic] = useState(true)
+    const [visibility, setVisibility] = useState<Visibility>(item.visibility ?? 'PUBLIC')
     const [editSpaceName, setEditSpaceName] = useState(item.spaceName ?? '')
     const [placeSearchOpen, setPlaceSearchOpen] = useState(false)
     const [musicModalOpen, setMusicModalOpen] = useState(false)
@@ -171,18 +179,15 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable=true
             const updateData = {
                 content: editReview,
                 visitedAt: editDate.toISOString().split('T')[0],
-                category: Object.keys(CATEGORY_TO_KOREAN).find(
-                    key => CATEGORY_TO_KOREAN[key] === editCategory
-                ) as PassportCategory | undefined,
+                category: CATEGORY_MAP[editCategory] as PassportCategory,
                 musicTitle: editMusic?.title ?? item.musicTitle,
                 musicArtist: editMusic?.artist ?? item.musicArtist,
                 imageUrls: item.imageUrls ?? [],
                 districtCategory: item.districtCategory,
-                visibility: (isPublic ? 'PUBLIC' : 'PRIVATE') as Visibility,
                 spaceName: editSpaceName,
             }
             await updatePassport(item.passportId, updateData)
-            await updatePassportVisibility(item.passportId, isPublic ? 'PUBLIC' : 'PRIVATE')
+            await changePassportVisibility(item.passportId, visibility)
             setIsEditing(false)
         } catch (e: any) {
             console.error('저장 실패:', e.response?.data)
@@ -194,8 +199,8 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable=true
     }
 
     return (
-        <KeyboardAvoidingView 
-            style={[styles.container, styles.scrollContent]} 
+        <KeyboardAvoidingView
+            style={[styles.container, styles.scrollContent]}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
             {/* 상단 헤더 */}
@@ -224,10 +229,10 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable=true
                     <View>
                         <TouchableOpacity onPress={isEditing ? openImagePicker : undefined} disabled={!isEditing}>
                             <View style={styles.imageBackground} />
-                            <Image 
-                                source={{ uri: editImageUri ?? item.imageUrls?.[0] ?? item.image?.uri }} 
-                                style={styles.placeImage} 
-                                resizeMode="cover" 
+                            <Image
+                                source={{ uri: editImageUri ?? item.imageUrls?.[0] ?? item.image?.uri }}
+                                style={styles.placeImage}
+                                resizeMode="cover"
                             />
                             {isEditing && (
                                 <View style={styles.editImageBadge}>
@@ -236,14 +241,14 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable=true
                             )}
                         </TouchableOpacity>
                         {isEditing && (
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.coverBadge}
                                 onPress={() => setIsCover(!isCover)}
                             >
-                                <Ionicons 
-                                    name={isCover ? 'bookmark' : 'bookmark-outline'} 
-                                    size={14} 
-                                    color="#ffffff" 
+                                <Ionicons
+                                    name={isCover ? 'bookmark' : 'bookmark-outline'}
+                                    size={14}
+                                    color="#ffffff"
                                 />
                                 <Text style={styles.coverBadgeText}>
                                     {isCover ? '대표 사진' : '대표 사진으로 설정'}
@@ -271,7 +276,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable=true
                         </View>
 
                         <View style={styles.infoRow}>
-                            <Image source={require('../../../../assets/icons/location.png')} style={styles.icon} resizeMode="contain"/>
+                            <Image source={require('../../../../assets/icons/location.png')} style={styles.icon} resizeMode="contain" />
                             {isEditing ? (
                                 <TouchableOpacity onPress={() => setPlaceSearchOpen(true)} style={styles.infoEditButton}>
                                     <Text style={styles.infoText}>{editSpaceName}</Text>
@@ -282,7 +287,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable=true
                         </View>
 
                         <View style={styles.infoRow}>
-                            <Image source={require('../../../../assets/icons/calendar.png')} style={styles.icon} resizeMode="contain"/>
+                            <Image source={require('../../../../assets/icons/calendar.png')} style={styles.icon} resizeMode="contain" />
                             {isEditing ? (
                                 <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.infoEditButton}>
                                     <Text style={styles.infoText}>{formatDate(editDate)}</Text>
@@ -340,8 +345,11 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable=true
                                 <TouchableOpacity onPress={handleSave}>
                                     <Text style={styles.editText}>save my passport</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => setIsPublic(!isPublic)}>
-                                    <Text style={styles.editText}>{isPublic ? '공개' : '비공개'}</Text>
+                                <TouchableOpacity onPress={() => {
+                                    const idx = VISIBILITY_CYCLE.indexOf(visibility)
+                                    setVisibility(VISIBILITY_CYCLE[(idx + 1) % 3])
+                                }}>
+                                    <Text style={styles.editText}>{VISIBILITY_LABEL[visibility]}</Text>
                                 </TouchableOpacity>
                             </>
                         ) : (
@@ -541,7 +549,7 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
         gap: 4,
     },
-    
+
     coverBadgeText: {
         fontSize: 11,
         color: '#ffffff',

@@ -46,16 +46,16 @@ export const passportStyles = StyleSheet.create({
     
     listContainer: {
         paddingHorizontal: 20,
-        paddingBottom: 100,
     },
     
     listCard: {
+        flexDirection: 'row',
         width: Dimensions.get('window').width - 40,
         backgroundColor: '#FFFFFF',
+        alignContent: 'center',
         borderRadius: 18,
         marginTop: 8,
-        marginBottom: 15,
-        overflow: "hidden",
+        marginBottom: 10,
         shadowColor: '#4C4C4C',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.16,
@@ -77,12 +77,33 @@ export const passportStyles = StyleSheet.create({
         padding: 15,
     },
 
-    textArea: { flex: 1 },
+    textArea: { 
+        position: 'absolute',
+        flex: 1,
+        paddingVertical: 20,
+        left: 80,
+        gap: 5,
+        flexDirection: 'column',
+     },
 
     metaRow: { 
-        flexDirection: 'row', 
-        gap: 24,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         paddingVertical: 2,
+        gap: 5,
+        width: Dimensions.get('window').width - 40 - 80 - 55,
+    },
+
+    metaLocation: { 
+        flexDirection: 'row', 
+        paddingVertical: 2,
+        top: -1,
+        flex: 1,
+    },
+
+    metaDate: { 
+        flexDirection: 'row',
     },
 
     meta: { 
@@ -209,4 +230,5 @@ export const passportStyles = StyleSheet.create({
         marginLeft: 'auto',
     },
 
+    
 })
