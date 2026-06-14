@@ -1,15 +1,132 @@
+import { getMyLights, LightItem } from "@/src/api/lights.api";
+import { getPassportDetail } from "@/src/api/passport/passport.api";
+import PassportDetail from "@/src/features/passport/screens/PassportDetail";
 import AddPlaceScreen from "@/src/features/place/screens/AddPlaceScreen";
 import {
   NaverMapMarkerOverlay,
   NaverMapView,
 } from "@mj-studio/react-native-naver-map";
 import * as Location from "expo-location";
-import { useRef, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const NAVY = "#0F2744";
 const TAB_BAR_HEIGHT = 70;
+const NCP_CLIENT_ID = process.env.EXPO_PUBLIC_NCP_CLIENT_ID ?? "";
+const NCP_CLIENT_SECRET = process.env.EXPO_PUBLIC_NCP_CLIENT_SECRET ?? "";
+
+// ─── 타입 ────────────────────────────────────────────────────────────────
+
+interface PassportPreview {
+  passportId: number;
+  spaceName: string;
+  address: string;
+  visitedAt: string;
+  imageUrl: string | null;
+  musicTitle: string | null;
+  musicArtist: string | null;
+}
+
+interface BBox {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
+}
+
+interface PickedLocation {
+  latitude: number;
+  longitude: number;
+  address: string | null;
+}
+
+// ─── 상수 ────────────────────────────────────────────────────────────────
+
+const INITIAL_BBOX: BBox = {
+  minLat: 37.41,
+  maxLat: 37.72,
+  minLng: 126.77,
+  maxLng: 127.18,
+};
+
+// ─── 유틸 함수 ────────────────────────────────────────────────────────────
+
+function cameraToBBox(event: any): BBox | null {
+  const bounds = event?.contentBounds;
+  if (bounds?.northEast && bounds?.southWest) {
+    return {
+      minLat: bounds.southWest.lat,
+      maxLat: bounds.northEast.lat,
+      minLng: bounds.southWest.lng,
+      maxLng: bounds.northEast.lng,
+    };
+  }
+  const lat = event?.latitude;
+  const lng = event?.longitude;
+  if (!lat || !lng) return null;
+  const delta = 0.05;
+  return {
+    minLat: lat - delta,
+    maxLat: lat + delta,
+    minLng: lng - delta,
+    maxLng: lng + delta,
+  };
+}
+
+// 네이버 역지오코딩 → 도로명 주소 우선, 없으면 지번 주소
+async function naverReverseGeocode(
+  latitude: number,
+  longitude: number,
+): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://maps.apigw.ntruss.com/map-reversegeocode/v2/gc?coords=${longitude},${latitude}&orders=roadaddr,addr&output=json`,
+      {
+        headers: {
+          "x-ncp-apigw-api-key-id": NCP_CLIENT_ID,
+          "x-ncp-apigw-api-key": NCP_CLIENT_SECRET,
+        },
+      },
+    );
+    const json = await res.json();
+    const results = json.results;
+    if (!Array.isArray(results) || results.length === 0) return null;
+
+    const roadaddr = results.find((r: any) => r.name === "roadaddr");
+    const addr = results.find((r: any) => r.name === "addr");
+    const target = roadaddr ?? addr;
+    if (!target) return null;
+
+    const r = target.region;
+    const area1 = r.area1?.name ?? "";
+    const area2 = r.area2?.name ?? "";
+    const area3 = r.area3?.name ?? "";
+    const land = target.land;
+
+    if (roadaddr && land?.name) {
+      const building = land.addition0?.value ? ` ${land.addition0.value}` : "";
+      return `${area1} ${area2} ${land.name} ${land.number1}${building}`.trim();
+    }
+    if (addr && land?.number1) {
+      const number2 = land.number2 ? `-${land.number2}` : "";
+      return `${area1} ${area2} ${area3} ${land.number1}${number2}`.trim();
+    }
+    return `${area1} ${area2} ${area3}`.trim() || null;
+  } catch (e) {
+    console.error("네이버 역지오코딩 실패:", e);
+    return null;
+  }
+}
+
+// ─── 서브 컴포넌트 ────────────────────────────────────────────────────────
 
 function ExplorationLegend() {
   return (
@@ -41,7 +158,31 @@ function UserLocationMarker() {
   );
 }
 
-/** 지도 중앙에 고정되는 핀 */
+function PassportMarker({ spaceName }: { spaceName: string }) {
+  return (
+    <View style={styles.passportMarkerWrapper}>
+      <View style={styles.passportMarkerBubble}>
+        <Text style={styles.passportMarkerEmoji}>🛂</Text>
+        <Text style={styles.passportMarkerLabel} numberOfLines={1}>
+          {spaceName}
+        </Text>
+      </View>
+      <View style={styles.passportMarkerTail} />
+    </View>
+  );
+}
+
+function ClusterMarker({ count }: { count: number }) {
+  return (
+    <View style={styles.clusterWrapper}>
+      <View style={styles.clusterBubble}>
+        <Text style={styles.clusterCount}>{count}</Text>
+      </View>
+      <View style={styles.clusterTail} />
+    </View>
+  );
+}
+
 function CenterPin() {
   return (
     <View style={styles.centerPinWrapper} pointerEvents="none">
@@ -50,58 +191,106 @@ function CenterPin() {
   );
 }
 
-interface DiscoveryCardProps {
-  placeName: string;
-  district: string;
-  onConfirm: () => void;
-  onDismiss: () => void;
+interface PassportPreviewCardProps {
+  preview: PassportPreview | null;
+  loading: boolean;
+  error: string | null;
+  onClose: () => void;
+  onOpenDetail: () => void;
 }
 
-function DiscoveryCard({
-  placeName,
-  district,
-  onConfirm,
-  onDismiss,
-}: DiscoveryCardProps) {
+function PassportPreviewCard({
+  preview,
+  loading,
+  error,
+  onClose,
+  onOpenDetail,
+}: PassportPreviewCardProps) {
   return (
-    <View style={styles.discoveryCard}>
-      <View style={styles.placeNameBar}>
-        <Text style={styles.placeNameText}>{placeName}</Text>
-      </View>
-      <View style={styles.discoveryBody}>
-        <Text style={styles.discoveryTitle}>새로운 장소를 발견하셨군요!</Text>
-        <View style={styles.discoveryLocation}>
-          <Text style={styles.locationPin}>📍</Text>
-          <Text style={styles.locationText}>{district}</Text>
+    <View style={styles.previewCard}>
+      <TouchableOpacity
+        style={styles.previewCloseBtn}
+        onPress={onClose}
+        hitSlop={12}
+      >
+        <Text style={styles.previewCloseText}>✕</Text>
+      </TouchableOpacity>
+
+      {loading && (
+        <View style={styles.previewCenter}>
+          <ActivityIndicator color={NAVY} />
+          <Text style={styles.previewLoadingText}>불러오는 중...</Text>
         </View>
-        <View style={styles.discoveryActions}>
-          <TouchableOpacity
-            style={styles.confirmButton}
-            onPress={onConfirm}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.confirmButtonText}>나만의 여권 만들기</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.dismissButton}
-            onPress={onDismiss}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.dismissButtonText}>아니요</Text>
-          </TouchableOpacity>
+      )}
+
+      {error && !loading && (
+        <View style={styles.previewCenter}>
+          <Text style={styles.previewErrorText}>⚠️ {error}</Text>
         </View>
-      </View>
+      )}
+
+      {preview && !loading && (
+        <>
+          {preview.imageUrl ? (
+            <Image
+              source={{ uri: preview.imageUrl }}
+              style={styles.previewImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.previewImagePlaceholder}>
+              <Text style={styles.previewImagePlaceholderText}>🖼️</Text>
+            </View>
+          )}
+          <View style={styles.previewBody}>
+            <Text style={styles.previewPlaceName} numberOfLines={1}>
+              {preview.spaceName}
+            </Text>
+            <View style={styles.previewRow}>
+              <Text style={styles.previewRowIcon}>📍</Text>
+              <Text style={styles.previewRowText} numberOfLines={1}>
+                {preview.address}
+              </Text>
+            </View>
+            <View style={styles.previewRow}>
+              <Text style={styles.previewRowIcon}>🗓</Text>
+              <Text style={styles.previewRowText}>{preview.visitedAt}</Text>
+            </View>
+            {preview.musicTitle && (
+              <View style={styles.previewRow}>
+                <Text style={styles.previewRowIcon}>🎵</Text>
+                <Text style={styles.previewRowText} numberOfLines={1}>
+                  {preview.musicTitle}
+                  {preview.musicArtist ? ` — ${preview.musicArtist}` : ""}
+                </Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={styles.previewDetailBtn}
+              activeOpacity={0.85}
+              onPress={onOpenDetail}
+            >
+              <Text style={styles.previewDetailBtnText}>여권 상세보기</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
     </View>
   );
 }
 
-/** 위치 확인 카드 — 핀 고정 후 "이 위치가 맞습니까?" */
 interface LocationConfirmCardProps {
+  latitude: number;
+  longitude: number;
+  address: string | null;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
 function LocationConfirmCard({
+  latitude,
+  longitude,
+  address,
   onConfirm,
   onCancel,
 }: LocationConfirmCardProps) {
@@ -113,7 +302,7 @@ function LocationConfirmCard({
       <View style={styles.discoveryBody}>
         <Text style={styles.discoveryTitle}>이 위치가 맞습니까?</Text>
         <Text style={styles.locationText}>
-          핀이 가리키는 위치에 장소를 등록합니다.
+          {address ?? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`}
         </Text>
         <View style={[styles.discoveryActions, { marginTop: 10 }]}>
           <TouchableOpacity
@@ -136,92 +325,157 @@ function LocationConfirmCard({
   );
 }
 
-interface PassportPin {
-  latitude: number;
-  longitude: number;
-  placeName: string;
-}
-
-// 지도 중앙 좌표를 가져오기 위한 카메라 상태 타입
-interface CameraState {
-  latitude: number;
-  longitude: number;
-}
+// ─── 메인 스크린 ──────────────────────────────────────────────────────────
 
 export default function MapScreen() {
   const { bottom: safeBottom } = useSafeAreaInsets();
-  const [showDiscovery, setShowDiscovery] = useState(true);
-  const [showRegisterBtn, setShowRegisterBtn] = useState(false);
+
+  const [showRegisterBtn, setShowRegisterBtn] = useState(true);
   const [showAddPlace, setShowAddPlace] = useState(false);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
   } | null>(null);
-  const [passportPins, setPassportPins] = useState<PassportPin[]>([]);
+  const [lights, setLights] = useState<LightItem[]>([]);
 
-  // 장소 직접 선택 모드
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewData, setPreviewData] = useState<PassportPreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  const [detailItem, setDetailItem] = useState<any>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
   const [pickingLocation, setPickingLocation] = useState(false);
-  // 핀 위치 확인 카드 표시
   const [showLocationConfirm, setShowLocationConfirm] = useState(false);
-  // 현재 카메라(지도 중앙) 좌표
-  const [cameraCenter, setCameraCenter] = useState<CameraState>({
+  const [cameraCenter, setCameraCenter] = useState({
     latitude: 37.5665,
     longitude: 126.978,
   });
+  const [pickedLocation, setPickedLocation] = useState<PickedLocation | null>(
+    null,
+  );
+  const [addressLoading, setAddressLoading] = useState(false);
 
   const mapRef = useRef<any>(null);
-
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const baseBottom = TAB_BAR_HEIGHT + safeBottom + 12;
 
-  // Discovery card: "나만의 여권 만들기"
-  const handleConfirm = () => {
-    setPassportPins((prev) => [
-      ...prev,
-      {
-        latitude: 37.5665,
-        longitude: 126.978,
-        placeName: "스타벅스 OO점",
-      },
-    ]);
-    setShowDiscovery(false);
-    setShowAddPlace(true);
-  };
+  // ── 불빛 fetch ────────────────────────────────────────────────────────
 
-  // Discovery card: "아니요"
-  const handleDismiss = () => {
-    setShowDiscovery(false);
-    setShowRegisterBtn(true);
-  };
+  const loadLights = useCallback(async (bbox: BBox) => {
+    try {
+      const res = await getMyLights(bbox);
+      const data = res.data.data;
+      setLights(Array.isArray(data) ? data : []);
+    } catch (e: any) {
+      console.error("lights fetch 실패:", e.message);
+      setLights([]);
+    }
+  }, []);
 
-  // "나만의 장소 등록하기" 버튼 → 위치 선택 모드 진입
-  const handleRegisterPress = () => {
-    setShowRegisterBtn(false);
-    setPickingLocation(true);
-  };
+  useEffect(() => {
+    loadLights(INITIAL_BBOX);
+  }, []);
 
-  // 지도 카메라 이동 이벤트 → 중앙 좌표 갱신
-  const handleCameraChanged = (event: any) => {
-    const { latitude, longitude } = event;
-    if (latitude && longitude) {
-      setCameraCenter({ latitude, longitude });
+  const handleCameraChanged = useCallback(
+    (event: any) => {
+      const lat = event?.latitude;
+      const lng = event?.longitude;
+      if (lat && lng) setCameraCenter({ latitude: lat, longitude: lng });
+
+      if (pickingLocation) return;
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      debounceTimer.current = setTimeout(() => {
+        const bbox = cameraToBBox(event);
+        if (bbox) loadLights(bbox);
+      }, 400);
+    },
+    [pickingLocation, loadLights],
+  );
+
+  // ── 핀 탭 핸들러 ──────────────────────────────────────────────────────
+
+  const handleSinglePinTap = async (item: LightItem) => {
+    setPreviewVisible(true);
+    setPreviewData(null);
+    setPreviewError(null);
+    setPreviewLoading(true);
+    try {
+      const res = await getPassportDetail(item.passportId);
+      const d = res.data.data;
+      setPreviewData({
+        passportId: d.passportId,
+        spaceName: d.spaceName,
+        address: d.address,
+        visitedAt: d.visitedAt,
+        imageUrl: d.imageUrls?.[0] ?? null,
+        musicTitle: d.musicTitle ?? null,
+        musicArtist: d.musicArtist ?? null,
+      });
+    } catch {
+      setPreviewError("장소 정보를 불러오지 못했어요.");
+    } finally {
+      setPreviewLoading(false);
     }
   };
 
-  // 위치 선택 모드에서 "위치 고정" 버튼
-  const handlePinLocation = () => {
-    setShowLocationConfirm(true);
+  const handleClusterTap = (item: LightItem) => {
+    const lat = item.centerLatitude ?? item.latitude;
+    const lng = item.centerLongitude ?? item.longitude;
+    mapRef.current?.animateCameraTo({
+      latitude: lat,
+      longitude: lng,
+      zoom: 16,
+      duration: 400,
+    });
   };
 
-  // 위치 확인 카드: "예" → AddPlace로
+  const handleOpenDetail = async () => {
+    if (!previewData) return;
+    setDetailLoading(true);
+    try {
+      const res = await getPassportDetail(previewData.passportId);
+      setDetailItem(res.data.data);
+      setPreviewVisible(false);
+      setPreviewData(null);
+    } catch (e) {
+      console.error("상세 조회 실패:", e);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  // ── 위치 선택 핸들러 ──────────────────────────────────────────────────
+
+  const handleRegisterPress = () => {
+    setShowRegisterBtn(false);
+    setPickingLocation(true);
+    setPreviewVisible(false);
+  };
+
+  // "이 위치로 고정" → 네이버 역지오코딩으로 주소 변환
+  const handlePinLocation = async () => {
+    const { latitude, longitude } = cameraCenter;
+    setAddressLoading(true);
+    try {
+      const address = await naverReverseGeocode(latitude, longitude);
+      setPickedLocation({ latitude, longitude, address });
+    } finally {
+      setAddressLoading(false);
+      setShowLocationConfirm(true);
+    }
+  };
+
   const handleLocationConfirm = () => {
     setPickingLocation(false);
     setShowLocationConfirm(false);
     setShowAddPlace(true);
   };
 
-  // 위치 확인 카드: "아니요" → 다시 조정
   const handleLocationCancel = () => {
     setShowLocationConfirm(false);
+    setPickedLocation(null);
   };
 
   const handleLocationPress = async () => {
@@ -243,12 +497,14 @@ export default function MapScreen() {
     });
   };
 
+  // ── 렌더 ─────────────────────────────────────────────────────────────
+
   return (
     <View style={styles.container}>
       <NaverMapView
         ref={mapRef}
         style={styles.map}
-        camera={{ latitude: 37.5665, longitude: 126.978, zoom: 14 }}
+        camera={{ latitude: 37.5665, longitude: 126.978, zoom: 12 }}
         isShowZoomControls={!pickingLocation}
         onCameraChanged={handleCameraChanged}
       >
@@ -263,20 +519,38 @@ export default function MapScreen() {
             <UserLocationMarker />
           </NaverMapMarkerOverlay>
         )}
-        {passportPins.map((pin, index) => (
-          <NaverMapMarkerOverlay
-            key={index}
-            latitude={pin.latitude}
-            longitude={pin.longitude}
-            anchor={{ x: 0.5, y: 1 }}
-          />
-        ))}
+
+        {lights.map((item, idx) =>
+          item.isCluster ? (
+            <NaverMapMarkerOverlay
+              key={`cluster-${idx}`}
+              latitude={item.centerLatitude ?? item.latitude}
+              longitude={item.centerLongitude ?? item.longitude}
+              anchor={{ x: 0.5, y: 1 }}
+              width={56}
+              height={64}
+              onTap={() => handleClusterTap(item)}
+            >
+              <ClusterMarker count={item.count ?? 0} />
+            </NaverMapMarkerOverlay>
+          ) : (
+            <NaverMapMarkerOverlay
+              key={`passport-${item.passportId}`}
+              latitude={item.latitude}
+              longitude={item.longitude}
+              anchor={{ x: 0.5, y: 1 }}
+              width={130}
+              height={58}
+              onTap={() => handleSinglePinTap(item)}
+            >
+              <PassportMarker spaceName={item.spaceName} />
+            </NaverMapMarkerOverlay>
+          ),
+        )}
       </NaverMapView>
 
-      {/* 위치 선택 모드: 화면 중앙 고정 핀 */}
       {pickingLocation && <CenterPin />}
 
-      {/* 탐험 진행도 */}
       {!pickingLocation && (
         <View
           style={[styles.legendWrapper, { bottom: baseBottom + 64 }]}
@@ -286,7 +560,6 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* 하단 바: 현위치 버튼 + 장소 등록 버튼 */}
       {!pickingLocation && (
         <View style={[styles.bottomBar, { bottom: baseBottom }]}>
           <TouchableOpacity
@@ -296,7 +569,6 @@ export default function MapScreen() {
           >
             <Text style={styles.locationButtonIcon}>◎</Text>
           </TouchableOpacity>
-
           {showRegisterBtn && (
             <TouchableOpacity
               style={styles.registerButton}
@@ -311,10 +583,8 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* 위치 선택 모드 안내 + 위치 고정 버튼 */}
       {pickingLocation && !showLocationConfirm && (
         <>
-          {/* 상단 안내 */}
           <View style={styles.pickingGuideWrapper}>
             <View style={styles.pickingGuideCard}>
               <Text style={styles.pickingGuideText}>
@@ -322,8 +592,6 @@ export default function MapScreen() {
               </Text>
             </View>
           </View>
-
-          {/* 하단: 현위치 버튼 + 위치 고정 버튼 */}
           <View style={[styles.bottomBar, { bottom: baseBottom }]}>
             <TouchableOpacity
               style={styles.locationButton}
@@ -336,44 +604,89 @@ export default function MapScreen() {
               style={styles.registerButton}
               activeOpacity={0.85}
               onPress={handlePinLocation}
+              disabled={addressLoading}
             >
-              <Text style={styles.registerButtonText}>이 위치로 고정</Text>
+              {addressLoading ? (
+                <ActivityIndicator color={NAVY} />
+              ) : (
+                <Text style={styles.registerButtonText}>이 위치로 고정</Text>
+              )}
             </TouchableOpacity>
           </View>
         </>
       )}
 
-      {/* 위치 확인 카드 */}
-      {pickingLocation && showLocationConfirm && (
+      {pickingLocation && showLocationConfirm && pickedLocation && (
         <View style={[styles.discoveryWrapper, { bottom: baseBottom + 60 }]}>
           <LocationConfirmCard
+            latitude={pickedLocation.latitude}
+            longitude={pickedLocation.longitude}
+            address={pickedLocation.address}
             onConfirm={handleLocationConfirm}
             onCancel={handleLocationCancel}
           />
         </View>
       )}
 
-      {/* Discovery 카드 */}
-      {showDiscovery && (
+      {previewVisible && !pickingLocation && (
         <View style={[styles.discoveryWrapper, { bottom: baseBottom + 60 }]}>
-          <DiscoveryCard
-            placeName="스타벅스 OO점"
-            district="서울시 영등포구"
-            onConfirm={handleConfirm}
-            onDismiss={handleDismiss}
+          <PassportPreviewCard
+            preview={previewData}
+            loading={previewLoading}
+            error={previewError}
+            onClose={() => {
+              setPreviewVisible(false);
+              setPreviewData(null);
+            }}
+            onOpenDetail={handleOpenDetail}
           />
         </View>
       )}
 
-      {/* AddPlaceScreen */}
+      {detailLoading && (
+        <View style={styles.detailLoadingOverlay}>
+          <ActivityIndicator size="large" color={NAVY} />
+        </View>
+      )}
+
+      {detailItem && (
+        <View style={StyleSheet.absoluteFill}>
+          <PassportDetail
+            item={detailItem}
+            editable={false}
+            onBack={() => {
+              setDetailItem(null);
+              setPreviewVisible(true);
+            }}
+          />
+        </View>
+      )}
+
       {showAddPlace && (
         <View style={StyleSheet.absoluteFill}>
-          <AddPlaceScreen />
+          <AddPlaceScreen
+            initialLatitude={pickedLocation?.latitude}
+            initialLongitude={pickedLocation?.longitude}
+            initialAddress={pickedLocation?.address ?? undefined}
+            onClose={() => {
+              console.log(
+                "🔙 AddPlaceScreen 닫힘, pickedLocation:",
+                pickedLocation,
+              );
+              setShowAddPlace(false);
+              setShowRegisterBtn(true);
+              setPickingLocation(false);
+              setPickedLocation(null);
+              loadLights(INITIAL_BBOX);
+            }}
+          />
         </View>
       )}
     </View>
   );
 }
+
+// ─── 스타일 ───────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -409,7 +722,130 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
-  // 화면 중앙 고정 핀
+  passportMarkerWrapper: { alignItems: "center" },
+  passportMarkerBubble: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: NAVY,
+    borderRadius: 20,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    gap: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
+    maxWidth: 125,
+  },
+  passportMarkerEmoji: { fontSize: 13 },
+  passportMarkerLabel: {
+    color: "white",
+    fontSize: 11,
+    fontWeight: "700",
+    flexShrink: 1,
+  },
+  passportMarkerTail: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 8,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderTopColor: NAVY,
+  },
+
+  clusterWrapper: { alignItems: "center" },
+  clusterBubble: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#6366F1",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
+    borderWidth: 3,
+    borderColor: "white",
+  },
+  clusterCount: { color: "white", fontSize: 15, fontWeight: "800" },
+  clusterTail: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderTopWidth: 7,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderTopColor: "#6366F1",
+  },
+
+  previewCard: {
+    backgroundColor: "white",
+    borderRadius: 20,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  previewCloseBtn: {
+    position: "absolute",
+    top: 12,
+    right: 14,
+    zIndex: 10,
+    padding: 4,
+  },
+  previewCloseText: { fontSize: 16, color: "#94A3B8" },
+  previewCenter: { paddingVertical: 32, alignItems: "center", gap: 8 },
+  previewLoadingText: { fontSize: 13, color: "#94A3B8", marginTop: 6 },
+  previewErrorText: { fontSize: 13, color: "#EF4444" },
+  previewImage: { width: "100%", height: 160 },
+  previewImagePlaceholder: {
+    width: "100%",
+    height: 120,
+    backgroundColor: "#F1F5F9",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  previewImagePlaceholderText: { fontSize: 36 },
+  previewBody: {
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 16,
+    gap: 6,
+  },
+  previewPlaceName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1E293B",
+    marginBottom: 4,
+  },
+  previewRow: { flexDirection: "row", alignItems: "center", gap: 7 },
+  previewRowIcon: { fontSize: 13 },
+  previewRowText: { fontSize: 13, color: "#475569", flexShrink: 1 },
+  previewDetailBtn: {
+    marginTop: 12,
+    backgroundColor: NAVY,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  previewDetailBtnText: { color: "white", fontWeight: "700", fontSize: 14 },
+
+  detailLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255,255,255,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 20,
+  },
+
   centerPinWrapper: {
     position: "absolute",
     top: "50%",
@@ -418,11 +854,8 @@ const styles = StyleSheet.create({
     marginTop: -40,
     zIndex: 10,
   },
-  centerPinEmoji: {
-    fontSize: 36,
-  },
+  centerPinEmoji: { fontSize: 36 },
 
-  // 위치 선택 모드 상단 안내
   pickingGuideWrapper: {
     position: "absolute",
     top: 60,
@@ -444,10 +877,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  legendWrapper: {
-    position: "absolute",
-    right: 16,
-  },
+  legendWrapper: { position: "absolute", right: 16 },
   legendCard: {
     backgroundColor: "rgba(255,255,255,0.95)",
     borderRadius: 12,
@@ -478,7 +908,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-
   locationButton: {
     width: 48,
     height: 48,
@@ -493,7 +922,6 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   locationButtonIcon: { fontSize: 22, color: "#334155" },
-
   registerButton: {
     flex: 1,
     backgroundColor: "white",
@@ -506,17 +934,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 5,
   },
-  registerButtonText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#1E293B",
-  },
+  registerButtonText: { fontSize: 15, fontWeight: "700", color: "#1E293B" },
 
-  discoveryWrapper: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-  },
+  discoveryWrapper: { position: "absolute", left: 16, right: 16 },
   discoveryCard: {
     backgroundColor: "white",
     borderRadius: 20,
@@ -542,14 +962,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   discoveryTitle: { fontSize: 17, fontWeight: "700", color: "#1E293B" },
-  discoveryLocation: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginBottom: 14,
-  },
-  locationPin: { fontSize: 13 },
-  locationText: { fontSize: 13, color: "#64748B" },
+  locationText: { fontSize: 13, color: "#64748B", textAlign: "center" },
   discoveryActions: { flexDirection: "row", gap: 10, width: "100%" },
   confirmButton: {
     flex: 1,
