@@ -104,3 +104,21 @@ export type FriendRequestAction = "ACCEPT" | "REJECT";
 export type FriendRequestActionRequest = {
     action: FriendRequestAction;
 }
+
+// 팀 생성 요청
+export type CreateTeamRequest = {
+    teamName: string;
+};
+
+// 팀 가입 요청
+export type JoinTeamRequest = {
+    teamCode: string;
+};
+
+// 팀 생성/가입 응답 데이터
+export type TeamResponseData = {
+    teamId: number;
+    teamName: string;
+    teamCode: string;
+    createdAt: string;
+};

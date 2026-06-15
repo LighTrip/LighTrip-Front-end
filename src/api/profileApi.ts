@@ -1,13 +1,16 @@
 import * as Securestore from "expo-secure-store";
 import {
+    CreateTeamRequest,
     FriendRequestAction,
     FriendRequestActionRequest,
+    JoinTeamRequest,
     MyProfileResponse,
     PendingFriendResponse,
     PresignedUrlRequest,
     PresignedUrlResponse,
     ProfileEditForm,
     ProfileUser,
+    TeamResponseData,
     UpdateProfileRequest,
 } from "../features/profile/types/profile.types";
 import { BASE_URL } from "./config";
@@ -282,3 +285,61 @@ export const respondFriendRequest = async (
         throw new Error(errorMessage)
     }
 }
+
+// 9. 팀 생성
+export const createTeam = async (
+    teamName: string
+): Promise<TeamResponseData> => {
+    const accessToken = await getAccessToken();
+
+    const response = await fetch(`${BASE_URL}/api/v1/teams`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+            teamName,
+        }satisfies CreateTeamRequest),
+    });
+
+    const result = await response.json();
+
+    console.log("팀 생성 상태:", response.status);
+    console.log("팀 생성 응답:", result);
+
+    if(!response.ok) {
+        throw new Error(result.message || "팀 생성 실패");
+    }
+
+    return result as TeamResponseData;
+};
+
+// 10. 팀 가입
+export const joinTeam = async (
+    teamCode: string
+): Promise<TeamResponseData> => {
+    const accessToken = await getAccessToken();
+
+    const response = await fetch(`${BASE_URL}/api/v1/teams/join`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+            teamCode,
+        }satisfies JoinTeamRequest),
+    });
+
+    const result = await response.json();
+
+    console.log("팀 가입 상태:", response.status);
+    console.log("팀 가입 응답:", result);
+
+    if(!response.ok) {
+        throw new Error(result.message || "팀 가입 실패");
+    }
+
+    return result as TeamResponseData;
+};
