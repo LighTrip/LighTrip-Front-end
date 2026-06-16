@@ -1,4 +1,5 @@
 import { getMyProfile, logout } from "@/src/api/profileApi";
+import { useTeamMode } from "@/src/components/common/TeamModeContext";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Securestore from "expo-secure-store";
@@ -27,7 +28,7 @@ const TAB_BAR_HEIGHT = 90;
 export default function ProfileView() {
     const router = useRouter();
 
-    const [isTeam, setIsTeam] = useState(false);
+    const { isTeamMode, setIsTeamMode } = useTeamMode();
     const [user, setUser] = useState<ProfileUser>(profileUserDummy);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -188,7 +189,7 @@ export default function ProfileView() {
                                 <View>
                                     <Text style={styles.menuTitle}>팀으로 전환</Text>
                                     <Text style={styles.menuDescription}>
-                                        현재 접속 모드: {isTeam ? "팀" : "개인"}
+                                        현재 접속 모드: {isTeamMode ? "팀" : "개인"}
                                     </Text>
                                 </View>
                             </View>
@@ -197,14 +198,14 @@ export default function ProfileView() {
                                 activeOpacity={0.8}
                                 style={[
                                     styles.teamToggle,
-                                    isTeam ? styles.teamToggleOn : styles.teamToggleOff,
+                                    isTeamMode ? styles.teamToggleOn : styles.teamToggleOff,
                                 ]}
-                                onPress={() => setIsTeam(!isTeam)}
+                                onPress={() => setIsTeamMode(!isTeamMode)}
                             >
                                 <View
                                     style={[
                                         styles.teamToggleCircle,
-                                        isTeam ? styles.teamToggleCircleOn : styles.teamToggleCircleOff,
+                                        isTeamMode ? styles.teamToggleCircleOn : styles.teamToggleCircleOff,
                                     ]}
                                 />
                             </TouchableOpacity>

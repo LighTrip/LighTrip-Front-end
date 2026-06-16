@@ -1,10 +1,13 @@
-// app/(tabs)/_layout.tsx
+import { TeamModeProvider, useTeamMode } from "@/src/components/common/TeamModeContext";
 import colors from "@/src/constant/colors";
 import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 import { View } from "react-native";
 
-export default function TabLayout() {
+function TabsLayoutContent() {
+  const router = useRouter();
+  const { isTeamMode } = useTeamMode();
+
   return (
     <Tabs
       screenOptions={{
@@ -36,6 +39,7 @@ export default function TabLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="profile"
         options={{
@@ -46,6 +50,7 @@ export default function TabLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="index"
         options={{
@@ -67,6 +72,7 @@ export default function TabLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="social"
         options={{
@@ -77,16 +83,44 @@ export default function TabLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="search"
         options={{
-          title: "둘러보기",
+          title: isTeamMode ? "팀" : "둘러보기",
           tabBarItemStyle: { marginTop: 10 },
           tabBarIcon: ({ color }) => (
-            <Ionicons name="search" size={24} color={color} />
+            <Ionicons
+              name={isTeamMode ? "people-circle" : "search"}
+              size={24}
+              color={color}
+            />
           ),
+        }}
+        listeners={{
+          tabPress: (e) => {
+            if (isTeamMode) {
+              e.preventDefault();
+              router.push("/team");
+            }
+          },
+        }}
+      />
+
+      <Tabs.Screen
+        name="team"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
+  );
+}
+
+export default function TabLayout() {
+  return (
+    <TeamModeProvider>
+      <TabsLayoutContent />
+    </TeamModeProvider>
   );
 }
