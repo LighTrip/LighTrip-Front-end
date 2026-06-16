@@ -71,13 +71,21 @@ const INITIAL_BBOX: BBox = {
 // ─── 유틸 함수 ────────────────────────────────────────────────────────────
 
 function cameraToBBox(event: any): BBox | null {
-  const bounds = event?.contentBounds;
-  if (bounds?.northEast && bounds?.southWest) {
+  // onCameraChanged 이벤트의 region은 남서쪽(SW) 좌표 + 위경도 delta 형태로 내려온다.
+  // (contentBounds.northEast/southWest 같은 필드는 존재하지 않음 — 항상 미존재 → fallback)
+  const region = event?.region;
+  if (
+    region &&
+    typeof region.latitude === "number" &&
+    typeof region.longitude === "number" &&
+    typeof region.latitudeDelta === "number" &&
+    typeof region.longitudeDelta === "number"
+  ) {
     return {
-      minLat: bounds.southWest.lat,
-      maxLat: bounds.northEast.lat,
-      minLng: bounds.southWest.lng,
-      maxLng: bounds.northEast.lng,
+      minLat: region.latitude,
+      maxLat: region.latitude + region.latitudeDelta,
+      minLng: region.longitude,
+      maxLng: region.longitude + region.longitudeDelta,
     };
   }
   const lat = event?.latitude;
@@ -101,7 +109,9 @@ function clusterRadiusFromBBox(bbox: BBox | null): number {
   const latSpan = bbox.maxLat - bbox.minLat;
   const lngSpan = bbox.maxLng - bbox.minLng;
   const diagonal = Math.sqrt(latSpan * latSpan + lngSpan * lngSpan);
-  return Math.max(0.00008, diagonal * 0.08);
+  // 하한을 거의 0으로 둬서 최대 줌에서는 실거리가 있는 항목들은 모두 낱개로 분리되게 한다.
+  // (동일 좌표에 가까운 중복 항목만 묶이도록 아주 작은 값만 유지)
+  return Math.max(0.000003, diagonal * 0.08);
 }
 
 /** 단일 마커들을 그리디 거리 기반으로 프론트 클러스터링 */
