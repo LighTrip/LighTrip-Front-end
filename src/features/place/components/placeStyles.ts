@@ -1,13 +1,29 @@
 import { StyleSheet, StatusBar, Platform } from "react-native"
 
+const sharedContainer = {
+    flex: 1,
+    backgroundColor: '#F8FAFD',
+    justifyContent: 'flex-start' as const,
+    alignItems: 'center' as const,
+    paddingTop: StatusBar.currentHeight || 65,
+}
+
+const sharedClickContainer = {
+    width: '91%' as const,
+    height: 45,
+    borderRadius: 16,
+    backgroundColor: '#1A3A6B',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+}
+
+const sharedClickText = {
+    color: '#FFFFFF',
+    fontWeight: 'bold' as const,
+}
+
 export const editStyles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F8FAFD',
-        justifyContent: 'flex-start',
-        alignItems: 'center',
-        paddingTop: StatusBar.currentHeight || 65,
-    },
+    container: sharedContainer,
 
     logContainer: {
         position: 'relative',
@@ -321,20 +337,9 @@ export const editStyles = StyleSheet.create({
         color: '#888',
     },
 
-    clickContainer: {
-        width: '91%',
-        height: 45,
-        borderRadius: 16,
-        backgroundColor: '#1A3A6B',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 0,
-    },
+    clickContainer: sharedClickContainer,
 
-    clickText: {
-        color: '#FFFFFF',
-        fontWeight: 'bold',
-    },
+    clickText: sharedClickText,
 
     visibilityButton: {
         backgroundColor: '#1A3A6B',
@@ -352,13 +357,7 @@ export const editStyles = StyleSheet.create({
 
 
 export const addStyles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F8FAFD',
-        justifyContent: 'flex-start',
-        alignItems: 'center',
-        paddingTop: StatusBar.currentHeight || 65,
-    },   
+    container: sharedContainer,
 
     photoContainer: {
         height: 450,
@@ -479,18 +478,7 @@ export const addStyles = StyleSheet.create({
         lineHeight: 17,
     },
 
-    clickContainer: {
-        width: '91%',
-        height: 45,
-        borderRadius: 16,
-        backgroundColor: '#1A3A6B',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
+    clickContainer: sharedClickContainer,
 
-    clickText: {
-        color: '#FFFFFF',
-        fontWeight: 'bold',
-    }
+    clickText: sharedClickText,
 })
