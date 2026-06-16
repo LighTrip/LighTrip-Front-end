@@ -15,6 +15,7 @@ import { BASE_URL } from "./config";
 // 로그인 토큰 얻기
 const getAccessToken = async () => {
     const accessToken = await Securestore.getItemAsync("accessToken");
+    console.log("현재 accessToken:", accessToken);
 
     if (!accessToken) {
         throw new Error("로그인 토큰이 없습니다.");

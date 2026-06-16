@@ -1,5 +1,7 @@
 import {
     Friend,
+    FriendMapDistrict,
+    FriendPassport,
     MutualFriend,
     PublicUserProfile,
     RecommendedFriend
@@ -14,9 +16,10 @@ type FriendApiItem = {
     nickname: string;
     profileImg: string | null;
     friendCode: string;
+    location: string;
     status: string;
     createdAt: string;
-    stampCount: number;
+    stampCount?: number;
     passportCount: number;
     mutualFriends: MutualFriend[];
 };
@@ -73,6 +76,22 @@ type PublicUserProfileResponse = {
     }
 }
 
+// 친구 여권 타입
+type FriendPassportListResponse = {
+    success: boolean;
+    code: string;
+    message: string;
+    data: FriendPassport[];
+}
+
+// 친구 지도 타입
+type FriendMapResponse = {
+    success: boolean;
+    code: string;
+    message: string;
+    data: FriendMapDistrict[];
+}
+
 // 1. 토큰 발급
 const getAccessToken = async () => {
     const accessToken = await Securestore.getItemAsync("accessToken");
@@ -101,11 +120,12 @@ const mapFriendApiItemToFriend = (item: FriendApiItem): Friend => {
         name: item.nickname,
         profileImg: item.profileImg,
         friendCode: item.friendCode,
+        location: item.location,
         status: item.status,
         createdAt: item.createdAt,
 
-        stampCount: item.stampCount,
-        passportCount: item.passportCount,
+        stampCount: item.stampCount ?? 0,
+        passportCount: item.passportCount ?? 0,
         mutualFriends: item.mutualFriends ?? [],
     }
 }
@@ -232,3 +252,61 @@ export const getPublicUserProfile = async (
 
     return data.data;
 }
+
+// 9. 친구 여권 목록 조회
+/*export const getFriendPassports = async (
+    userId: number,
+    district?: string,
+    page: number = 0,
+    size: number = 20,
+) : Promise<FriendPassport[]> => {
+    const params = new URLSearchParams();
+
+    params.append("page", String(page));
+    params.append("size", String(size));
+    params.append("sort", "visitedAt,desc");
+
+    if (district) {
+        params.append("district", district);
+    }
+
+    const requestUrl = `${BASE_URL}/api/v1/friends/${userId}/passports?${params.toString()}`;
+
+    const response = await fetch (requestUrl, {
+        method: "GET",
+        headers: await authHeaders(),
+    });
+
+    const data: FriendPassportListResponse = await response.json();
+
+    console.log("친구 여권 목록 조회 응답 상태:", response.status)
+    console.log("친구 여권 목록 조회 응답 데이터:", data);
+
+    if(!response.ok || !data.success) {
+        throw new Error(data.message || "친구 여권 목록 조회에 실패했습니다.");
+    }
+
+    return data.data;
+}
+*/
+
+// 10. 친구 여권 목록 조회
+export const getFriendMap = async (
+    userId: number
+): Promise<FriendMapDistrict[]> => {
+    const response = await fetch(`${BASE_URL}/api/v1/friends/${userId}/map`, {
+        method: "GET",
+        headers: await authHeaders(),
+    });
+
+    const data: FriendMapResponse = await response.json();
+
+    console.log("친구 여권 목록 조회 응답 상태:", response.status);
+    console.log("친구 여권 목록 조회 응답 데이터:", data);
+
+    if(!response.ok || !data.success) {
+        throw new Error(data.message || "친구 여권 목록 조회에 실패했습니다.");
+    }
+
+    return data.data;
+};
