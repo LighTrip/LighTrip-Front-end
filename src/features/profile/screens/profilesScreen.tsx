@@ -1,4 +1,5 @@
-import { getMyProfile, logout } from "@/src/api/profileApi";
+import { getMyProfile, logout, updateLiveLocationSharing } from "@/src/api/profileApi";
+import { useTeamMode } from "@/src/components/common/TeamModeContext";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Securestore from "expo-secure-store";
@@ -11,7 +12,7 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
 } from "react-native";
 import FriendManageModal from "../components/FriendManageModal";
 import TeamManageModal from "../components/TeamManageModal";
@@ -27,12 +28,15 @@ const TAB_BAR_HEIGHT = 90;
 export default function ProfileView() {
     const router = useRouter();
 
-    const [isTeam, setIsTeam] = useState(false);
+    const { isTeamMode, setIsTeamMode } = useTeamMode();
     const [user, setUser] = useState<ProfileUser>(profileUserDummy);
     const [isLoading, setIsLoading] = useState(true);
 
     const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
     const [isFriendModalOpen, setIsFriendModalOpen] = useState(false);
+    
+    const [isLocationSharing, setIsLocationSharing] = useState(false);
+    const [isLocationSharingLoading, setIsLocationSharingLoading] = useState(false);
     
     // 메뉴 클릭 함수
     const handleMenuPress = (item: ProfileMenuItem) => {
@@ -87,6 +91,48 @@ export default function ProfileView() {
             ]
         )
     }
+
+    // 위치 공유 토글 함수
+    const handleToggleLocationSharing = async () => {
+
+        if (isLocationSharingLoading) return;
+
+        const nextValue = !isLocationSharing;
+
+        try {
+            setIsLocationSharingLoading(true);
+    
+            const savedTeamId = await Securestore.getItemAsync("teamId");
+    
+            console.log("위치 공유 변경 teamId:", savedTeamId);
+            console.log("위치 공유 변경 값:", nextValue);
+    
+            if (!savedTeamId) {
+                Alert.alert("알림", "소속된 팀 정보가 없습니다.");
+                return;
+            }
+    
+            await updateLiveLocationSharing(Number(savedTeamId), nextValue);
+    
+            setIsLocationSharing(nextValue);
+    
+            Alert.alert(
+                "완료",
+                nextValue ? "위치 공유가 켜졌습니다." : "위치 공유가 꺼졌습니다."
+            );
+        } catch (error) {
+            console.error("위치 공유 설정 변경 실패:", error);
+    
+            Alert.alert(
+                "오류",
+                error instanceof Error
+                    ? error.message
+                    : "위치 공유 설정을 변경하지 못했습니다."
+            );
+        } finally {
+            setIsLocationSharingLoading(false);
+        }
+    };
 
     useFocusEffect(
         useCallback (() => {
@@ -188,7 +234,7 @@ export default function ProfileView() {
                                 <View>
                                     <Text style={styles.menuTitle}>팀으로 전환</Text>
                                     <Text style={styles.menuDescription}>
-                                        현재 접속 모드: {isTeam ? "팀" : "개인"}
+                                        현재 접속 모드: {isTeamMode ? "팀" : "개인"}
                                     </Text>
                                 </View>
                             </View>
@@ -197,18 +243,55 @@ export default function ProfileView() {
                                 activeOpacity={0.8}
                                 style={[
                                     styles.teamToggle,
-                                    isTeam ? styles.teamToggleOn : styles.teamToggleOff,
+                                    isTeamMode ? styles.teamToggleOn : styles.teamToggleOff,
                                 ]}
-                                onPress={() => setIsTeam(!isTeam)}
+                                onPress={() => setIsTeamMode(!isTeamMode)}
                             >
                                 <View
                                     style={[
                                         styles.teamToggleCircle,
-                                        isTeam ? styles.teamToggleCircleOn : styles.teamToggleCircleOff,
+                                        isTeamMode ? styles.teamToggleCircleOn : styles.teamToggleCircleOff,
                                     ]}
                                 />
                             </TouchableOpacity>
                         </View>
+
+                        {isTeamMode && (
+                            <View style={[styles.menuItem, styles.menuItemBorder]}>
+                                <View style={styles.menuLeft}>
+                                    <View style={styles.iconBox}>
+                                        <Ionicons name="location" size={22} color="#FFFFFF" />
+                                    </View>
+                                        
+                                    <View style={styles.locationShareTextBox}>
+                                        <Text style={styles.menuTitle}>위치 공유</Text>
+                                        <Text style={styles.menuDescription}>
+                                            팀원들에게 내 현재 위치를 공유합니다.
+                                        </Text>
+                                    </View>
+                                </View>
+                                    
+                                <TouchableOpacity
+                                    activeOpacity={0.8}
+                                    disabled={isLocationSharingLoading}
+                                    style={[
+                                        styles.teamToggle,
+                                        isLocationSharing ? styles.teamToggleOn : styles.teamToggleOff,
+                                        isLocationSharingLoading && styles.toggleDisabled,
+                                    ]}
+                                    onPress={handleToggleLocationSharing}
+                                >
+                                    <View
+                                        style={[
+                                            styles.teamToggleCircle,
+                                            isLocationSharing
+                                                ? styles.teamToggleCircleOn
+                                                : styles.teamToggleCircleOff,
+                                        ]}
+                                    />
+                                </TouchableOpacity>
+                            </View>
+                        )}
     
                         {settingMenuDummy.map((item, index) => (
                             <TouchableOpacity
@@ -427,7 +510,13 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: "500",
     },
-
+    locationShareTextBox: {
+        flex: 1,
+        marginRight: 12,
+    },
+    toggleDisabled: {
+        opacity: 0.5,
+    },
     /*설정, 계정*/
     sectionSet: {
         marginBottom: 20,

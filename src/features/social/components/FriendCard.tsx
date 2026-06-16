@@ -11,17 +11,16 @@ type FriendCardProps = {
 const defaultProfile = require("../../../../assets/images/default_profile.png");
 
 const getMutualFriendText = (
-    mutualFriends?: {nickname: string}[]
+    mutualFriends: {nickname: string}[]
 ) => {
-    if (!mutualFriends || mutualFriends.length === 0) {
+    if (mutualFriends.length === 0) {
         return "함께 아는 친구 없음"
     }
 
     if (mutualFriends.length === 1) {
-        return `${mutualFriends[0].nickname}와 함께`
+        return `${mutualFriends[0].nickname} 님과 함께`
     }
-
-    return `${mutualFriends[0].nickname} 외 ${mutualFriends.length -1}명과 함께 `;
+    return `${mutualFriends[0].nickname} 외 ${mutualFriends.length -1}명과 함께`;
 };
 
 export default function FriendCard({friend, isSelected, onPress, onLongPress}: FriendCardProps) {
@@ -44,9 +43,13 @@ export default function FriendCard({friend, isSelected, onPress, onLongPress}: F
                 } 
                 style={styles.profileImage} 
             />
-            <Text style={styles.name}>{friend.name}</Text>
-            <Text style={styles.stampText}>도장 {friend.stampCount ?? 0}개</Text>
-            <Text style={styles.togetherText}>
+            <Text style={styles.name} numberOfLines={1}>
+                {friend.name}
+            </Text>
+            <Text style={styles.stampText}>
+                도장 {friend.stampCount ?? 0}개
+            </Text>
+            <Text style={styles.togetherText} numberOfLines={1}>
                 {getMutualFriendText(friend.mutualFriends)}
             </Text>
         </TouchableOpacity>
@@ -62,6 +65,7 @@ const styles = StyleSheet.create ({
         alignItems: "center",
         justifyContent: "center",
         marginBottom: 20,
+        paddingHorizontal: 12,
     },
     selectedCard: {
         backgroundColor: "#C6C6C6",
@@ -73,17 +77,23 @@ const styles = StyleSheet.create ({
         marginBottom: 8,
     },
     name: {
+        width: "100%",
+        textAlign: "center",
         fontSize: 15,
         fontWeight: "700",
         color: "#000000",
         marginBottom: 8,
     },
     stampText: {
+        width: "100%",
+        textAlign: "center",
         fontSize: 11,
         color: "#4A5565",
         marginBottom: 4,
     },
     togetherText: {
+        width: "100%",
+        textAlign: "center",
         fontSize: 10,
         color: "#6A7282",
     }

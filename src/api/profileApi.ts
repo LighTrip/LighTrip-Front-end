@@ -11,13 +11,15 @@ import {
     ProfileEditForm,
     ProfileUser,
     TeamResponseData,
-    UpdateProfileRequest,
+    UpdateLiveLocationSharingRequest,
+    UpdateProfileRequest
 } from "../features/profile/types/profile.types";
 import { BASE_URL } from "./config";
 
 // 로그인 토큰 얻기
 const getAccessToken = async () => {
     const accessToken = await Securestore.getItemAsync("accessToken");
+    console.log("현재 accessToken:", accessToken);
 
     if (!accessToken) {
         throw new Error("로그인 토큰이 없습니다.");
@@ -312,7 +314,13 @@ export const createTeam = async (
         throw new Error(result.message || "팀 생성 실패");
     }
 
-    return result as TeamResponseData;
+    const teamData = result as TeamResponseData;
+
+    await Securestore.setItemAsync("teamId", String(teamData.teamId));
+    await Securestore.setItemAsync("teamCode", teamData.teamCode);
+    await Securestore.setItemAsync("teamName", teamData.teamName);
+
+    return teamData;
 };
 
 // 10. 팀 가입
@@ -341,5 +349,49 @@ export const joinTeam = async (
         throw new Error(result.message || "팀 가입 실패");
     }
 
-    return result as TeamResponseData;
+    const teamData = result as TeamResponseData;
+
+    await Securestore.setItemAsync("teamId", String(teamData.teamId));
+    await Securestore.setItemAsync("teamCode", teamData.teamCode);
+    await Securestore.setItemAsync("teamName", teamData.teamName);
+
+    return teamData;
+};
+
+// 11. 위치 공유 온오프 API
+export const updateLiveLocationSharing = async (
+    teamId: number,
+    sharing: boolean
+): Promise<void> => {
+    const accessToken = await getAccessToken();
+
+    const response = await fetch(
+        `${BASE_URL}/api/v1/teams/${teamId}/live-locations/me`,
+        {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+                sharing,
+            } satisfies UpdateLiveLocationSharingRequest),
+        }
+    );
+
+    console.log("위치 공유 온오프 상태:", response.status);
+
+    if (!response.ok) {
+        let errorMessage = "위치 공유 설정 변경 실패";
+
+        try {
+            const result = await response.json();
+            console.log("위치 공유 온오프 에러 응답:", result);
+            errorMessage = result.message || errorMessage;
+        } catch {
+            console.log("위치 공유 온오프 응답 body 없음");
+        }
+
+        throw new Error(errorMessage);
+    }
 };

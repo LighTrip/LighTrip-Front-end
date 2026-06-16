@@ -138,7 +138,12 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
         } catch (err) {
             console.error('EXIF 추출 실패:', err)
         }
+        await fetchPlaceNameFromCoords(lat, lng);
+      }
+    } catch (err) {
+      console.error("EXIF 추출 실패:", err);
     }
+  };
 
     const openAlbum = async () => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -180,14 +185,13 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
             if (asset.exif) await extractFromExif(asset.exif)
         }
     }
+  };
 
-    if (completedPlace) {
-        return (
-            <PassportDetail
-                item={completedPlace}
-                onBack={() => setCompletedPlace(null)}
-            />
-        )
+  const openCamera = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      alert("카메라 권한이 필요해요");
+      return;
     }
 
     if (showEdit) {
@@ -222,7 +226,9 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
             />
         )
     }
+  };
 
+  if (completedPlace) {
     return (
         <KeyboardAvoidingView
             style={styles.container}

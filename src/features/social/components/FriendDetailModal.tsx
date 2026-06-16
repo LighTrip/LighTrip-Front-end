@@ -25,6 +25,7 @@ export default function FriendDetailModal({
     onClose,
 }: FriendDetailModalProps) {
     const [selectedTab, setSelectedTab] = useState<"passport" | "map">("passport");
+    const [latestDistrict, setLatestDistrict] = useState<string | null>(null);
 
     const snapPoints = useMemo(() => ["70%", "95%"], []);
     const bottomSheetRef = useRef<BottomSheet>(null);
@@ -75,7 +76,7 @@ export default function FriendDetailModal({
 
                     <View style={styles.profileTextArea}>
                         <Text style={styles.name}>
-                            {friend.name} #{friend.id}
+                            {friend.name} #{friend.userId}
                         </Text>
 
                         <Text style={styles.infoText}>
@@ -89,7 +90,7 @@ export default function FriendDetailModal({
                                 color="#B8B8B8"
                             />
                             <Text style={styles.visitText}>
-                                최근 방문: 서울특별시 중구
+                                최근 방문: {latestDistrict ?? "정보 없음"}
                             </Text>
                                 </View>
                             </View>
@@ -134,9 +135,12 @@ export default function FriendDetailModal({
                         </View>
 
                         {selectedTab === "passport" ? (
-                            <PassportPreview />
+                            <PassportPreview 
+                                userId={friend.userId}
+                                onLatestDistrictChange={setLatestDistrict} 
+                            />
                         ) : (
-                            <MapPreview />
+                            <MapPreview userId={friend.userId}/>
                         )}
             </BottomSheetScrollView>
         </BottomSheet>

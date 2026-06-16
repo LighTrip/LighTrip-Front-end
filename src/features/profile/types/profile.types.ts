@@ -122,3 +122,8 @@ export type TeamResponseData = {
     teamCode: string;
     createdAt: string;
 };
+
+// 위치 공유 온오프 요청
+export type UpdateLiveLocationSharingRequest = {
+    sharing: boolean;
+}

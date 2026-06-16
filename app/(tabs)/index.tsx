@@ -11,7 +11,10 @@ import * as Location from "expo-location";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Image,
+  Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -43,15 +46,18 @@ interface BBox {
   maxLng: number;
 }
 
-interface PolygonCoord {
-  latitude: number;
-  longitude: number;
-}
-
 interface PickedLocation {
   latitude: number;
   longitude: number;
   address: string | null;
+}
+
+// 프론트 클러스터
+interface FrontCluster {
+  id: string;
+  centerLat: number;
+  centerLng: number;
+  items: LightItem[]; // 단일 마커들만
 }
 
 // ─── 상수 ────────────────────────────────────────────────────────────────
@@ -66,13 +72,21 @@ const INITIAL_BBOX: BBox = {
 // ─── 유틸 함수 ────────────────────────────────────────────────────────────
 
 function cameraToBBox(event: any): BBox | null {
-  const bounds = event?.contentBounds;
-  if (bounds?.northEast && bounds?.southWest) {
+  // onCameraChanged 이벤트의 region은 남서쪽(SW) 좌표 + 위경도 delta 형태로 내려온다.
+  // (contentBounds.northEast/southWest 같은 필드는 존재하지 않음 — 항상 미존재 → fallback)
+  const region = event?.region;
+  if (
+    region &&
+    typeof region.latitude === "number" &&
+    typeof region.longitude === "number" &&
+    typeof region.latitudeDelta === "number" &&
+    typeof region.longitudeDelta === "number"
+  ) {
     return {
-      minLat: bounds.southWest.lat,
-      maxLat: bounds.northEast.lat,
-      minLng: bounds.southWest.lng,
-      maxLng: bounds.northEast.lng,
+      minLat: region.latitude,
+      maxLat: region.latitude + region.latitudeDelta,
+      minLng: region.longitude,
+      maxLng: region.longitude + region.longitudeDelta,
     };
   }
   const lat = event?.latitude;
@@ -87,7 +101,61 @@ function cameraToBBox(event: any): BBox | null {
   };
 }
 
-// 네이버 역지오코딩 → 도로명 주소 우선, 없으면 지번 주소
+/**
+ * 현재 화면 BBox 크기 기반으로 클러스터 반경 계산
+ * BBox 대각선의 8% → 줌아웃할수록 넓게 묶고 확대하면 잘게 분리
+ */
+function clusterRadiusFromBBox(bbox: BBox | null): number {
+  if (!bbox) return 0.01;
+  const latSpan = bbox.maxLat - bbox.minLat;
+  const lngSpan = bbox.maxLng - bbox.minLng;
+  const diagonal = Math.sqrt(latSpan * latSpan + lngSpan * lngSpan);
+  // 하한을 거의 0으로 둬서 최대 줌에서는 실거리가 있는 항목들은 모두 낱개로 분리되게 한다.
+  // (동일 좌표에 가까운 중복 항목만 묶이도록 아주 작은 값만 유지)
+  return Math.max(0.000003, diagonal * 0.08);
+}
+
+/** 단일 마커들을 그리디 거리 기반으로 프론트 클러스터링 */
+function clusterSingleMarkers(
+  items: LightItem[],
+  bbox: BBox | null,
+): FrontCluster[] {
+  const radius = clusterRadiusFromBBox(bbox);
+  const singles = items.filter((it) => !it.isCluster);
+  const assigned = new Array(singles.length).fill(false);
+  const clusters: FrontCluster[] = [];
+
+  singles.forEach((item, i) => {
+    if (assigned[i]) return;
+    const group: LightItem[] = [item];
+    assigned[i] = true;
+
+    singles.forEach((other, j) => {
+      if (assigned[j]) return;
+      const dlat = item.latitude - other.latitude;
+      const dlng = item.longitude - other.longitude;
+      if (Math.sqrt(dlat * dlat + dlng * dlng) <= radius) {
+        group.push(other);
+        assigned[j] = true;
+      }
+    });
+
+    const centerLat =
+      group.reduce((s, it) => s + it.latitude, 0) / group.length;
+    const centerLng =
+      group.reduce((s, it) => s + it.longitude, 0) / group.length;
+
+    clusters.push({
+      id: `fc-${i}`,
+      centerLat,
+      centerLng,
+      items: group,
+    });
+  });
+
+  return clusters;
+}
+
 async function naverReverseGeocode(
   latitude: number,
   longitude: number,
@@ -178,13 +246,28 @@ function PassportMarker({ spaceName }: { spaceName: string }) {
   );
 }
 
-function ClusterMarker({ count }: { count: number }) {
+/** 서버 클러스터 마커 */
+function ServerClusterMarker({ count }: { count: number }) {
   return (
     <View style={styles.clusterWrapper}>
       <View style={styles.clusterBubble}>
         <Text style={styles.clusterCount}>{count}</Text>
       </View>
       <View style={styles.clusterTail} />
+    </View>
+  );
+}
+
+/** 프론트 클러스터 마커 */
+function FrontClusterMarker({ count }: { count: number }) {
+  return (
+    <View style={styles.frontClusterWrapper}>
+      <View style={styles.frontClusterOuter}>
+        <View style={styles.frontClusterInner}>
+          <Text style={styles.frontClusterCount}>{count}</Text>
+        </View>
+      </View>
+      <View style={styles.frontClusterTail} />
     </View>
   );
 }
@@ -196,6 +279,108 @@ function CenterPin() {
     </View>
   );
 }
+
+// ─── 바텀시트 ─────────────────────────────────────────────────────────────
+
+interface ClusterBottomSheetProps {
+  cluster: FrontCluster | null;
+  onClose: () => void;
+  onSelectItem: (item: LightItem) => void;
+}
+
+function ClusterBottomSheet({
+  cluster,
+  onClose,
+  onSelectItem,
+}: ClusterBottomSheetProps) {
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (cluster) {
+      Animated.spring(slideAnim, {
+        toValue: 1,
+        tension: 65,
+        friction: 11,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      slideAnim.setValue(0);
+    }
+  }, [cluster]);
+
+  if (!cluster) return null;
+
+  return (
+    <Modal
+      visible={!!cluster}
+      transparent
+      animationType="none"
+      onRequestClose={onClose}
+    >
+      <TouchableOpacity
+        style={styles.sheetBackdrop}
+        activeOpacity={1}
+        onPress={onClose}
+      />
+      <Animated.View
+        style={[
+          styles.sheetContainer,
+          {
+            transform: [
+              {
+                translateY: slideAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [400, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        {/* 핸들 */}
+        <View style={styles.sheetHandle} />
+
+        {/* 헤더 */}
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>
+            이 근처 장소 {cluster.items.length}곳
+          </Text>
+          <TouchableOpacity onPress={onClose} hitSlop={12}>
+            <Text style={styles.sheetCloseText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 목록 */}
+        <ScrollView
+          style={styles.sheetScroll}
+          contentContainerStyle={styles.sheetScrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {cluster.items.map((item, idx) => (
+            <TouchableOpacity
+              key={`sheet-item-${item.passportId ?? idx}`}
+              style={styles.sheetItem}
+              activeOpacity={0.75}
+              onPress={() => onSelectItem(item)}
+            >
+              <View style={styles.sheetItemIcon}>
+                <Text style={styles.sheetItemEmoji}>🛂</Text>
+              </View>
+              <View style={styles.sheetItemBody}>
+                <Text style={styles.sheetItemName} numberOfLines={1}>
+                  {item.spaceName}
+                </Text>
+              </View>
+              <Text style={styles.sheetItemChevron}>›</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </Animated.View>
+    </Modal>
+  );
+}
+
+// ─── PassportPreviewCard ─────────────────────────────────────────────────
 
 interface PassportPreviewCardProps {
   preview: PassportPreview | null;
@@ -285,6 +470,8 @@ function PassportPreviewCard({
   );
 }
 
+// ─── LocationConfirmCard ──────────────────────────────────────────────────
+
 interface LocationConfirmCardProps {
   latitude: number;
   longitude: number;
@@ -343,6 +530,7 @@ export default function MapScreen() {
     longitude: number;
   } | null>(null);
   const [lights, setLights] = useState<LightItem[]>([]);
+  const [currentBBox, setCurrentBBox] = useState<BBox | null>(INITIAL_BBOX);
 
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewData, setPreviewData] = useState<PassportPreview | null>(null);
@@ -363,13 +551,16 @@ export default function MapScreen() {
   );
   const [addressLoading, setAddressLoading] = useState(false);
 
-  const [polygonCoords, setPolygonCoords] = useState<PolygonCoord[] | null>(
-    null,
-  );
+  // 프론트 클러스터 바텀시트
+  const [activeCluster, setActiveCluster] = useState<FrontCluster | null>(null);
 
   const mapRef = useRef<any>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const baseBottom = TAB_BAR_HEIGHT + safeBottom + 12;
+
+  // ── 프론트 클러스터 계산 ───────────────────────────────────────────────
+
+  const frontClusters = clusterSingleMarkers(lights, currentBBox);
 
   // ── 불빛 fetch ────────────────────────────────────────────────────────
 
@@ -379,62 +570,12 @@ export default function MapScreen() {
       const data = res.data.data;
       const items: LightItem[] = Array.isArray(data) ? data : [];
 
-      // ── 디버그 로그 ──────────────────────────────────────────────────
       console.log(
         `[Lights] BBox: minLat=${bbox.minLat.toFixed(4)}, maxLat=${bbox.maxLat.toFixed(4)}, minLng=${bbox.minLng.toFixed(4)}, maxLng=${bbox.maxLng.toFixed(4)}`,
       );
       console.log(`[Lights] 총 ${items.length}개 마커`);
-      items.forEach((item, i) => {
-        if (item.isCluster) {
-          console.log(
-            `  [${i}] 클러스터 | 개수=${item.count} | lat=${item.centerLatitude}, lng=${item.centerLongitude}`,
-          );
-        } else {
-          console.log(
-            `  [${i}] 단일 | passportId=${item.passportId} | spaceName=${item.spaceName} | lat=${item.latitude}, lng=${item.longitude}`,
-          );
-        }
-      });
-      // ────────────────────────────────────────────────────────────────
 
       setLights(items);
-      if (items.length >= 2) {
-        const coords: PolygonCoord[] = items.map((item) => ({
-          latitude: item.isCluster
-            ? (item.centerLatitude ?? item.latitude)
-            : item.latitude,
-          longitude: item.isCluster
-            ? (item.centerLongitude ?? item.longitude)
-            : item.longitude,
-        }));
-        if (coords.length === 2) {
-          // 2개: 두 점으로 사각형 구성
-          const [a, b] = coords;
-          setPolygonCoords([
-            {
-              latitude: Math.max(a.latitude, b.latitude),
-              longitude: Math.min(a.longitude, b.longitude),
-            },
-            {
-              latitude: Math.max(a.latitude, b.latitude),
-              longitude: Math.max(a.longitude, b.longitude),
-            },
-            {
-              latitude: Math.min(a.latitude, b.latitude),
-              longitude: Math.max(a.longitude, b.longitude),
-            },
-            {
-              latitude: Math.min(a.latitude, b.latitude),
-              longitude: Math.min(a.longitude, b.longitude),
-            },
-          ]);
-        } else {
-          // 3개 이상: 마커 좌표 그대로 폴리곤
-          setPolygonCoords(coords);
-        }
-      } else {
-        setPolygonCoords(null);
-      }
     } catch (e: any) {
       console.error("lights fetch 실패:", e.message);
       setLights([]);
@@ -456,11 +597,7 @@ export default function MapScreen() {
       debounceTimer.current = setTimeout(() => {
         const bbox = cameraToBBox(event);
         if (bbox) {
-          // ── 디버그 로그 ────────────────────────────────────────────
-          console.log(
-            `[Camera] BBox 갱신: minLat=${bbox.minLat.toFixed(4)}, maxLat=${bbox.maxLat.toFixed(4)}, minLng=${bbox.minLng.toFixed(4)}, maxLng=${bbox.maxLng.toFixed(4)}`,
-          );
-          // ──────────────────────────────────────────────────────────
+          setCurrentBBox(bbox);
           loadLights(bbox);
         }
       }, 400);
@@ -468,7 +605,7 @@ export default function MapScreen() {
     [pickingLocation, loadLights],
   );
 
-  // ── 핀 탭 핸들러 ──────────────────────────────────────────────────────
+  // ── 마커 탭 ───────────────────────────────────────────────────────────
 
   const handleSinglePinTap = async (item: LightItem) => {
     setPreviewVisible(true);
@@ -494,7 +631,7 @@ export default function MapScreen() {
     }
   };
 
-  const handleClusterTap = (item: LightItem) => {
+  const handleServerClusterTap = (item: LightItem) => {
     const lat = item.centerLatitude ?? item.latitude;
     const lng = item.centerLongitude ?? item.longitude;
     mapRef.current?.animateCameraTo({
@@ -503,6 +640,20 @@ export default function MapScreen() {
       zoom: 16,
       duration: 400,
     });
+  };
+
+  const handleFrontClusterTap = (cluster: FrontCluster) => {
+    if (cluster.items.length === 1) {
+      // 단일이면 바로 프리뷰
+      handleSinglePinTap(cluster.items[0]);
+    } else {
+      setActiveCluster(cluster);
+    }
+  };
+
+  const handleSheetItemSelect = (item: LightItem) => {
+    setActiveCluster(null);
+    handleSinglePinTap(item);
   };
 
   const handleOpenDetail = async () => {
@@ -528,7 +679,6 @@ export default function MapScreen() {
     setPreviewVisible(false);
   };
 
-  // "이 위치로 고정" → 네이버 역지오코딩으로 주소 변환
   const handlePinLocation = async () => {
     const { latitude, longitude } = cameraCenter;
     setAddressLoading(true);
@@ -571,9 +721,7 @@ export default function MapScreen() {
     });
   };
 
-  if (showAddPlace) {
-    return <AddPlaceScreen onClose={() => setShowAddPlace(false)} />
-  }
+  // ── 렌더 ─────────────────────────────────────────────────────────────
 
   return (
     <View style={styles.container}>
@@ -581,18 +729,12 @@ export default function MapScreen() {
         ref={mapRef}
         style={styles.map}
         camera={{ latitude: 37.5665, longitude: 126.978, zoom: 12 }}
+        isNightModeEnabled={true} // 야간 모드 on
+        lightness={-0.2} // 약간 더 어둡게 (-1~1)
         isShowZoomControls={!pickingLocation}
         onCameraChanged={handleCameraChanged}
       >
-        {polygonCoords && (
-          <NaverMapPolygonOverlay
-            coords={polygonCoords}
-            color="rgba(15, 39, 68, 0.18)"
-            outlineColor="rgba(15, 39, 68, 0.45)"
-            outlineWidth={1.5}
-          />
-        )}
-
+        {/* 유저 위치 */}
         {userLocation && (
           <NaverMapMarkerOverlay
             latitude={userLocation.latitude}
@@ -605,37 +747,59 @@ export default function MapScreen() {
           </NaverMapMarkerOverlay>
         )}
 
-        {lights.map((item, idx) =>
-          item.isCluster ? (
+        {/* 서버 클러스터 마커 */}
+        {lights
+          .filter((it) => it.isCluster)
+          .map((item, idx) => (
             <NaverMapMarkerOverlay
-              key={`cluster-${idx}`}
+              key={`server-cluster-${idx}`}
               latitude={item.centerLatitude ?? item.latitude}
               longitude={item.centerLongitude ?? item.longitude}
               anchor={{ x: 0.5, y: 1 }}
               width={56}
               height={64}
-              onTap={() => handleClusterTap(item)}
+              onTap={() => handleServerClusterTap(item)}
             >
-              <ClusterMarker count={item.count ?? 0} />
+              <ServerClusterMarker count={item.count ?? 0} />
             </NaverMapMarkerOverlay>
-          ) : (
+          ))}
+
+        {/* 프론트 클러스터 마커 */}
+        {frontClusters.map((cluster) =>
+          cluster.items.length === 1 ? (
+            // 단일 → 기존 PassportMarker
             <NaverMapMarkerOverlay
-              key={`passport-${item.passportId}`}
-              latitude={item.latitude}
-              longitude={item.longitude}
+              key={cluster.id}
+              latitude={cluster.centerLat}
+              longitude={cluster.centerLng}
               anchor={{ x: 0.5, y: 1 }}
               width={130}
               height={58}
-              onTap={() => handleSinglePinTap(item)}
+              onTap={() => handleFrontClusterTap(cluster)}
             >
-              <PassportMarker spaceName={item.spaceName} />
+              <PassportMarker spaceName={cluster.items[0].spaceName} />
+            </NaverMapMarkerOverlay>
+          ) : (
+            // 복수 → 숫자 핀
+            <NaverMapMarkerOverlay
+              key={cluster.id}
+              latitude={cluster.centerLat}
+              longitude={cluster.centerLng}
+              anchor={{ x: 0.5, y: 1 }}
+              width={64}
+              height={72}
+              onTap={() => handleFrontClusterTap(cluster)}
+            >
+              <FrontClusterMarker count={cluster.items.length} />
             </NaverMapMarkerOverlay>
           ),
         )}
       </NaverMapView>
 
+      {/* 위치 선택 핀 */}
       {pickingLocation && <CenterPin />}
 
+      {/* 범례 */}
       {!pickingLocation && (
         <View
           style={[styles.legendWrapper, { bottom: baseBottom + 64 }]}
@@ -645,6 +809,7 @@ export default function MapScreen() {
         </View>
       )}
 
+      {/* 하단 바 (일반) */}
       {!pickingLocation && (
         <View style={[styles.bottomBar, { bottom: baseBottom }]}>
           <TouchableOpacity
@@ -668,6 +833,7 @@ export default function MapScreen() {
         </View>
       )}
 
+      {/* 위치 선택 모드 하단 바 */}
       {pickingLocation && !showLocationConfirm && (
         <>
           <View style={styles.pickingGuideWrapper}>
@@ -701,6 +867,7 @@ export default function MapScreen() {
         </>
       )}
 
+      {/* 위치 확인 카드 */}
       {pickingLocation && showLocationConfirm && pickedLocation && (
         <View style={[styles.discoveryWrapper, { bottom: baseBottom + 60 }]}>
           <LocationConfirmCard
@@ -713,6 +880,7 @@ export default function MapScreen() {
         </View>
       )}
 
+      {/* 여권 프리뷰 카드 */}
       {previewVisible && !pickingLocation && (
         <View style={[styles.discoveryWrapper, { bottom: baseBottom + 60 }]}>
           <PassportPreviewCard
@@ -728,12 +896,14 @@ export default function MapScreen() {
         </View>
       )}
 
+      {/* 상세 로딩 오버레이 */}
       {detailLoading && (
         <View style={styles.detailLoadingOverlay}>
           <ActivityIndicator size="large" color={NAVY} />
         </View>
       )}
 
+      {/* 여권 상세 */}
       {detailItem && (
         <View style={StyleSheet.absoluteFill}>
           <PassportDetail
@@ -747,6 +917,7 @@ export default function MapScreen() {
         </View>
       )}
 
+      {/* 장소 등록 */}
       {showAddPlace && (
         <View style={StyleSheet.absoluteFill}>
           <AddPlaceScreen
@@ -754,10 +925,6 @@ export default function MapScreen() {
             initialLongitude={pickedLocation?.longitude}
             initialAddress={pickedLocation?.address ?? undefined}
             onClose={() => {
-              console.log(
-                "🔙 AddPlaceScreen 닫힘, pickedLocation:",
-                pickedLocation,
-              );
               setShowAddPlace(false);
               setShowRegisterBtn(true);
               setPickingLocation(false);
@@ -767,6 +934,13 @@ export default function MapScreen() {
           />
         </View>
       )}
+
+      {/* 프론트 클러스터 바텀시트 */}
+      <ClusterBottomSheet
+        cluster={activeCluster}
+        onClose={() => setActiveCluster(null)}
+        onSelectItem={handleSheetItemSelect}
+      />
     </View>
   );
 }
@@ -777,6 +951,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
 
+  // 유저 위치 마커
   userLocationMarker: {
     width: 40,
     height: 40,
@@ -807,6 +982,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
+  // 여권 마커
   passportMarkerWrapper: { alignItems: "center" },
   passportMarkerBubble: {
     flexDirection: "row",
@@ -841,6 +1017,7 @@ const styles = StyleSheet.create({
     borderTopColor: NAVY,
   },
 
+  // 서버 클러스터
   clusterWrapper: { alignItems: "center" },
   clusterBubble: {
     width: 48,
@@ -869,6 +1046,44 @@ const styles = StyleSheet.create({
     borderTopColor: "#6366F1",
   },
 
+  // 프론트 클러스터
+  frontClusterWrapper: { alignItems: "center" },
+  frontClusterOuter: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(15, 39, 68, 0.12)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  frontClusterInner: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: NAVY,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
+    borderWidth: 2.5,
+    borderColor: "white",
+  },
+  frontClusterCount: { color: "white", fontSize: 16, fontWeight: "800" },
+  frontClusterTail: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderTopWidth: 7,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderTopColor: NAVY,
+  },
+
+  // 프리뷰 카드
   previewCard: {
     backgroundColor: "white",
     borderRadius: 20,
@@ -931,6 +1146,7 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
 
+  // 핀
   centerPinWrapper: {
     position: "absolute",
     top: "50%",
@@ -941,6 +1157,7 @@ const styles = StyleSheet.create({
   },
   centerPinEmoji: { fontSize: 36 },
 
+  // 가이드
   pickingGuideWrapper: {
     position: "absolute",
     top: 60,
@@ -962,6 +1179,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
+  // 범례
   legendWrapper: { position: "absolute", right: 16 },
   legendCard: {
     backgroundColor: "rgba(255,255,255,0.95)",
@@ -985,6 +1203,7 @@ const styles = StyleSheet.create({
   legendDot: { width: 12, height: 12, borderRadius: 3 },
   legendLabel: { fontSize: 11, color: "#475569" },
 
+  // 하단 바
   bottomBar: {
     position: "absolute",
     left: 16,
@@ -1021,6 +1240,7 @@ const styles = StyleSheet.create({
   },
   registerButtonText: { fontSize: 15, fontWeight: "700", color: "#1E293B" },
 
+  // 디스커버리/위치확인 카드
   discoveryWrapper: { position: "absolute", left: 16, right: 16 },
   discoveryCard: {
     backgroundColor: "white",
@@ -1065,4 +1285,69 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   dismissButtonText: { color: "#475569", fontWeight: "600", fontSize: 15 },
+
+  // 클러스터 바텀시트
+  sheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  sheetContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "white",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "65%",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 12,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#CBD5E1",
+    alignSelf: "center",
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  sheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  sheetTitle: { fontSize: 16, fontWeight: "700", color: "#1E293B" },
+  sheetCloseText: { fontSize: 16, color: "#94A3B8", padding: 4 },
+  sheetScroll: { flexGrow: 0 },
+  sheetScrollContent: { paddingBottom: 32, paddingTop: 4 },
+  sheetItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F8FAFC",
+    gap: 14,
+  },
+  sheetItemIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: `rgba(15,39,68,0.08)`,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sheetItemEmoji: { fontSize: 20 },
+  sheetItemBody: { flex: 1 },
+  sheetItemName: { fontSize: 14, fontWeight: "700", color: "#1E293B" },
+  sheetItemSub: { fontSize: 12, color: "#94A3B8", marginTop: 2 },
+  sheetItemChevron: { fontSize: 20, color: "#CBD5E1", fontWeight: "300" },
 });
