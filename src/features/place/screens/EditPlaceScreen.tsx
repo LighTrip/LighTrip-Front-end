@@ -84,7 +84,6 @@ const EditPlaceScreen = ({
 
     const [date, setDate] = useState(visitDate ?? new Date())
     const [showDatePicker, setShowDatePicker] = useState(false)
-    const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
 
     const formatDate = (date: Date) => {
         return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`
