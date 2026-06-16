@@ -1,6 +1,5 @@
 import { getMyProfile, logout } from "@/src/api/profileApi";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Securestore from "expo-secure-store";
 import { useCallback, useState } from "react";
@@ -23,9 +22,10 @@ import {
 } from "../data/profileDummy";
 import { ProfileMenuItem, ProfileUser } from "../types/profile.types";
 
+const TAB_BAR_HEIGHT = 90;
+
 export default function ProfileView() {
     const router = useRouter();
-    const tabBarHeight = useBottomTabBarHeight();
 
     const [isTeam, setIsTeam] = useState(false);
     const [user, setUser] = useState<ProfileUser>(profileUserDummy);
@@ -154,7 +154,7 @@ export default function ProfileView() {
     
             {/* 스크롤 영역 */}
             <ScrollView
-                style={[styles.scrollArea, {marginBottom: tabBarHeight}]}
+                style={styles.scrollArea}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
                 contentInsetAdjustmentBehavior="never"
@@ -299,10 +299,11 @@ const styles = StyleSheet.create({
     },
     scrollArea: {
         flex: 1,
+        marginBottom: TAB_BAR_HEIGHT,
     },
     scrollContent: {
         paddingHorizontal: 20,
-        paddingBottom:  50,
+        paddingBottom:  20,
     },
     sectionAccount: {
         marginBottom: 0,

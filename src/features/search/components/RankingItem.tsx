@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import type { RankingUser } from "../types/ranking.types";
 
 type RankingItemProps = {
@@ -13,15 +13,6 @@ export default function RankingItem({ user, isMyRank = false }: RankingItemProps
             <View style={styles.rankCircle}>
                 <Text style={styles.rankText}>{user.rank}</Text>
             </View>
-
-            <Image
-                source={
-                    user.profileImageUrl
-                        ? { uri: user.profileImageUrl }
-                        : require("@/assets/images/default_profile.png")
-                }
-                style={styles.rankingProfileImage}
-            />
 
             <View style={styles.rankingUserInfo}>
                 <Text style={styles.rankingName} numberOfLines={1}>
@@ -85,17 +76,9 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         color: "#FFFFFF",
     },
-    rankingProfileImage: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        backgroundColor: "#d9d9d9",
-        borderWidth: 2,
-        borderColor: "#1A3A6B",
-        marginRight: 12,
-    },
     rankingUserInfo: {
         flex: 1,
+        marginLeft: 10,
     },
     rankingName: {
         fontSize: 16,
