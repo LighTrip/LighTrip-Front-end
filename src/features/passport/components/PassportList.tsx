@@ -91,8 +91,6 @@ const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange, refres
     const fetchDistricts = async () => {
         try {
             const res = await getMyPassportDistricts()
-            console.log('districts[0]:', JSON.stringify(res.data?.data?.[0]))
-
             setDistricts(res.data?.data ?? [])
         } catch (e) {
             console.error(e)

@@ -186,12 +186,8 @@ const EditPlaceScreen = ({
             })
 
             const resData = res.data?.data ?? res.data
-            console.log('[submit] 4. createPassport 응답 전체:', JSON.stringify(resData))
             const createdPassportId = resData?.passportId
 
-            // 커버 이미지 + 텍스트 색상 AI 적용
-            // - 기존 구: 새 사진으로 커버 교체 + 텍스트 색상 갱신
-            // - 새 구 첫 등록: 백엔드가 자동 생성한 cover에 사진/색상 설정
             try {
                 const districtCategory = DISTRICT_CATEGORY_MAP[region] ?? region
                 const districtsRes = await getMyPassportDistricts()
@@ -199,15 +195,10 @@ const EditPlaceScreen = ({
                 const targetDistrict = districts.find(
                     (d: any) => d.displayName === region || d.districtCategory === districtCategory
                 )
-                console.log('[submit] 5. targetDistrict:', targetDistrict?.displayName, '| coverId:', targetDistrict?.coverId, '| passportCount:', targetDistrict?.passportCount)
                 if (targetDistrict?.coverId != null && imageUrls[0]) {
                     await changeCoverImage(targetDistrict.coverId, imageUrls[0])
                     const colorHex = await predictCoverTextColor(imageUrls[0], region)
-                    console.log('[submit] 6. textColor 호출: colorHex=', colorHex)
                     await textColor(targetDistrict.coverId, colorHex)
-                    console.log('[submit] 7. textColor API 완료')
-                } else {
-                    console.warn('[submit] district 없거나 coverId 없음 — 백엔드 응답 확인 필요:', targetDistrict)
                 }
             } catch (aiErr) {
                 console.warn('커버 설정 실패:', aiErr)
