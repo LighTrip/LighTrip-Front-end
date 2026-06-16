@@ -124,7 +124,7 @@ const mapFriendApiItemToFriend = (item: FriendApiItem): Friend => {
         status: item.status,
         createdAt: item.createdAt,
 
-        stampCount: item.stampCount ?? 0,
+        stampCount: item.passportCount ?? 0,
         passportCount: item.passportCount ?? 0,
         mutualFriends: item.mutualFriends ?? [],
     }
