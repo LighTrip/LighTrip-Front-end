@@ -718,6 +718,8 @@ export default function MapScreen() {
         ref={mapRef}
         style={styles.map}
         camera={{ latitude: 37.5665, longitude: 126.978, zoom: 12 }}
+        isNightModeEnabled={true} // 야간 모드 on
+        lightness={-0.2} // 약간 더 어둡게 (-1~1)
         isShowZoomControls={!pickingLocation}
         onCameraChanged={handleCameraChanged}
       >
