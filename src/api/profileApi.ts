@@ -11,7 +11,8 @@ import {
     ProfileEditForm,
     ProfileUser,
     TeamResponseData,
-    UpdateProfileRequest,
+    UpdateLiveLocationSharingRequest,
+    UpdateProfileRequest
 } from "../features/profile/types/profile.types";
 import { BASE_URL } from "./config";
 
@@ -355,4 +356,42 @@ export const joinTeam = async (
     await Securestore.setItemAsync("teamName", teamData.teamName);
 
     return teamData;
+};
+
+// 11. 위치 공유 온오프 API
+export const updateLiveLocationSharing = async (
+    teamId: number,
+    sharing: boolean
+): Promise<void> => {
+    const accessToken = await getAccessToken();
+
+    const response = await fetch(
+        `${BASE_URL}/api/v1/teams/${teamId}/live-locations/me`,
+        {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+                sharing,
+            } satisfies UpdateLiveLocationSharingRequest),
+        }
+    );
+
+    console.log("위치 공유 온오프 상태:", response.status);
+
+    if (!response.ok) {
+        let errorMessage = "위치 공유 설정 변경 실패";
+
+        try {
+            const result = await response.json();
+            console.log("위치 공유 온오프 에러 응답:", result);
+            errorMessage = result.message || errorMessage;
+        } catch {
+            console.log("위치 공유 온오프 응답 body 없음");
+        }
+
+        throw new Error(errorMessage);
+    }
 };
