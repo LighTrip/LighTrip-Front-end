@@ -543,10 +543,8 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                     setEditLat(parseFloat(place.y) || 0)
                     setEditLng(parseFloat(place.x) || 0)
 
-                    // 주소에서 구 추출
-                    const guMatch = addressStr.match(/[가-힣]+구/)
-                    const guPart = guMatch?.[0]
-                    console.log('[KakaoPlace] addressStr:', addressStr, '→ guPart:', guPart)
+                    // 주소에서 구 추출 (공백 분리 후 '구' 종료 토큰 탐색 — regex backtracking 없음)
+                    const guPart = addressStr.split(' ').find(token => token.endsWith('구'))
 
                     if (guPart) {
                         setEditDistrict(guPart)
