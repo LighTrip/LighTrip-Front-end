@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import type { RankingUser } from "../types/ranking.types";
 
 type TopRankingCardProps = {
@@ -7,25 +7,9 @@ type TopRankingCardProps = {
 };
 
 export default function TopRankingCard({ user }: TopRankingCardProps) {
-
-    const isFristRank = user.rank === 1;
-
     return (
-        <View 
-            style={[
-                styles.topRankingCard,
-                isFristRank && styles.firstRankingCard,
-            ]}
-        >
+        <View style={styles.topRankingCard}>
             <Text style={styles.medalText}>{getMedal(user.rank)}</Text>
-            <Image
-                source={
-                    user.profileImageUrl
-                        ? {uri : user.profileImageUrl}
-                        : require("@/assets/images/default_profile.png")
-                }
-                style={styles.profileImage}
-            />
             <Text style={styles.topRankingName} numberOfLines={1}>
                 {user.nickname}
             </Text>
@@ -48,34 +32,24 @@ function getMedal(rank: number) {
 const styles = StyleSheet.create({
     topRankingCard: {
         width: "31%",
-        height: 132,
+        height: 120,
         backgroundColor: "#1A3A6B",
         borderRadius: 15,
         alignItems: "center",
         justifyContent: "center",
-        paddingHorizontal: 6,
-    },
-    firstRankingCard: {
-        height: 154,
+        paddingHorizontal: 8,
     },
     medalText: {
-        fontSize: 20,
-        marginBottom: 4,
-    },
-    profileImage: {
-        width: 45,
-        height: 45,
-        borderRadius: 21,
-        backgroundColor: "#d9d9d9",
-        borderWidth: 2,
-        borderColor: "#FFFFFF",
-        marginBottom: 6,
+        fontSize: 24,
+        marginBottom: 10,
     },
     topRankingName: {
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: "600",
         color: "#FFFFFF",
-        marginBottom: 2,
+        marginBottom: 6,
+        textAlign: "center",
+        maxWidth: "100%",
     },
     scoreRow: {
         flexDirection: "row",

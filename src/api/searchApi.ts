@@ -125,3 +125,28 @@ export async function requestFriend(friendCode: string) {
     return data.data
 
 }
+
+// 4. 구 별 랭킹 조회 API 연결
+export async function getDistrictRanking (district: string) {
+    const token = await Securestore.getItemAsync("accessToken");
+
+    const url = `${BASE_URL}/api/v1/rankings/districts/${district}`;
+
+    const response = await fetch(url, {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    })
+
+    const data = await response.json();
+
+    console.log("구별 주간 랭킹 조회 상태 코드:", response.status);
+    console.log("구별 주간 랭킹 조회 응답:", data);
+
+    if(!response.ok || !data.success) {
+        throw new Error(data.message || "구별 랭킹 조회에 실패했습니다.");
+    }
+
+    return data.data;
+}
