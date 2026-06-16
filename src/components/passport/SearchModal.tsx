@@ -56,7 +56,10 @@ const SearchModal = <T,>({ visible, onClose, placeholder, fetchResults, keyExtra
                     <FlatList
                         data={results}
                         keyExtractor={keyExtractor}
-                        renderItem={({ item }) => <>{renderItem(item, onSelect)}</>}
+                        renderItem={({ item }) => <>{renderItem(item, (selected) => {
+                            onSelect(selected)
+                            handleClose()
+                        })}</>}
                     />
                 </View>
             </TouchableOpacity>

@@ -37,7 +37,7 @@ let freesentationTypefacePromise: Promise<SkTypeface | null> | null = null;
 export function getFreesentationTypeface(): Promise<SkTypeface | null> {
   freesentationTypefacePromise ??= (async () => {
     try {
-      const asset = Asset.fromModule(require('../../assets/fonts/Freesentation-4Regular.ttf'));
+      const asset = Asset.fromModule(require('../../../../assets/fonts/Freesentation-4Regular.ttf'));
       await asset.downloadAsync();
 
       const uri = asset.localUri ?? asset.uri;
@@ -46,7 +46,9 @@ export function getFreesentationTypeface(): Promise<SkTypeface | null> {
       });
 
       const data = Skia.Data.fromBase64(base64);
-      return Skia.Typeface.MakeFreeTypeFaceFromData(data);
+      const typeface = Skia.Typeface.MakeFreeTypeFaceFromData(data);
+      console.log('[font] Freesentation 로딩:', typeface ? '성공 ✓' : '실패 (null 반환)');
+      return typeface;
     } catch (e) {
       console.warn('getFreesentationTypeface: failed to load font, falling back to default', e);
       return null;
@@ -101,7 +103,7 @@ export function coverResizeAndCrop(
 }
 
 // Title ROI는 150x200 기준 고정 좌표
-export const TITLE_ROI = { x: 7, y: 36, width: 136, height: 36 } as const;
+export const TITLE_ROI = { x: 7, y: 56, width: 136, height: 36 } as const;
 
 /**
  * 원본 이미지 -> 150x200 center crop -> title ROI(136x36) crop까지 수행하고
@@ -282,6 +284,7 @@ export async function buildTitleMask(
   paint.setAntiAlias(true);
 
   const textWidth = font.getTextWidth(text);
+  console.log(`[buildTitleMask] font textWidth="${text}": ${textWidth.toFixed(1)}px (fontSize=${fontSize})`);
 
   // ---- 카드(cardWidth x cardHeight) 기준 텍스트 x 좌표 계산 ----
   let xCard: number;
@@ -298,6 +301,7 @@ export async function buildTitleMask(
   const yTopInROI = cardTop - TITLE_ROI.y;
   const y = yTopInROI + fontSize * baselineRatio; // baseline 보정
 
+  console.log(`[buildTitleMask] text="${text}" | canvas(${w}x${h}) | cardTop=${card?.top} | ROI.y=${TITLE_ROI.y} | xCard=${xCard.toFixed(1)} | x(ROI)=${x.toFixed(1)} | yTopInROI=${yTopInROI.toFixed(1)} | baseline(ROI)=${y.toFixed(1)}`);
   canvas.drawText(text, x, y, paint, font);
 
   const image = surface.makeImageSnapshot();
@@ -313,10 +317,13 @@ export async function buildTitleMask(
   }
 
   const mask = new Float32Array(w * h);
+  let nonZero = 0;
   for (let i = 0; i < w * h; i++) {
     const alpha = pixels[i * 4 + 3];
     mask[i] = alpha > alphaThreshold ? 1 : 0;
+    if (mask[i]) nonZero++;
   }
+  console.log(`[buildTitleMask] 마스크 비율: ${nonZero}/${w * h} px (${(nonZero / (w * h) * 100).toFixed(1)}%) | baseline y=${y.toFixed(1)} (canvas 0~${h - 1})`);
 
   return mask; // length = 36 * 136 = 4896
 }

@@ -67,10 +67,6 @@ export const updatePassport = (passportId: number, data: Partial<CreatePassportR
 export const deletePassport = (passportId: number) =>
     axiosInstance.delete(API_ENDPOINTS.PASSPORT.DELETE(passportId))
 
-// 여권 공개 범위 수정
-export const updatePassportVisibility = (passportId: number, visibility: 'PUBLIC' | 'PRIVATE') =>
-    axiosInstance.patch(API_ENDPOINTS.PASSPORT.UPDATE_VISIBILITY(passportId), { visibility })
-
 // 여권 상세 조회용 (전체)
 export type PassportDetailType = {
     passportId: number
@@ -124,3 +120,14 @@ export const getMyPassportDistricts = () =>
 export const getDistrictsPassports = (districtCategory: string) =>
     axiosInstance.get(API_ENDPOINTS.PASSPORT.GET_DISTRICT_PASSPORTS(districtCategory))
 
+// 여권 공개 범위 수정
+export const changePassportVisibility = (passportId: number, visibility: Visibility) =>
+    axiosInstance.patch(API_ENDPOINTS.PASSPORT.UPDATE_VISIBILITY(passportId), { visibility })
+
+// 여권 커버 텍스트 (textColor: #RRGGBB hex 문자열)
+export const textColor = (coverId: number, colorHex: string) =>
+    axiosInstance.patch(API_ENDPOINTS.DISTRICTCOVER.TEXT(coverId), { textColor: colorHex })
+
+// 여권 커버 사진 설정
+export const changeCoverImage = (coverId: number, imageUrl: string) =>
+    axiosInstance.patch(API_ENDPOINTS.DISTRICTCOVER.IMAGE(coverId), { imageUrl })

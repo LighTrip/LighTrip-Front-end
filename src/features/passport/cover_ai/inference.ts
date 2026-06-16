@@ -6,11 +6,13 @@
  * - output: 'top1_index', shape [1], int64, range 0~31 (palette.json id)
  */
 
-import { InferenceSession, Tensor } from 'onnxruntime-react-native';
+import type { InferenceSession, Tensor } from 'onnxruntime-react-native';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import paletteData from './palette.json';
 import { MODEL_INPUT_SHAPE, buildRGBTensor, buildTitleMask, buildModelInput, TitleMaskOptions } from './preprocess';
+
+const getOnnx = () => require('onnxruntime-react-native') as typeof import('onnxruntime-react-native');
 
 // ---------------------------------------------------------------------------
 // 모델 파일 경로 확보 (asset -> 파일시스템 복사)
@@ -78,7 +80,7 @@ let sessionPromise: Promise<InferenceSession> | null = null;
  * modelPath는 앱에 bundle된 모델 파일의 실제 경로/URI로 교체할 것.
  */
 export function getSession(modelPath: string): Promise<InferenceSession> {
-  sessionPromise ??= InferenceSession.create(modelPath);
+  sessionPromise ??= getOnnx().InferenceSession.create(modelPath);
   return sessionPromise;
 }
 
@@ -110,6 +112,7 @@ export async function runInference(
 
   const session = await getSession(modelPath);
 
+  const { Tensor } = getOnnx();
   const tensor = new Tensor('float32', inputData, [...MODEL_INPUT_SHAPE]);
 
   const results = await session.run({ input: tensor });
@@ -122,11 +125,11 @@ export async function runInference(
   // int64 -> number (onnxruntime이 BigInt로 반환할 수 있음)
   const raw = outputTensor.data[0];
   const top1Index = Number(raw);
+  const color = getColorFromIndex(top1Index);
 
-  return {
-    top1Index,
-    color: getColorFromIndex(top1Index),
-  };
+  console.log(`[ONNX] top1_index=${top1Index} | hex=${color.hex} | name=${color.name} | group=${color.group}`);
+
+  return { top1Index, color };
 }
 
 // ---------------------------------------------------------------------------

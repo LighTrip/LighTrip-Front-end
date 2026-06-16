@@ -1,15 +1,12 @@
 import {
-    StatusBar,
-    StyleSheet,
+    ScrollView,
     Text,
     TextInput,
     TouchableOpacity,
     Image,
     Dimensions,
     View,
-    Switch,
     Platform,
-    ActivityIndicator,
     KeyboardAvoidingView,
 } from 'react-native'
 import React, { useState, useEffect } from 'react'
@@ -22,13 +19,14 @@ import MusicSearch from '@/src/components/passport/MusicSearch'
 import NoiseOverlay from '@/src/components/common/NoiseOverlay'
 import Dropdown from '@/src/components/common/Dropdown'
 import { REGIONS, DISTRICT_CATEGORY_MAP } from '@/src/constant/regions'
+import { editStyles as styles } from '../components/placeStyles'
 
 // API
-import { generateAIDraft } from '@/src/api/passport/ai.api'  // AI 초안 생성
 import { getPresignedUrl, uploadToS3 } from '@/src/api/passport/image.api'  // 이미지 업로드
-import { createPassport, CATEGORY_MAP } from '@/src/api/passport/passport.api'  // 여권 생성
+import { createPassport, getMyPassportDistricts, textColor, changeCoverImage, CATEGORY_MAP, Visibility } from '@/src/api/passport/passport.api'  // 여권 생성
+import { predictCoverTextColor } from '@/src/features/passport/cover_ai/coverColorHelper'
 
-const { width } = Dimensions.get('window')
+const { width, height: screenHeight } = Dimensions.get('window')
 const CARD_WIDTH = width * 0.91
 
 const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY
@@ -37,7 +35,10 @@ const PLACE_TYPES = ['☕ 카페', '🍽️ 식당', '🍶 술집', '🏞️ 공
 
 // 주소에서 도시에 해당하는 구 목록 찾기
 const findDistrictsByAddress = (address: string): string[] => {
-    const matchedCity = Object.keys(REGIONS).find(city => address.includes(city))
+    const matchedCity = Object.keys(REGIONS).find(city => {
+        const abbrev = city.replace('특별시', '').replace('광역시', '').replace('특별자치시', '')
+        return address.includes(city) || address.includes(abbrev)
+    })
     return matchedCity ? REGIONS[matchedCity] : REGIONS['서울특별시']
 }
 
@@ -56,7 +57,7 @@ const InfoRow = ({ iconName, text, onPress }: { iconName: string; text: string; 
 type Props = {
     onBack: () => void
     onComplete: (item: any) => void
-    photo: string | null
+    photos: string[]
     description: string
     visitDate: Date | null
     locationAddress: string | null
@@ -64,12 +65,13 @@ type Props = {
     locationName: string | null
     latitude: number | null
     longitude: number | null
+    aiDraft: { draft: string; category: string } | null
 }
 
 const EditPlaceScreen = ({
     onBack,
     onComplete,
-    photo,
+    photos,
     description,
     visitDate,
     locationRegion,
@@ -77,6 +79,7 @@ const EditPlaceScreen = ({
     latitude,
     longitude,
     locationAddress,
+    aiDraft,
 }: Props) => {
 
     const [date, setDate] = useState(visitDate ?? new Date())
@@ -103,93 +106,105 @@ const EditPlaceScreen = ({
 
     const [content, setContent] = useState('')
     const [isGenerating, setIsGenerating] = useState(false)
-    const [isPublic, setIsPublic] = useState(true)
+    const [visibility, setVisibility] = useState<Visibility>('PUBLIC')
+
+    const VISIBILITY_CYCLE: Visibility[] = ['PUBLIC', 'FRIENDS_ONLY', 'PRIVATE']
+    const VISIBILITY_LABEL: Record<Visibility, string> = {
+        PUBLIC: '공개',
+        FRIENDS_ONLY: '친구만',
+        PRIVATE: '비공개',
+    }
+    const VISIBILITY_SUB: Record<Visibility, string> = {
+        PUBLIC: '모든 사람이 볼 수 있어요',
+        FRIENDS_ONLY: '친구만 볼 수 있어요',
+        PRIVATE: '나만 볼 수 있어요',
+    }
+    const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
+
 
     const [music, setMusic] = useState<{ title: string; artist: string; artwork: string } | null>(null)
     const [musicModalOpen, setMusicModalOpen] = useState(false)
 
     useEffect(() => {
-        generateWithAI()
-    }, [])
-
-    const generateWithAI = async () => {
-        if (!photo) return
-        setIsGenerating(true)
-        try {
-            const data = await generateAIDraft(photo, description)
-            if (data.draft) setContent(data.draft)
-            if (data.category) {
-                const matched = PLACE_TYPES.find(type => type.includes(data.category))
-                if (matched) setPlaceType(matched)
-            }
-        } catch (err) {
-            console.error('AI 생성 실패:', err)
-            alert('AI 초안 생성 중 오류가 발생했어요')
-        } finally {
-            setIsGenerating(false)
+        if (aiDraft?.draft) setContent(aiDraft.draft)
+        if (aiDraft?.category) {
+            const matched = PLACE_TYPES.find(type => type.includes(aiDraft.category))
+            if (matched) setPlaceType(matched)
         }
-    }
+    }, [])
 
 
     // 장소 선택 시 도시 감지 → 구 목록 자동 교체
     const handlePlaceSelect = (item: any) => {
         setLocationName(item.place_name)
-        setCurrentAddress(item.address_name ?? '')
+        const address = item.address_name || item.road_address_name || ''
+        setCurrentAddress(address)
         setCurrentLat(parseFloat(item.y) ?? 0)  // 카카오: y가 위도
         setCurrentLng(parseFloat(item.x) ?? 0)  // 카카오: x가 경도
 
-        const address = item.address_name ?? ''
         const districts = findDistrictsByAddress(address)
         setAvailableDistricts(districts)
         const matchedDistrict = districts.find(r => address.includes(r))
         setRegion(matchedDistrict ?? '선택')
+
+        setPlaceSearchOpen(false)
     }
 
     const handleSubmit = async () => {
-        if (!photo) return alert('사진을 선택해주세요')
-        if (!content) return alert('내용을 입력해주세요')
-        if (region === '선택') return alert('방문 지역을 선택해주세요')
+        if (photos.length === 0) return alert('사진을 선택해 주세요.')
+        if (!content) return alert('내용을 입력해 주세요.')
+        if (region === '선택') return alert('방문 지역을 선택해 주세요.')
 
         setIsGenerating(true)
         try {
-            // 1. presigned URL 발급
-            const presignedRes = await getPresignedUrl('image/jpeg')
-            const presignedUrl = presignedRes.data?.presignedUrl
-            const imageUrl = presignedRes.data?.imageUrl
-
-            if (!presignedUrl) throw new Error('presignedUrl 없음')
-
-            // 2. S3 업로드
-            await uploadToS3(presignedUrl, photo!)
-
-            
+            const imageUrls = await Promise.all(
+                photos.map(async (uri) => {
+                    const presignedRes = await getPresignedUrl('image/jpeg')
+                    const presignedUrl = presignedRes.data?.presignedUrl
+                    const imageUrl = presignedRes.data?.imageUrl
+                    if (!presignedUrl) throw new Error('presignedUrl 없음')
+                    await uploadToS3(presignedUrl, uri)
+                    return imageUrl
+                })
+            )
             // 3. 여권 등록
             const res = await createPassport({
-                imageUrls: [imageUrl],
+                imageUrls,
                 content,
                 latitude: currentLat,
                 longitude: currentLng,
                 address: currentAddress,
-                visitedAt: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+                visitedAt: (() => { const d = date > new Date() ? new Date() : date; return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })(),
                 category: CATEGORY_MAP[placeType] ?? 'ETC',
                 districtCategory: DISTRICT_CATEGORY_MAP[region] ?? region,
-                visibility: isPublic ? 'PUBLIC' : 'PRIVATE',
+                visibility: visibility,
                 spaceName: locationName,
                 district: region !== '선택' ? region : undefined,
                 musicTitle: music?.title,
                 musicArtist: music?.artist,
             })
 
-            const createdPassportId = res.data.data.passportId
+            const resData = res.data?.data ?? res.data
+            const createdPassportId = resData?.passportId
+
+            try {
+                const districtCategory = DISTRICT_CATEGORY_MAP[region] ?? region
+                const districtsRes = await getMyPassportDistricts()
+                const districts: any[] = districtsRes.data?.data ?? []
+                const targetDistrict = districts.find(
+                    (d: any) => d.displayName === region || d.districtCategory === districtCategory
+                )
+                if (targetDistrict?.coverId != null && imageUrls[0]) {
+                    await changeCoverImage(targetDistrict.coverId, imageUrls[0])
+                    const colorHex = await predictCoverTextColor(imageUrls[0], region)
+                    await textColor(targetDistrict.coverId, colorHex)
+                }
+            } catch (aiErr) {
+                console.warn('커버 설정 실패:', aiErr)
+            }
 
             onComplete({createdPassportId})
         } catch (err: any) {
-            console.error('등록 실패 상세:', err.response?.data)
-            console.error('등록 실패 status:', err.response?.status)
-            console.error('등록 실패 message:', err.message)
-            console.error('등록 실패 요청 URL:', err.config?.url)
-            console.error('등록 실패 요청 data:', err.config?.data)
-            console.error('err 전체:', JSON.stringify(err, Object.getOwnPropertyNames(err)))
             alert('등록에 실패했어요')
         } finally {
             setIsGenerating(false)
@@ -220,16 +235,52 @@ const EditPlaceScreen = ({
                     </View>
 
                     <View style={styles.photoBox}>
-                        {photo !== null ? (
+                        {photos.length > 1 ? (
+                            <ScrollView
+                                horizontal
+                                style={{ flex: 1 }}
+                                contentContainerStyle={{ flexDirection: 'row' }}
+                                showsHorizontalScrollIndicator={false}
+                                pagingEnabled
+                                onScroll={(e) => {
+                                    const index = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH)
+                                    setCurrentPhotoIndex(index)
+                                }}
+                                scrollEventThrottle={16}
+                            >
+                                {photos.map((uri, index) => (
+                                    <Image
+                                        key={index}
+                                        source={{ uri }}
+                                        style={{ width: CARD_WIDTH * 0.91, height: '100%' }}
+                                        resizeMode="cover"
+                                    />
+                                ))}
+                            </ScrollView>
+                        ) : photos.length === 1 ? (
                             <Image
-                                source={{ uri: photo }}
-                                style={{ width: '100%', height: '100%', borderRadius: 16 }}
+                                source={{ uri: photos[0] }}
+                                style={{ width: '100%', height: '100%' }}
                                 resizeMode="cover"
                             />
                         ) : (
                             <Text style={{ color: '#aaa' }}>사진 없음</Text>
                         )}
                     </View>
+
+                    {photos.length > 1 && (
+                        <View style={styles.photoIndicatorRow}>
+                            {photos.map((_, index) => (
+                                <View
+                                    key={index}
+                                    style={index === currentPhotoIndex
+                                        ? styles.photoIndicatorDotActive
+                                        : styles.photoIndicatorDot
+                                    }
+                                />
+                            ))}
+                        </View>
+                    )}
 
                     <View style={styles.infoSection}>
                         {/* 장소 이름 */}
@@ -275,21 +326,17 @@ const EditPlaceScreen = ({
                     <View style={styles.contentSection}>
                         <View style={styles.contentLabelRow}>
                             <Text style={styles.contentLabel}>내용</Text>
-                            {isGenerating && (
-                                <View style={styles.generatingRow}>
-                                    <ActivityIndicator size="small" color="#1A3A6B" />
-                                    <Text style={styles.generatingText}>AI 작성 중...</Text>
-                                </View>
-                            )}
+                            <Text style={{ fontSize: 14, color: '#aaa' }}>{content.length}/80</Text>
                         </View>
                         <TextInput
                             style={styles.contentInput}
                             multiline
-                            placeholder={isGenerating ? 'AI가 초안을 작성 중이에요...' : '내용을 입력하세요'}
+                            placeholder='내용을 입력하세요'
                             placeholderTextColor="#aaa"
                             value={content}
                             onChangeText={setContent}
                             editable={!isGenerating}
+                            maxLength={80}
                         />
                     </View>
 
@@ -314,9 +361,13 @@ const EditPlaceScreen = ({
                     {/* 음악 검색 모달 */}
                     <MusicSearch
                         visible={musicModalOpen}
-                        onSelect={(item) => setMusic(item)}
+                        onSelect={(item) => {
+                            setMusic(item)
+                            setMusicModalOpen(false)
+                        }}
                         onClose={() => setMusicModalOpen(false)}
                     />
+
 
                     {/* 장소 검색 모달 */}
                     <KakaoPlaceSearch
@@ -329,14 +380,17 @@ const EditPlaceScreen = ({
                     <View style={styles.publicRow}>
                         <View>
                             <Text style={styles.publicTitle}>여권 공개 여부</Text>
-                            <Text style={styles.publicSub}>{isPublic ? '모든 사람이 볼 수 있어요' : '나만 볼 수 있어요'}</Text>
+                            <Text style={styles.publicSub}>{VISIBILITY_SUB[visibility]}</Text>
                         </View>
-                        <Switch
-                            value={isPublic}
-                            onValueChange={setIsPublic}
-                            trackColor={{ false: '#D0D0D0', true: '#1A3A6B' }}
-                            thumbColor={'#FFFFFF'}
-                        />
+                        <TouchableOpacity
+                            style={styles.visibilityButton}
+                            onPress={() => {
+                                const idx = VISIBILITY_CYCLE.indexOf(visibility)
+                                setVisibility(VISIBILITY_CYCLE[(idx + 1) % 3])
+                            }}
+                        >
+                            <Text style={styles.visibilityButtonText}>{VISIBILITY_LABEL[visibility]}</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </Shadow>
@@ -352,313 +406,3 @@ const EditPlaceScreen = ({
 }
 
 export default EditPlaceScreen
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F8FAFD',
-        justifyContent: 'flex-start',
-        alignItems: 'center',
-        paddingTop: StatusBar.currentHeight || 65,
-    },
-
-    logContainer: {
-        position: 'relative',
-        height: 645,
-        borderRadius: 16,
-        backgroundColor: '#F8FAFD',
-        justifyContent: 'flex-start',
-        alignItems: 'center',
-        overflow: 'hidden',
-        marginBottom: 15,
-    },
-
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        width: '100%',
-        paddingHorizontal: 16,
-        marginTop: 15,
-    },
-
-    backButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-
-    headerTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#222',
-    },
-
-    photoBox: {
-        width: 340,
-        height: 170,
-        borderRadius: 16,
-        backgroundColor: '#FFFFFF',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 10,
-    },
-
-    infoSection: {
-        width: '90%',
-        paddingHorizontal: 16,
-        marginTop: 8,
-    },
-
-    infoRowWrapper: { width: '100%' },
-
-    infoRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 10,
-        gap: 10,
-    },
-
-    infoText: {
-        fontSize: 15,
-        color: '#222',
-        fontWeight: '600',
-        flex: 1,
-    },
-
-    divider: {
-        height: 1,
-        backgroundColor: '#4B4B4B',
-    },
-
-    dropdownRow: {
-        flexDirection: 'row',
-        width: '100%',
-        paddingHorizontal: 16,
-        gap: 8,
-        marginTop: 16,
-    },
-
-    modalBackdrop: {
-        flex: 1,
-        backgroundColor: '#00000040',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-
-    modalBox: {
-        width: 200,
-        maxHeight: 320,
-        backgroundColor: '#fff',
-        borderRadius: 16,
-        paddingVertical: 8,
-        elevation: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 10,
-    },
-
-    modalItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-    },
-
-    modalItemSelected: {
-        backgroundColor: '#F0F4FF',
-    },
-
-    modalItemText: {
-        fontSize: 14,
-        color: '#333',
-    },
-
-    modalItemTextSelected: {
-        color: '#1A3A6B',
-        fontWeight: '600',
-    },
-
-    contentSection: {
-        width: '100%',
-        minHeight: 130,
-        maxHeight: 130,
-        paddingHorizontal: 16,
-        marginTop: 10,
-        gap: 8,
-    },
-
-    contentLabelRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-
-    contentLabel: {
-        fontSize: 13,
-        color: '#555',
-        fontWeight: '500',
-    },
-
-    generatingRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-    },
-
-    generatingText: {
-        fontSize: 12,
-        color: '#1A3A6B',
-    },
-
-    contentInput: {
-        fontSize: 14,
-        color: '#222',
-        lineHeight: 24,
-        borderBottomWidth: 1,
-        borderBottomColor: '#C0C0C0',
-        paddingVertical: 4,
-        minHeight: 40,
-    },
-
-    musicCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        width: '91%',
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-        backgroundColor: '#FFFFFF',
-        padding: 12,
-        paddingRight: 20, 
-        marginTop: -10,
-        marginBottom: 10,
-        gap: 12,
-    },
-
-    albumArt: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        backgroundColor: '#ddd',
-    },
-
-    musicInfo: { 
-        gap: 4,
-        flex: 1,
-        maxWidth: '80%',
-        overflow: 'hidden',
-    },
-
-    musicTitle: {
-        fontSize: 15,
-        fontWeight: 'bold',
-        color: '#222',
-    },
-
-    musicArtist: {
-        fontSize: 13,
-        color: '#888',
-    },
-
-    musicModalBox: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: '70%',
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        padding: 16,
-    },
-
-    musicSearchBox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#F0F0F0',
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        gap: 8,
-    },
-
-    musicSearchInput: {
-        flex: 1,
-        fontSize: 14,
-        color: '#222',
-    },
-
-    musicResultItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 10,
-        gap: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-    },
-
-    musicResultArt: {
-        width: 48,
-        height: 48,
-        borderRadius: 8,
-        backgroundColor: '#ddd',
-    },
-
-    musicResultInfo: {
-        flex: 1,
-        gap: 4,
-    },
-
-    musicResultTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#222',
-    },
-
-    musicResultArtist: {
-        fontSize: 12,
-        color: '#888',
-    },
-
-    publicRow: {
-        position: 'absolute',
-        bottom: 0,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        width: '100%',
-        paddingVertical: 12,
-        gap: 12,
-        marginRight: 15,
-    },
-
-    publicTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        textAlign: 'right',
-        color: '#222',
-    },
-
-    publicSub: {
-        fontSize: 12,
-        color: '#888',
-    },
-
-    clickContainer: {
-        width: '91%',
-        height: 45,
-        borderRadius: 16,
-        backgroundColor: '#1A3A6B',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 0,
-    },
-
-    clickText: {
-        color: '#FFFFFF',
-        fontWeight: 'bold',
-    },
-})

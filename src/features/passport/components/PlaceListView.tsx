@@ -6,7 +6,7 @@ import {
     Image,
 } from 'react-native';
 import React from 'react'
-import { passportStyles as styles } from './passportStyles';
+import { passportStyles as styles, LIST_STAMP_SIZE } from './passportStyles';
 import { MyPassport, getPassportDetail } from '@/src/api/passport/passport.api'
 
 const STAMP_MAP: Record<string, any> = {
@@ -40,7 +40,7 @@ const PlaceListView = ({ data, onSelectPlace }: Props) => {
     }
 
     return (
-        <View style={{ flex: 1, marginTop: 5 }}>
+        <View style={{ flex: 1, marginTop: 5, paddingBottom: 100 }}>
             
             <FlatList
                 data={data}
@@ -55,14 +55,24 @@ const PlaceListView = ({ data, onSelectPlace }: Props) => {
                     <TouchableOpacity style={styles.listCard} onPress={() => handleSelect(item)}>
                         <Image 
                             source={STAMP_MAP[item.category] ?? STAMP_MAP['ETC']} 
-                            style={{ width: 80, height: 80}} 
+                            style={{ width: LIST_STAMP_SIZE, height: LIST_STAMP_SIZE }}
                             resizeMode="contain"
                         />
                         <View style={styles.textArea}>
                             <Text style={styles.listName}>{item.spaceName}</Text>
                             <View style={styles.metaRow}>
-                                <Text style={styles.meta}>📍{item.districtDisplayName}</Text>
-                                <Text style={styles.meta}>📅 {item.visitedAt}</Text>
+                                <Image 
+                                    source={require('@/assets/icons/location.png')} 
+                                    style={{ width: 14, height: 14 }} 
+                                    resizeMode="contain"
+                                />
+                                <Text style={styles.metaLocation}>{item.districtDisplayName}</Text>
+                                <Image 
+                                    source={require('@/assets/icons/calendar.png')} 
+                                    style={{ width: 14, height: 14, }} 
+                                    resizeMode="contain"
+                                />
+                                <Text style={styles.metaDate}> {item.visitedAt}</Text>
                             </View>
                         </View>
                     </TouchableOpacity>

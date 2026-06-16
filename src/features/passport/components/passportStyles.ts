@@ -1,7 +1,10 @@
 import { Dimensions, StyleSheet } from 'react-native'
 
-export const COVER_WIDTH = (Dimensions.get('window').width - 20 * 2 - 1) / 2
+const { width } = Dimensions.get('window')
+export const COVER_WIDTH = (width - 20 * 2 - 1) / 2
 export const COVER_HEIGHT = COVER_WIDTH * (4 / 3)
+export const LIST_CARD_WIDTH = width - 40
+export const LIST_STAMP_SIZE = Math.round(LIST_CARD_WIDTH * 0.23)
 
 export const passportStyles = StyleSheet.create({
     searchRow: {
@@ -18,7 +21,7 @@ export const passportStyles = StyleSheet.create({
         height: 39,
         borderRadius: 10,
         backgroundColor: '#ffffff',
-        borderWidth: 2,
+        borderWidth: 1,
         borderColor: '#1A3A6B',
         alignItems: 'center',
         justifyContent: 'center',
@@ -36,7 +39,7 @@ export const passportStyles = StyleSheet.create({
         height: 39,
         backgroundColor: '#ffffff',
         borderRadius: 10,
-        borderWidth: 2,
+        borderWidth: 1,
         borderColor: '#1A3A6B',
         paddingVertical: 8,
         paddingHorizontal: 16,
@@ -46,16 +49,16 @@ export const passportStyles = StyleSheet.create({
     
     listContainer: {
         paddingHorizontal: 20,
-        paddingBottom: 100,
     },
     
     listCard: {
-        width: Dimensions.get('window').width - 40,
+        flexDirection: 'row',
+        width: LIST_CARD_WIDTH,
         backgroundColor: '#FFFFFF',
+        alignContent: 'center',
         borderRadius: 18,
         marginTop: 8,
-        marginBottom: 15,
-        overflow: "hidden",
+        marginBottom: 10,
         shadowColor: '#4C4C4C',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.16,
@@ -77,12 +80,33 @@ export const passportStyles = StyleSheet.create({
         padding: 15,
     },
 
-    textArea: { flex: 1 },
+    textArea: {
+        position: 'absolute',
+        flex: 1,
+        paddingVertical: 20,
+        left: LIST_STAMP_SIZE,
+        gap: 5,
+        flexDirection: 'column',
+     },
 
-    metaRow: { 
-        flexDirection: 'row', 
-        gap: 24,
+    metaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         paddingVertical: 2,
+        gap: 5,
+        width: LIST_CARD_WIDTH - LIST_STAMP_SIZE - 55,
+    },
+
+    metaLocation: { 
+        flexDirection: 'row', 
+        paddingVertical: 2,
+        top: -1,
+        flex: 1,
+    },
+
+    metaDate: { 
+        flexDirection: 'row',
     },
 
     meta: { 
@@ -209,4 +233,5 @@ export const passportStyles = StyleSheet.create({
         marginLeft: 'auto',
     },
 
+    
 })

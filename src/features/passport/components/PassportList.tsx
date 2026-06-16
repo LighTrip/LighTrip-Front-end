@@ -24,9 +24,10 @@ type Props = {
     onSelectPlace: (item: MyPassport, group?: MyPassport[]) => void
     initialTab?: 'cover' | 'list'
     onTabChange?: (tab: 'cover' | 'list') => void
+    refreshTrigger?: number
 }
 
-const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange }: Props) => {
+const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange, refreshTrigger }: Props) => {
     const [selected, setSelected] = useState<'cover' | 'list'>(initialTab)
     const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null)
     const [districts, setDistricts] = useState<any[]>([])  
@@ -45,6 +46,12 @@ const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange }: Prop
     useEffect(() => {
         if (initialTab) setSelected(initialTab)
     }, [initialTab])
+
+    useEffect(() => {
+        if (refreshTrigger === undefined || refreshTrigger === 0) return
+        fetchDistricts()
+        fetchPassports()
+    }, [refreshTrigger])
 
     const sortedDistricts = [...districts].sort((a, b) => {
         if (coverSortOrder === '이름순') return a.displayName.localeCompare(b.displayName)
@@ -84,8 +91,6 @@ const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange }: Prop
     const fetchDistricts = async () => {
         try {
             const res = await getMyPassportDistricts()
-            console.log('districts[0]:', JSON.stringify(res.data?.data?.[0]))
-
             setDistricts(res.data?.data ?? [])
         } catch (e) {
             console.error(e)
@@ -95,7 +100,14 @@ const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange }: Prop
     const handleDistrictPress = async (district: any) => {
         try {
             const res = await getDistrictsPassports(district.districtCategory)
-            const items: MyPassport[] = res.data?.data?.content ?? []
+            const rawItems: MyPassport[] = res.data?.data?.content ?? []
+            const items = rawItems.map(i => ({
+                ...i,
+                _districtPassportCount: district.passportCount,
+                _coverId: district.coverId,
+                districtDisplayName: district.displayName,
+                district: district.displayName,
+            }))
             if (items.length > 0) {
                 onSelectPlace(items[0], items)
             }
@@ -111,7 +123,7 @@ const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange }: Prop
         />
     ) : (
         <FlatList
-            style={{ height: COVER_HEIGHT * 2, overflow: 'hidden' }}
+            style={{ height: COVER_HEIGHT * 1.96 + 32, overflow: 'hidden' }}
             data={chunkArray(filteredDistricts, 4)}
             keyExtractor={(_, index) => String(index)}
             horizontal
@@ -133,7 +145,7 @@ const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange }: Prop
                                 }]}
                                 resizeMode="cover"
                             />
-                            <Text style={styles.placeName}>{district.displayName}</Text>
+                            <Text style={[styles.placeName, { color: district.textColor ?? '#FFFFFF' }]}>{district.displayName}</Text>
                         </TouchableOpacity>
                     ))}
                 </View>
@@ -193,13 +205,15 @@ const styles = StyleSheet.create({
         marginHorizontal: 5,
         borderRadius: 10,
         backgroundColor: '#FFFFFF',
-        borderWidth: 2,
-        borderColor: '#1A3A6B',
+        shadowColor: '#1A3A6B',
+        shadowOffset: { width: 1, height: 1 },
+        shadowOpacity: 0.4,
+        shadowRadius: 2,
+        elevation: 4,
     },
 
     tabButtonActive: {
         backgroundColor: '#1A3A6B',
-        borderColor: '#1A3A6B',
     },
 
     tabText: {
@@ -226,10 +240,11 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-start',
         gap: 11,
     },
-    
+
+
     passportCover: {
         width: COVER_WIDTH,
-        height: COVER_HEIGHT * 0.98,
+        height: COVER_HEIGHT * 1.03,
         borderTopRightRadius: 16,
         borderBottomRightRadius: 16,
         borderTopLeftRadius: 0,
@@ -245,7 +260,6 @@ const styles = StyleSheet.create({
     placeName: {
         position: 'absolute',
         top: '30%',
-        color: '#FFFFFF',
         fontSize: 28,
         fontFamily: 'Freesentation',
     },
