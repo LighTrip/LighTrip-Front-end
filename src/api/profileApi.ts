@@ -313,7 +313,13 @@ export const createTeam = async (
         throw new Error(result.message || "팀 생성 실패");
     }
 
-    return result as TeamResponseData;
+    const teamData = result as TeamResponseData;
+
+    await Securestore.setItemAsync("teamId", String(teamData.teamId));
+    await Securestore.setItemAsync("teamCode", teamData.teamCode);
+    await Securestore.setItemAsync("teamName", teamData.teamName);
+
+    return teamData;
 };
 
 // 10. 팀 가입
@@ -342,5 +348,11 @@ export const joinTeam = async (
         throw new Error(result.message || "팀 가입 실패");
     }
 
-    return result as TeamResponseData;
+    const teamData = result as TeamResponseData;
+
+    await Securestore.setItemAsync("teamId", String(teamData.teamId));
+    await Securestore.setItemAsync("teamCode", teamData.teamCode);
+    await Securestore.setItemAsync("teamName", teamData.teamName);
+
+    return teamData;
 };
