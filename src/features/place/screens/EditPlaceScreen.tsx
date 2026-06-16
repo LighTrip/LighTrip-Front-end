@@ -23,9 +23,10 @@ import { editStyles as styles } from '../components/placeStyles'
 
 // API
 import { getPresignedUrl, uploadToS3 } from '@/src/api/passport/image.api'  // 이미지 업로드
-import { createPassport, CATEGORY_MAP, Visibility } from '@/src/api/passport/passport.api'  // 여권 생성
+import { createPassport, getMyPassportDistricts, textColor, changeCoverImage, CATEGORY_MAP, Visibility } from '@/src/api/passport/passport.api'  // 여권 생성
+import { predictCoverTextColor } from '@/src/features/passport/cover_ai/coverColorHelper'
 
-const { width } = Dimensions.get('window')
+const { width, height: screenHeight } = Dimensions.get('window')
 const CARD_WIDTH = width * 0.91
 
 const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY
@@ -34,7 +35,10 @@ const PLACE_TYPES = ['☕ 카페', '🍽️ 식당', '🍶 술집', '🏞️ 공
 
 // 주소에서 도시에 해당하는 구 목록 찾기
 const findDistrictsByAddress = (address: string): string[] => {
-    const matchedCity = Object.keys(REGIONS).find(city => address.includes(city))
+    const matchedCity = Object.keys(REGIONS).find(city => {
+        const abbrev = city.replace('특별시', '').replace('광역시', '').replace('특별자치시', '')
+        return address.includes(city) || address.includes(abbrev)
+    })
     return matchedCity ? REGIONS[matchedCity] : REGIONS['서울특별시']
 }
 
@@ -80,6 +84,7 @@ const EditPlaceScreen = ({
 
     const [date, setDate] = useState(visitDate ?? new Date())
     const [showDatePicker, setShowDatePicker] = useState(false)
+    const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
 
     const formatDate = (date: Date) => {
         return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`
@@ -133,15 +138,17 @@ const EditPlaceScreen = ({
     // 장소 선택 시 도시 감지 → 구 목록 자동 교체
     const handlePlaceSelect = (item: any) => {
         setLocationName(item.place_name)
-        setCurrentAddress(item.address_name ?? '')
+        const address = item.address_name || item.road_address_name || ''
+        setCurrentAddress(address)
         setCurrentLat(parseFloat(item.y) ?? 0)  // 카카오: y가 위도
         setCurrentLng(parseFloat(item.x) ?? 0)  // 카카오: x가 경도
 
-        const address = item.address_name ?? ''
         const districts = findDistrictsByAddress(address)
         setAvailableDistricts(districts)
         const matchedDistrict = districts.find(r => address.includes(r))
         setRegion(matchedDistrict ?? '선택')
+
+        setPlaceSearchOpen(false)
     }
 
     const handleSubmit = async () => {
@@ -161,7 +168,6 @@ const EditPlaceScreen = ({
                     return imageUrl
                 })
             )
-            
             // 3. 여권 등록
             const res = await createPassport({
                 imageUrls,
@@ -169,7 +175,7 @@ const EditPlaceScreen = ({
                 latitude: currentLat,
                 longitude: currentLng,
                 address: currentAddress,
-                visitedAt: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+                visitedAt: (() => { const d = date > new Date() ? new Date() : date; return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })(),
                 category: CATEGORY_MAP[placeType] ?? 'ETC',
                 districtCategory: DISTRICT_CATEGORY_MAP[region] ?? region,
                 visibility: visibility,
@@ -179,7 +185,33 @@ const EditPlaceScreen = ({
                 musicArtist: music?.artist,
             })
 
-            const createdPassportId = res.data.data.passportId
+            const resData = res.data?.data ?? res.data
+            console.log('[submit] 4. createPassport 응답 전체:', JSON.stringify(resData))
+            const createdPassportId = resData?.passportId
+
+            // 커버 이미지 + 텍스트 색상 AI 적용
+            // - 기존 구: 새 사진으로 커버 교체 + 텍스트 색상 갱신
+            // - 새 구 첫 등록: 백엔드가 자동 생성한 cover에 사진/색상 설정
+            try {
+                const districtCategory = DISTRICT_CATEGORY_MAP[region] ?? region
+                const districtsRes = await getMyPassportDistricts()
+                const districts: any[] = districtsRes.data?.data ?? []
+                const targetDistrict = districts.find(
+                    (d: any) => d.displayName === region || d.districtCategory === districtCategory
+                )
+                console.log('[submit] 5. targetDistrict:', targetDistrict?.displayName, '| coverId:', targetDistrict?.coverId, '| passportCount:', targetDistrict?.passportCount)
+                if (targetDistrict?.coverId != null && imageUrls[0]) {
+                    await changeCoverImage(targetDistrict.coverId, imageUrls[0])
+                    const colorHex = await predictCoverTextColor(imageUrls[0], region)
+                    console.log('[submit] 6. textColor 호출: colorHex=', colorHex)
+                    await textColor(targetDistrict.coverId, colorHex)
+                    console.log('[submit] 7. textColor API 완료')
+                } else {
+                    console.warn('[submit] district 없거나 coverId 없음 — 백엔드 응답 확인 필요:', targetDistrict)
+                }
+            } catch (aiErr) {
+                console.warn('커버 설정 실패:', aiErr)
+            }
 
             onComplete({createdPassportId})
         } catch (err: any) {
@@ -221,7 +253,7 @@ const EditPlaceScreen = ({
                                 showsHorizontalScrollIndicator={false}
                                 pagingEnabled
                                 onScroll={(e) => {
-                                    const index = Math.round(e.nativeEvent.contentOffset.x / 325)
+                                    const index = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH)
                                     setCurrentPhotoIndex(index)
                                 }}
                                 scrollEventThrottle={16}
@@ -230,7 +262,7 @@ const EditPlaceScreen = ({
                                     <Image
                                         key={index}
                                         source={{ uri }}
-                                        style={{ width: 325, height: 170, borderRadius: 12 }}
+                                        style={{ width: CARD_WIDTH * 0.91, height: '100%' }}
                                         resizeMode="cover"
                                     />
                                 ))}
@@ -238,7 +270,7 @@ const EditPlaceScreen = ({
                         ) : photos.length === 1 ? (
                             <Image
                                 source={{ uri: photos[0] }}
-                                style={{ width: '100%', height: '100%', borderRadius: 12 }}
+                                style={{ width: '100%', height: '100%' }}
                                 resizeMode="cover"
                             />
                         ) : (
@@ -341,10 +373,11 @@ const EditPlaceScreen = ({
                         visible={musicModalOpen}
                         onSelect={(item) => {
                             setMusic(item)
-                            setMusicModalOpen(false) 
+                            setMusicModalOpen(false)
                         }}
                         onClose={() => setMusicModalOpen(false)}
                     />
+
 
                     {/* 장소 검색 모달 */}
                     <KakaoPlaceSearch
@@ -383,4 +416,3 @@ const EditPlaceScreen = ({
 }
 
 export default EditPlaceScreen
-

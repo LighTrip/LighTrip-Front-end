@@ -28,11 +28,16 @@ export default function PassportView() {
     // 여권 통계 조회 연결
     const [stats, setStats] = useState({ passportCount: 0, likeCount: 0, scrapCount: 0 })
     const [districts, setDistricts] = useState<any[]>([])
+    const [listRefreshKey, setListRefreshKey] = useState(0)
+
+   const refetchStats = () => {
+        getMyPassportStats().then(res => setStats(res.data.data)).catch(console.error)
+        getMyPassportDistricts().then(res => setDistricts(res.data.data)).catch(console.error)
+    }
 
     useFocusEffect(
         React.useCallback(() => {
-            getMyPassportStats().then(res => setStats(res.data.data)).catch(console.error)
-            getMyPassportDistricts().then(res => setDistricts(res.data.data)).catch(console.error)
+            refetchStats()
         }, [])
     )
 
@@ -67,6 +72,7 @@ export default function PassportView() {
             {selectedPlaces.length > 0 ? (
                 <View style={{ flex: 1 }}>
                     <PassportDetail
+                        key={selectedPlaces[selectedIndex]?.passportId}
                         item={selectedPlaces[selectedIndex]}
                         districts={districts}
                         onBack={() => {
@@ -74,6 +80,8 @@ export default function PassportView() {
                             setSelectedIndex(0)
                             selectedIndexRef.current = 0
                             setActiveTab('passport')
+                            refetchStats()
+                            setListRefreshKey(k => k + 1)
                         }}
                         onPrev={selectedIndex > 0 ? () => changePage(selectedIndex - 1) : undefined}
                         onNext={selectedIndex < selectedPlaces.length - 1 ? () => changePage(selectedIndex + 1) : undefined}
@@ -98,9 +106,10 @@ export default function PassportView() {
                         </TouchableOpacity>
                     </View>
 
-                    {activeTab === 'passport' && <PassportList 
+                    {activeTab === 'passport' && <PassportList
                         initialTab={passportTab}
                         onTabChange={setPassportTab}
+                        refreshTrigger={listRefreshKey}
                         onSelectPlace={(item, group) => {
                             updateSelectedPlaces(group || [item])
                             const idx = group ? group.indexOf(item) : 0

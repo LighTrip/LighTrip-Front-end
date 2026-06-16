@@ -79,6 +79,7 @@ export const API_ENDPOINTS = {
     CONFIRM: "/api/v1/payments/confirm",
     GET_MY_PREMIUM: "/api/v1/payments/me/premium",
   },
+
 } as const;
 
 export default API_ENDPOINTS;

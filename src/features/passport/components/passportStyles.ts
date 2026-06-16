@@ -1,7 +1,10 @@
 import { Dimensions, StyleSheet } from 'react-native'
 
-export const COVER_WIDTH = (Dimensions.get('window').width - 20 * 2 - 1) / 2
+const { width } = Dimensions.get('window')
+export const COVER_WIDTH = (width - 20 * 2 - 1) / 2
 export const COVER_HEIGHT = COVER_WIDTH * (4 / 3)
+export const LIST_CARD_WIDTH = width - 40
+export const LIST_STAMP_SIZE = Math.round(LIST_CARD_WIDTH * 0.23)
 
 export const passportStyles = StyleSheet.create({
     searchRow: {
@@ -50,7 +53,7 @@ export const passportStyles = StyleSheet.create({
     
     listCard: {
         flexDirection: 'row',
-        width: Dimensions.get('window').width - 40,
+        width: LIST_CARD_WIDTH,
         backgroundColor: '#FFFFFF',
         alignContent: 'center',
         borderRadius: 18,
@@ -77,22 +80,22 @@ export const passportStyles = StyleSheet.create({
         padding: 15,
     },
 
-    textArea: { 
+    textArea: {
         position: 'absolute',
         flex: 1,
         paddingVertical: 20,
-        left: 80,
+        left: LIST_STAMP_SIZE,
         gap: 5,
         flexDirection: 'column',
      },
 
-    metaRow: { 
+    metaRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingVertical: 2,
         gap: 5,
-        width: Dimensions.get('window').width - 40 - 80 - 55,
+        width: LIST_CARD_WIDTH - LIST_STAMP_SIZE - 55,
     },
 
     metaLocation: { 

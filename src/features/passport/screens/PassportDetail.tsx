@@ -17,6 +17,7 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    ScrollView,
 } from 'react-native'
 
 import NoiseOverlay from '@/src/components/common/NoiseOverlay'
@@ -26,10 +27,17 @@ import {
     deletePassport,
     PassportCategory,
     updatePassport,
+    createPassport,
+    getPassportDetail,
+    CreatePassportRequest,
     changePassportVisibility,
     Visibility,
     CATEGORY_MAP,
+    changeCoverImage,
+    textColor,
 } from '@/src/api/passport/passport.api'
+import { DISTRICT_CATEGORY_MAP } from '@/src/constant/regions'
+import { predictCoverTextColor } from '../cover_ai/coverColorHelper'
 
 type Props = {
     item: any
@@ -49,6 +57,17 @@ const STAMP_MAP: Record<string, any> = {
     '🏋️ 운동': require('@/assets/stamps/fitness.png'),
     '🛍️ 쇼핑': require('@/assets/stamps/shopping.png'),
     '📦 기타': require('@/assets/stamps/etc.png'),
+}
+
+const TAPE_COLOR_MAP: Record<string, string> = {
+    '☕ 카페': '#682709',
+    '🍽️ 식당': '#b53426',
+    '🍶 술집': '#5b2188',
+    '🏞️ 공원': '#4b8215',
+    '🎬 문화': '#ff6f00',
+    '🏋️ 운동': '#173282',
+    '🛍️ 쇼핑': '#ff01b7',
+    '📦 기타': '#A8A8A8',
 }
 
 const CATEGORY_TO_KOREAN: Record<string, string> = {
@@ -71,7 +90,7 @@ const VISIBILITY_LABEL: Record<Visibility, string> = {
     PRIVATE: '비공개',
 }
 
-const { width } = Dimensions.get('window')
+const { width, height: screenHeight } = Dimensions.get('window')
 
 type MusicDisplayItem = { title: string; artist: string; artwork: string } | null
 
@@ -116,8 +135,13 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
     const [musicModalOpen, setMusicModalOpen] = useState(false)
     const [categoryOpen, setCategoryOpen] = useState(false)
     const [showDatePicker, setShowDatePicker] = useState(false)
+    const [editDistrict, setEditDistrict] = useState(item.district ?? item.districtDisplayName ?? '')
+    const [editDistrictCategory, setEditDistrictCategory] = useState(item.districtCategory ?? '')
+    const [editAddress, setEditAddress] = useState(item.address ?? '')
+    const [editLat, setEditLat] = useState<number>(item.latitude ?? 0)
+    const [editLng, setEditLng] = useState<number>(item.longitude ?? 0)
 
-    const districtCount = districts?.find(d => d.displayName === item.district)?.passportCount ?? 0
+    const districtCount = (item as any)._districtPassportCount ?? districts?.find(d => d.displayName === editDistrict)?.passportCount ?? 0
 
     const displayMusic: MusicDisplayItem = editMusic ?? (item.musicTitle ? {
         title: item.musicTitle,
@@ -176,26 +200,77 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
 
     const handleSave = async () => {
         try {
-            const updateData = {
+            const matchedDistrict = districts?.find(d => d.displayName === editDistrict)
+            const originalDistrict = item.district ?? item.districtDisplayName ?? ''
+            const isNewDistrict = editDistrict !== originalDistrict && !matchedDistrict
+
+            const passportData: CreatePassportRequest = {
                 content: editReview,
                 visitedAt: editDate.toISOString().split('T')[0],
                 category: CATEGORY_MAP[editCategory] as PassportCategory,
                 musicTitle: editMusic?.title ?? item.musicTitle,
                 musicArtist: editMusic?.artist ?? item.musicArtist,
                 imageUrls: item.imageUrls ?? [],
-                districtCategory: item.districtCategory,
+                district: editDistrict,
+                districtCategory: matchedDistrict?.districtCategory ?? DISTRICT_CATEGORY_MAP[editDistrict] ?? editDistrictCategory,
                 spaceName: editSpaceName,
+                visibility: visibility,
+                address: editAddress,
+                latitude: editLat,
+                longitude: editLng,
             }
-            await updatePassport(item.passportId, updateData)
-            await changePassportVisibility(item.passportId, visibility)
-            setIsEditing(false)
+
+            if (isNewDistrict) {
+                let imageUrls = item.imageUrls
+                if (!imageUrls || imageUrls.length === 0) {
+                    const detailRes = await getPassportDetail(item.passportId)
+                    imageUrls = detailRes.data?.data?.imageUrls ?? []
+                }
+                await createPassport({ ...passportData, imageUrls })
+                await deletePassport(item.passportId)
+                onBack()
+            } else {
+                await updatePassport(item.passportId, passportData)
+                await changePassportVisibility(item.passportId, visibility)
+                if (editDistrict !== originalDistrict) {
+                    onBack()
+                } else {
+                    setIsEditing(false)
+                }
+            }
         } catch (e: any) {
-            console.error('저장 실패:', e.response?.data)
+            const errData = e.response?.data
+            console.error('저장 실패:', JSON.stringify(errData))
+            Alert.alert('저장 실패', JSON.stringify(errData ?? e.message ?? '알 수 없는 오류'))
         }
     }
 
     const formatDate = (date: Date) => {
         return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`
+    }
+
+    const handleSetCover = async () => {
+        try {
+            const coverId = item._coverId ?? item.coverId
+            if (coverId == null) return
+
+            let imageUrl = item.imageUrls?.[0]
+            if (!imageUrl) {
+                const detailRes = await getPassportDetail(item.passportId)
+                imageUrl = detailRes.data?.data?.imageUrls?.[0]
+            }
+            if (!imageUrl) return
+
+            await changeCoverImage(coverId, imageUrl)
+
+            const colorHex = await predictCoverTextColor(imageUrl, editDistrict)
+            await textColor(coverId, colorHex)
+
+            setIsCover(true)
+            Alert.alert('대표 사진으로 설정되었습니다.')
+        } catch (e: any) {
+            console.error('대표 사진 설정 실패:', e.response?.data)
+        }
     }
 
     return (
@@ -208,8 +283,8 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                 <View style={{ borderRadius: 16, overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
                     <NoiseOverlay />
                 </View>
-                <Text style={styles.districtTitle}>{item.district}</Text>
-                <Text style={styles.visitText}>{item.district}를 {districtCount}번 탐험했어요 ♪</Text>
+                <Text style={styles.districtTitle}>{editDistrict}</Text>
+                <Text style={styles.visitText}>{editDistrict}를 {districtCount}번 탐험했어요 ♪</Text>
             </View>
 
             {/* 여권 카드 */}
@@ -224,26 +299,73 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                         <Text style={styles.closeText}>✕</Text>
                     </TouchableOpacity>
 
-                    <Image source={require('../../../../assets/images/pinktape.png')} style={styles.tape} resizeMode="contain" />
+                    <Image source={require('../../../../assets/images/pinktape.png')} 
+                        style={[styles.tape, { tintColor: TAPE_COLOR_MAP[editCategory] ?? '#FFD9D9' }]}
+                        resizeMode="contain"
+                    />
 
                     <View>
-                        <TouchableOpacity onPress={isEditing ? openImagePicker : undefined} disabled={!isEditing}>
-                            <View style={styles.imageBackground} />
-                            <Image
-                                source={{ uri: editImageUri ?? item.imageUrls?.[0] ?? item.image?.uri }}
-                                style={styles.placeImage}
-                                resizeMode="cover"
-                            />
-                            {isEditing && (
+                        <View style={styles.imageBackground} />
+                        {item.imageUrls && item.imageUrls.length > 1 ? (
+                            <View
+                                style={{
+                                    width: width * 0.41,
+                                    height: 240,
+                                    marginBottom: 10,
+                                    marginTop: 10,
+                                    top: 5,
+                                    borderRadius: 4,
+                                    overflow: 'hidden',
+                                }}
+                            >
+                                <ScrollView
+                                    horizontal
+                                    pagingEnabled
+                                    showsHorizontalScrollIndicator={false}
+                                    decelerationRate="fast"
+                                >
+                                    {item.imageUrls.map((uri: string, idx: number) => (
+                                        <Image
+                                            key={idx}
+                                            source={{ uri: idx === 0 ? (editImageUri ?? uri) : uri }}
+                                            style={{ width: width * 0.41, height: 240 }}
+                                            resizeMode="cover"
+                                        />
+                                    ))}
+                                </ScrollView>
+
+                                {isEditing && (
+                                    <TouchableOpacity
+                                        style={[styles.editImageBadge, { position: 'absolute', bottom: 5, left: 5 }]}
+                                        onPress={openImagePicker}
+                                    >
+                                        <Ionicons name="camera-outline" size={14} color="#000000" />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        ) : isEditing ? (
+                            <TouchableOpacity onPress={openImagePicker}>
+                                <Image
+                                    source={{ uri: editImageUri ?? item.imageUrls?.[0] ?? item.image?.uri }}
+                                    style={styles.placeImage}
+                                    resizeMode="cover"
+                                />
                                 <View style={styles.editImageBadge}>
                                     <Ionicons name="camera-outline" size={14} color="#000000" />
                                 </View>
-                            )}
-                        </TouchableOpacity>
+                            </TouchableOpacity>
+                        ) : (
+                            <Image
+                                source={{ uri: item.imageUrls?.[0] ?? item.image?.uri }}
+                                style={styles.placeImage}
+                                resizeMode="cover"
+                            />
+                        )}
+
                         {isEditing && (
                             <TouchableOpacity
                                 style={styles.coverBadge}
-                                onPress={() => setIsCover(!isCover)}
+                                onPress={handleSetCover}
                             >
                                 <Ionicons
                                     name={isCover ? 'bookmark' : 'bookmark-outline'}
@@ -265,7 +387,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
 
                     {/* 정보 */}
                     <View style={styles.infoArea}>
-                        <View style={styles.infoRow}>
+                        <View style={[styles.infoRow, { marginBottom: 2 }]}>
                             {isEditing ? (
                                 <TouchableOpacity onPress={() => setCategoryOpen(true)} style={styles.infoEditButton}>
                                     <Text style={styles.infoText}>{editCategory}</Text>
@@ -276,18 +398,26 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                         </View>
 
                         <View style={styles.infoRow}>
-                            <Image source={require('../../../../assets/icons/location.png')} style={styles.icon} resizeMode="contain" />
+                            <Image source={require('../../../../assets/icons/location.png')} 
+                                style={[styles.icon, { tintColor: TAPE_COLOR_MAP[editCategory] ?? '#FFD9D9' }]} 
+                                resizeMode="contain" 
+                            />
                             {isEditing ? (
                                 <TouchableOpacity onPress={() => setPlaceSearchOpen(true)} style={styles.infoEditButton}>
-                                    <Text style={styles.infoText}>{editSpaceName}</Text>
+                                    <Text style={styles.infoText} numberOfLines={1} ellipsizeMode="tail">
+                                        {editSpaceName}
+                                    </Text>
                                 </TouchableOpacity>
                             ) : (
-                                <Text style={styles.infoText}>{editSpaceName}</Text>
+                                <Text style={styles.infoText} numberOfLines={1} ellipsizeMode="tail">{editSpaceName}</Text>
                             )}
                         </View>
 
                         <View style={styles.infoRow}>
-                            <Image source={require('../../../../assets/icons/calendar.png')} style={styles.icon} resizeMode="contain" />
+                            <Image source={require('../../../../assets/icons/calendar.png')} 
+                                style={[styles.icon, { tintColor: TAPE_COLOR_MAP[editCategory] ?? '#FFD9D9' }]} 
+                                resizeMode="contain" 
+                            />
                             {isEditing ? (
                                 <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.infoEditButton}>
                                     <Text style={styles.infoText}>{formatDate(editDate)}</Text>
@@ -307,7 +437,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                 </View>
 
                 {/* 구분선 */}
-                <View style={styles.dividerRow}>
+                <View style={[styles.dividerRow, { position: 'absolute', top: '50%', left: 0, right: 0 }]}>
                     <View style={styles.dividerLine} />
                 </View>
 
@@ -394,13 +524,40 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
 
             <MusicSearch
                 visible={musicModalOpen}
-                onSelect={(item) => setEditMusic(item)}
+                onSelect={(item) => {
+                    setEditMusic(item)
+                    setMusicModalOpen(false)
+                }}
                 onClose={() => setMusicModalOpen(false)}
             />
 
             <KakaoPlaceSearch
                 visible={placeSearchOpen}
-                onSelect={(place) => setEditSpaceName(place.place_name)}
+                onSelect={(place) => {
+                    console.log('[KakaoPlace] address_name:', place.address_name)
+                    console.log('[KakaoPlace] road_address_name:', place.road_address_name)
+
+                    setEditSpaceName(place.place_name)
+                    const addressStr = place.address_name || place.road_address_name || ''
+                    setEditAddress(addressStr)
+                    setEditLat(parseFloat(place.y) || 0)
+                    setEditLng(parseFloat(place.x) || 0)
+
+                    // 주소에서 구 추출
+                    const guMatch = addressStr.match(/[가-힣]+구/)
+                    const guPart = guMatch?.[0]
+                    console.log('[KakaoPlace] addressStr:', addressStr, '→ guPart:', guPart)
+
+                    if (guPart) {
+                        setEditDistrict(guPart)
+                        const matched = districts?.find(d => d.displayName === guPart)
+                        if (matched?.districtCategory) {
+                            setEditDistrictCategory(matched.districtCategory)
+                        }
+                    }
+
+                    setPlaceSearchOpen(false)
+                }}
                 onClose={() => setPlaceSearchOpen(false)}
             />
         </KeyboardAvoidingView>
@@ -455,7 +612,7 @@ const styles = StyleSheet.create({
     },
 
     passportCard: {
-        height: '77%',
+        height: screenHeight * 0.72,
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
         shadowColor: '#000',
@@ -475,9 +632,10 @@ const styles = StyleSheet.create({
 
     bottomHalf: {
         padding: 20,
+        paddingTop: 36,
         flex: 1,
         flexDirection: 'column',
-        gap: 16,
+        gap: 24,
     },
 
     closeButton: {
@@ -495,39 +653,42 @@ const styles = StyleSheet.create({
 
     tape: {
         position: 'absolute',
-        top: 30,
-        left: width * 0.27,
+        top: 20,
+        left: width * 0.29,
         width: 110,
-        height: 70,
+        height: 80,
         zIndex: 5,
     },
 
     imageBackground: {
         position: 'absolute',
-        width: '55%',
+        width: width * 0.45,
         height: 260,
-        left: 0,
+        left: -8,
         top: 5,
         backgroundColor: '#FFFFFF',
         borderRadius: 4,
-        transform: [{ rotate: '-4deg' }],
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
     },
 
     placeImage: {
-        width: '50%',
+        width: width * 0.41,
         height: 240,
-        left: 8,
         borderRadius: 4,
-        transform: [{ rotate: '-4deg' }],
         marginBottom: 10,
         marginTop: 10,
         top: 5,
+        overflow: 'hidden',
     },
 
     editImageBadge: {
         position: 'absolute',
-        bottom: 5,
-        left: 20,
+        bottom: 10,
+        left: 5,
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#ffffff80',
@@ -543,7 +704,7 @@ const styles = StyleSheet.create({
         left: -10,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1A3A6B',
+        backgroundColor: '#000000',
         borderRadius: 12,
         paddingHorizontal: 8,
         paddingVertical: 4,
@@ -568,6 +729,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 30,
         left: 120,
+        right: 16,
         gap: 2,
     },
 
@@ -575,11 +737,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        left: 105,
+        paddingLeft: 105,
     },
 
     infoEditButton: {
-        width: 110,
+        flex: 1,
         borderRadius: 10,
         flexDirection: 'row',
         alignItems: 'center',
@@ -587,6 +749,7 @@ const styles = StyleSheet.create({
     },
 
     infoText: {
+        flex: 1,
         fontSize: 16,
         color: '#333',
         textAlign: 'left',
@@ -612,7 +775,7 @@ const styles = StyleSheet.create({
 
     reviewBox: {
         width: '100%',
-        minHeight: 130,
+        height: 140,
         borderRadius: 12,
         padding: 5,
         alignItems: 'center',
@@ -630,10 +793,9 @@ const styles = StyleSheet.create({
 
     editReviewInput: {
         width: '102%',
-        height: 120,
+        height: 140,
         borderRadius: 16,
         paddingHorizontal: 20,
-        paddingVertical: 12,
         fontSize: 16,
         lineHeight: 28,
         alignContent: 'center',
@@ -676,7 +838,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        bottom: 3,
         gap: 5,
     },
 
