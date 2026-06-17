@@ -113,6 +113,13 @@ function TabsLayoutContent() {
           href: null,
         }}
       />
+
+      <Tabs.Screen
+        name="profile/subscribe"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

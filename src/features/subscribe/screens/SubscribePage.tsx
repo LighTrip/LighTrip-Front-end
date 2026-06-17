@@ -151,8 +151,8 @@ export default function SubscribePage() {
 
                 <View style={styles.ticketContainer}>
                     {[
-                        { header: styles.economyticketHeader, label: 'ECONOMY CLASS', plan: '기본', ticketIndex: 0 },
-                        { header: styles.businessticketHeader, label: 'BUSINESS CLASS', plan: '구독', ticketIndex: 1 },
+                        { header: styles.economyticketHeader, label: 'ECONOMY CLASS', plan: '기본', ticketIndex: 0, price: '무료', seat: 'BASIC' },
+                        { header: styles.businessticketHeader, label: 'BUSINESS CLASS', plan: '구독', ticketIndex: 1, price: '4,900~', seat: 'VIP' },
                     ].map((ticket, index) => {
                         const isStamped = selectedIndex !== null
                             ? (ticket.ticketIndex === 1 ? (selectedIndex === 1 || selectedIndex === 2) : selectedIndex === index)
@@ -165,8 +165,6 @@ export default function SubscribePage() {
                                     onPress={() => {
                                         if (ticket.ticketIndex === 1) {
                                             toggleBusiness()
-                                        } else {
-                                            setSelectedIndex(index === selectedIndex ? null : index)
                                         }
                                     }}
                                     activeOpacity={0.8}
@@ -191,7 +189,24 @@ export default function SubscribePage() {
                                             </View>
                                         </View>
                                         <Image source={require('../../../../assets/ticket/barcode.png')} style={styles.barcode} />
-                                        <Text style={styles.ticketText}>{ticket.plan}</Text>
+                                        <View style={styles.ticketBody}>
+                                            <View style={styles.ticketInfoCols}>
+                                                <View style={styles.ticketInfoItem}>
+                                                    <Text style={styles.ticketInfoLabel}>CLASS</Text>
+                                                    <Text style={styles.ticketInfoValue}>{ticket.plan}</Text>
+                                                </View>
+                                                <View style={styles.ticketInfoDivider} />
+                                                <View style={styles.ticketInfoItem}>
+                                                    <Text style={styles.ticketInfoLabel}>PRICE</Text>
+                                                    <Text style={styles.ticketInfoValue}>{ticket.price}</Text>
+                                                </View>
+                                                <View style={styles.ticketInfoDivider} />
+                                                <View style={styles.ticketInfoItem}>
+                                                    <Text style={styles.ticketInfoLabel}>SEAT</Text>
+                                                    <Text style={styles.ticketInfoValue}>{ticket.seat}</Text>
+                                                </View>
+                                            </View>
+                                        </View>
                                         <Image source={require('../../../../assets/ticket/logo_ticket.png')} style={styles.ticketLogo} />
                                         <View style={styles.tearLine} />
                                         {isStamped && (
@@ -216,20 +231,35 @@ export default function SubscribePage() {
                                                 { label: '월간 구독', desc: '4,900원/월', idx: 1 },
                                                 { label: '연간 구독', desc: '49,000원/년', idx: 2 },
                                             ].map((plan) => (
-                                                <TouchableOpacity
-                                                    key={plan.label}
-                                                    style={{
-                                                        borderColor: selectedIndex === plan.idx ? '#1A3A6B' : '#d1d1d1',
-                                                        borderWidth: selectedIndex === plan.idx ? 2 : 1,
-                                                        borderRadius: 15,                                                       
-                                                        padding: 16,
-                                                        backgroundColor: '#FFFFFF',
-                                                    }}
-                                                    onPress={() => setSelectedIndex(plan.idx)}
-                                                >
-                                                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1A3A6B' }}>{plan.label}</Text>
-                                                    <Text style={{ fontSize: 14, color: '#666666', marginTop: 4 }}>{plan.desc}</Text>
-                                                </TouchableOpacity>
+                                                <View key={plan.label} style={{ position: 'relative' }}>
+                                                    {plan.idx === 2 && (
+                                                        <View style={{
+                                                            position: 'absolute',
+                                                            top: 15,
+                                                            right: 15,
+                                                            zIndex: 10,
+                                                            backgroundColor: '#1A3A6B',
+                                                            borderRadius: 8,
+                                                            paddingHorizontal: 8,
+                                                            paddingVertical: 3,
+                                                        }}>
+                                                            <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#ffffff' }}>약 17% 할인</Text>
+                                                        </View>
+                                                    )}
+                                                    <TouchableOpacity
+                                                        style={{
+                                                            borderColor: selectedIndex === plan.idx ? '#1A3A6B' : '#d1d1d1',
+                                                            borderWidth: selectedIndex === plan.idx ? 2 : 1,
+                                                            borderRadius: 15,
+                                                            padding: 16,
+                                                            backgroundColor: '#FFFFFF',
+                                                        }}
+                                                        onPress={() => setSelectedIndex(plan.idx)}
+                                                    >
+                                                        <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1A3A6B' }}>{plan.label}</Text>
+                                                        <Text style={{ fontSize: 14, color: '#666666', marginTop: 4 }}>{plan.desc}</Text>
+                                                    </TouchableOpacity>
+                                                </View>
                                             ))}
                                         </View>
                                     </RNAnimated.View>
@@ -263,7 +293,7 @@ export default function SubscribePage() {
                             ))}
                         </View>
                     </View>
-                    <Ionicons name="caret-down" size={16} color="#000" style={{ marginTop: 5 }} />
+                    <Ionicons name="caret-down" size={16} color="#000" style={{ marginTop: 10 }} />
                 </TouchableOpacity>
 
                 <View
