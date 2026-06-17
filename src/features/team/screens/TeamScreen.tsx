@@ -1,4 +1,5 @@
 import { getTeamInfo, getTeamLiveLocations, getTeamMembers, leaveTeam } from "@/src/api/teamApi";
+import * as Securestore from "expo-secure-store";
 import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -30,11 +31,8 @@ export default function TeamView() {
     const fetchTeamInfo = async () => {
         try {
         setIsLoading(true);
-
-        // 테스트 팀 Id
-        const teamId = 26;
-
-        /*const savedTeamId = await Securestore.getItemAsync("teamId");
+        
+        const savedTeamId = await Securestore.getItemAsync("teamId");
         const savedTeamCode = await Securestore.getItemAsync("teamCode");
         const savedTeamName = await Securestore.getItemAsync("teamName");
 
@@ -44,13 +42,14 @@ export default function TeamView() {
 
         if (!savedTeamId) {
             setTeam(null);
+            setMembers([]);
+            setLiveLocations([]);
+            setIsMemberOpen(false);
+            setIsLocationOpen(false);
             return;
         }
 
-        const data = await getTeamInfo(Number(savedTeamId));
-        */
-
-        const teamData = await getTeamInfo(teamId);
+        const teamData = await getTeamInfo(Number(savedTeamId));
         setTeam(teamData);
         } catch (error) {
             console.error("팀 정보 조회 실패:", error);
@@ -206,7 +205,7 @@ export default function TeamView() {
         {/*팀원 목록*/}
         <TouchableOpacity style={styles.menuItem} onPress={handlePressMembers}>
             <View style={styles.menuTitleRow}>
-        <       Text style={styles.menuTitle}>팀원 목록</Text>
+                <Text style={styles.menuTitle}>팀원 목록</Text>
                 <Text style={styles.menuArrow}>{isMemberOpen ? "▲" : "▼"}</Text>
             </View>
             <Text style={styles.menuDescription}>팀원들의 정보를 확인해요</Text>
