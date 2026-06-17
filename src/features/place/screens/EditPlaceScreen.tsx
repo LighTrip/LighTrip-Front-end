@@ -22,14 +22,22 @@ import { REGIONS, DISTRICT_CATEGORY_MAP } from '@/src/constant/regions'
 import { editStyles as styles } from '../components/placeStyles'
 
 // API
-import { getPresignedUrl, uploadToS3 } from '@/src/api/passport/image.api'  // 이미지 업로드
-import { createPassport, getMyPassportDistricts, textColor, changeCoverImage, CATEGORY_MAP, Visibility } from '@/src/api/passport/passport.api'  // 여권 생성
+import { getPresignedUrl, uploadToS3 } from '@/src/api/passport/image.api'
+import { createPassport, getMyPassportDistricts, textColor, changeCoverImage, CATEGORY_MAP, Visibility } from '@/src/api/passport/passport.api'
+import { getMyPremium } from '@/src/api/payment/payment.api'
 import { predictCoverTextColor } from '@/src/features/passport/cover_ai/coverColorHelper'
 
 const { width, height: screenHeight } = Dimensions.get('window')
 const CARD_WIDTH = width * 0.91
 
 const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY
+
+const hexToRgb = (hex: string): string => {
+    const r = parseInt(hex.slice(1, 3), 16)
+    const g = parseInt(hex.slice(3, 5), 16)
+    const b = parseInt(hex.slice(5, 7), 16)
+    return `${r},${g},${b}`
+}
 
 const PLACE_TYPES = ['☕ 카페', '🍽️ 식당', '🍶 술집', '🏞️ 공원', '🎬 문화', '🏋️ 운동', '🛍️ 쇼핑', '📦 기타']
 
@@ -125,12 +133,20 @@ const EditPlaceScreen = ({
     const [music, setMusic] = useState<{ title: string; artist: string; artwork: string } | null>(null)
     const [musicModalOpen, setMusicModalOpen] = useState(false)
 
+    const [isPremium, setIsPremium] = useState(false)
+    const [themeColor, setThemeColor] = useState('#F8FAFD')
+
+    const THEME_COLORS = ['#F8FAFD', '#FFF0F5', '#FFF4EE', '#FFFBEE', '#EEFFF5']
+
     useEffect(() => {
         if (aiDraft?.draft) setContent(aiDraft.draft)
         if (aiDraft?.category) {
             const matched = PLACE_TYPES.find(type => type.includes(aiDraft.category))
             if (matched) setPlaceType(matched)
         }
+        getMyPremium().then(res => {
+            if (res.data?.data?.premium) setIsPremium(true)
+        }).catch(() => {})
     }, [])
 
 
@@ -182,6 +198,7 @@ const EditPlaceScreen = ({
                 district: region !== '선택' ? region : undefined,
                 musicTitle: music?.title,
                 musicArtist: music?.artist,
+                theme: isPremium ? hexToRgb(themeColor) : undefined,
             })
 
             const resData = res.data?.data ?? res.data
@@ -205,6 +222,7 @@ const EditPlaceScreen = ({
 
             onComplete({createdPassportId})
         } catch (err: any) {
+            console.error('[등록 실패]', err?.message, err?.response?.status, JSON.stringify(err?.response?.data))
             alert('등록에 실패했어요')
         } finally {
             setIsGenerating(false)
@@ -213,10 +231,12 @@ const EditPlaceScreen = ({
 
 
     return (
-        <KeyboardAvoidingView 
+        <View style={{ flex: 1, backgroundColor: '#F8FAFD' }}>
+        <KeyboardAvoidingView
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
+            <View style={{ marginTop: 10, alignSelf: 'center' }}>
             <Shadow
                 distance={6}
                 startColor={'#00000012'}
@@ -225,6 +245,11 @@ const EditPlaceScreen = ({
             >
                 <View style={styles.logContainer}>
                     <NoiseOverlay />
+                    <View style={{
+                        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: themeColor,
+                        opacity: 0.45,
+                    }} />
 
                     <View style={styles.header}>
                         <TouchableOpacity onPress={onBack} style={styles.backButton}>
@@ -377,23 +402,44 @@ const EditPlaceScreen = ({
                     />
                     
 
-                    <View style={styles.publicRow}>
-                        <View>
-                            <Text style={styles.publicTitle}>여권 공개 여부</Text>
-                            <Text style={styles.publicSub}>{VISIBILITY_SUB[visibility]}</Text>
+                    <View style={[styles.publicRow, isPremium && { justifyContent: 'space-between', paddingHorizontal: 16 }]}>
+                        {isPremium && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, left: 10 }}>
+                                {THEME_COLORS.map((color) => (
+                                    <TouchableOpacity
+                                        key={color}
+                                        onPress={() => setThemeColor(color)}
+                                        style={{
+                                            width: 20,
+                                            height: 20,
+                                            borderRadius: 10,
+                                            backgroundColor: color,
+                                            borderWidth: themeColor === color ? 2 : 1,
+                                            borderColor: themeColor === color ? '#1A3A6B' : '#ccc',
+                                        }}
+                                    />
+                                ))}
+                            </View>
+                        )}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <View>
+                                <Text style={styles.publicTitle}>여권 공개 여부</Text>
+                                <Text style={styles.publicSub}>{VISIBILITY_SUB[visibility]}</Text>
+                            </View>
+                            <TouchableOpacity
+                                style={styles.visibilityButton}
+                                onPress={() => {
+                                    const idx = VISIBILITY_CYCLE.indexOf(visibility)
+                                    setVisibility(VISIBILITY_CYCLE[(idx + 1) % 3])
+                                }}
+                            >
+                                <Text style={styles.visibilityButtonText}>{VISIBILITY_LABEL[visibility]}</Text>
+                            </TouchableOpacity>
                         </View>
-                        <TouchableOpacity
-                            style={styles.visibilityButton}
-                            onPress={() => {
-                                const idx = VISIBILITY_CYCLE.indexOf(visibility)
-                                setVisibility(VISIBILITY_CYCLE[(idx + 1) % 3])
-                            }}
-                        >
-                            <Text style={styles.visibilityButtonText}>{VISIBILITY_LABEL[visibility]}</Text>
-                        </TouchableOpacity>
                     </View>
                 </View>
             </Shadow>
+            </View>
 
             <TouchableOpacity
                 style={styles.clickContainer}
@@ -402,6 +448,7 @@ const EditPlaceScreen = ({
                 <Text style={styles.clickText}>등록하기</Text>
             </TouchableOpacity>
         </KeyboardAvoidingView>
+        </View>
     )
 }
 

@@ -33,6 +33,7 @@ export type CreatePassportRequest = {
     musicTitle?: string
     musicArtist?: string
     teamId?: string
+    theme?: string
 }
 
 // 여권 등록

@@ -26,6 +26,8 @@ export const generateAIDraft = async (imageUrl: string, description: string) => 
         data = { message: text }
     }
 
+    console.log('[AI draft] status:', response.status, 'data:', JSON.stringify(data))
+
     if (!response.ok) {
         const error: any = new Error(`Request failed with status code ${response.status}`)
         error.response = { status: response.status, data }
