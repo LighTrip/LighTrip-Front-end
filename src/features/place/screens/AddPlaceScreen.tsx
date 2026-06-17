@@ -1,4 +1,6 @@
 import * as ImagePicker from 'expo-image-picker'
+import * as FileSystem from 'expo-file-system/legacy'
+import * as SecureStore from 'expo-secure-store'
 import * as Location from 'expo-location'
 import { useRouter } from 'expo-router'
 import React, { useEffect, useState } from 'react'
@@ -22,6 +24,8 @@ import EditPlaceScreen from './EditPlaceScreen'
 import PassportDetail from '../../passport/screens/PassportDetail'
 import { REGIONS } from '@/src/constant/regions'
 import { generateAIDraft } from '@/src/api/passport/ai.api'
+import { getPresignedUrl, uploadToS3 } from '@/src/api/passport/image.api'
+import { getMyPremium } from '@/src/api/payment/payment.api'
 
 import { addStyles as styles, editStyles } from '../components/placeStyles'
 
@@ -29,6 +33,34 @@ const { width, height: screenHeight } = Dimensions.get('window')
 export const CARD_WIDTH = width * 0.91
 
 const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY
+const AI_USAGE_KEY = 'ai_draft_usage'
+
+const getWeekKey = () => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const jan1 = new Date(year, 0, 1)
+    const week = Math.ceil(((now.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7)
+    return `${year}-W${week}`
+}
+
+const checkAiLimit = async (): Promise<boolean> => {
+    const weekKey = getWeekKey()
+    const stored = await SecureStore.getItemAsync(AI_USAGE_KEY)
+    if (!stored) return true
+    const { week, count } = JSON.parse(stored)
+    return week !== weekKey || count < 5
+}
+
+const incrementAiUsage = async () => {
+    const weekKey = getWeekKey()
+    const stored = await SecureStore.getItemAsync(AI_USAGE_KEY)
+    let count = 0
+    if (stored) {
+        const parsed = JSON.parse(stored)
+        count = parsed.week === weekKey ? parsed.count : 0
+    }
+    await SecureStore.setItemAsync(AI_USAGE_KEY, JSON.stringify({ week: weekKey, count: count + 1 }))
+}
 
 type Props = {
     onClose?: () => void
@@ -55,6 +87,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
 
     const [completedPlace, setCompletedPlace] = useState<any | null>(null)
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
+    const [isPremium, setIsPremium] = useState(false)
 
     useEffect(() => {
         if (initialLatitude && initialLongitude) {
@@ -64,15 +97,36 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
         if (initialAddress) {
             setLocationAddress(initialAddress)
         }
+        getMyPremium().then(res => {
+            if (res.data?.data?.premium) setIsPremium(true)
+        }).catch(() => {})
     }, [])
 
     const handleCreateWithAI = async () => {
         if (photos.length === 0) return alert('사진을 먼저 선택해주세요')
+        if (!isPremium) {
+            const allowed = await checkAiLimit()
+            if (!allowed) return alert('이번 주 AI 초안 생성 횟수(5회)를 모두 사용했어요.\n구독하면 무제한으로 사용할 수 있어요!')
+        }
+        const fileInfo = await FileSystem.getInfoAsync(photos[0])
+        if (!fileInfo.exists) {
+            setPhotos([])
+            return alert('사진 파일을 찾을 수 없어요. 앨범에서 다시 선택해 주세요.')
+        }
         setIsGenerating(true)
         try {
-            const data = await generateAIDraft(photos[0], description)
+            const uri = photos[0]
+            const mimeType = uri.endsWith('.webp') ? 'image/webp' : uri.endsWith('.png') ? 'image/png' : 'image/jpeg'
+            const presignedRes = await getPresignedUrl(mimeType)
+            const presignedUrl = presignedRes.data?.presignedUrl
+            const imageUrl = presignedRes.data?.imageUrl
+            if (!presignedUrl || !imageUrl) throw new Error('presignedUrl 없음')
+            await uploadToS3(presignedUrl, uri)
+            const data = await generateAIDraft(imageUrl, description)
             setAiDraft(data)
-        } catch (err) {
+            if (!isPremium) await incrementAiUsage()
+        } catch (err: any) {
+            console.error('[AI] 오류:', err?.message, err?.response?.status, JSON.stringify(err?.response?.data))
             alert('AI 초안 생성 중 오류가 발생했어요')
         } finally {
             setIsGenerating(false)
@@ -155,8 +209,14 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
             exif: true,
         })
         if (!result.canceled) {
-            const uris = result.assets.map(a => a.uri)
-            setPhotos(uris)
+            const persistentUris = await Promise.all(
+                result.assets.map(async (a, i) => {
+                    const dest = `${FileSystem.documentDirectory}photo_${Date.now()}_${i}.jpg`
+                    await FileSystem.copyAsync({ from: a.uri, to: dest })
+                    return dest
+                })
+            )
+            setPhotos(persistentUris)
             const firstAsset = result.assets[0]
             if (firstAsset.exif) await extractFromExif(firstAsset.exif)
         }
@@ -176,7 +236,9 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
         })
         if (!result.canceled) {
             const asset = result.assets[0]
-            setPhotos(prev => [...prev, asset.uri])
+            const dest = `${FileSystem.documentDirectory}photo_${Date.now()}_0.jpg`
+            await FileSystem.copyAsync({ from: asset.uri, to: dest })
+            setPhotos(prev => [...prev, dest])
             if (asset.exif) await extractFromExif(asset.exif)
         }
     }
@@ -228,6 +290,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
+            <View style={{ marginTop: 10, alignSelf: 'center' }}>
             <Shadow
                 distance={6}
                 startColor={'#00000012'}
@@ -239,7 +302,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                     <View style={[styles.photoTextbox, { flexDirection: 'row', alignItems: 'center' }]}>
                         <TouchableOpacity
                             onPress={() => onClose ? onClose() : router.back()}
-                            style={{ padding: 4, marginRight: 4 }}
+                            style={{ padding: 4, marginRight: 4, marginTop: -7 }}
                         >
                             <Ionicons name="chevron-back" size={24} color="#333" />
                         </TouchableOpacity>
@@ -247,7 +310,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                     </View>
 
                     {photos.length > 1 ? (
-                        <View style={[styles.albumButton, { width: CARD_WIDTH * 0.91, height: screenHeight * 0.37 }]}>
+                        <View style={[styles.albumButton, { width: CARD_WIDTH * 0.91, height: screenHeight * 0.42 }]}>
                             <ScrollView
                                 horizontal
                                 style={{ flex: 1 }}
@@ -289,7 +352,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                         </View>
                     ) : photos.length === 1 ? (
                         <TouchableOpacity
-                            style={[styles.albumButton, { width: CARD_WIDTH * 0.91, height: screenHeight * 0.37 }]}
+                            style={[styles.albumButton, { width: CARD_WIDTH * 0.91, height: screenHeight * 0.42 }]}
                             onPress={openAlbum}
                         >
                             <Image
@@ -300,7 +363,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                         </TouchableOpacity>
                     ) : (
                         <TouchableOpacity
-                            style={[styles.albumButtonEmpty, { width: CARD_WIDTH * 0.91, height: screenHeight * 0.37 }]}
+                            style={[styles.albumButtonEmpty, { width: CARD_WIDTH * 0.91, height: screenHeight * 0.42 }]}
                             onPress={openAlbum}
                         >
                             <Text style={{ color: '#aaa' }}>앨범에서 선택하기</Text>
@@ -315,6 +378,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                     </TouchableOpacity>
                 </View>
             </Shadow>
+            </View>
 
             <Shadow
                 distance={6}
@@ -327,7 +391,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                     <View style={styles.infoTextbox}>
                         <Text style={styles.infotitleText}>어떤 곳인지 간단히 설명해 주세요.</Text>
                     </View>
-                    <View style={[styles.infoTypeBox, { width: CARD_WIDTH * 0.91, height: screenHeight * 0.095 }]}>
+                    <View style={[styles.infoTypeBox, { width: CARD_WIDTH * 0.91, height: screenHeight * 0.12 }]}>
                         <TextInput
                             style={styles.infoTypeText}
                             placeholder="카페에 가서 커피를 마셨다!"

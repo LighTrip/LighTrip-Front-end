@@ -1,5 +1,6 @@
 import axiosInstance from '@/src/api/axiosInstance'
 import { API_ENDPOINTS } from '@/src/api/config'
+import * as FileSystem from 'expo-file-system/legacy'
 
 // 이미지 presigned URL 발급
 export const getPresignedUrl = (contentType: string) =>
@@ -9,22 +10,20 @@ export const getPresignedUrl = (contentType: string) =>
     })
 
 
-// S3 업로드
-// Android에서 content:// URI를 fetch body로 직접 쓰면 "Network request failed"가 남.
-// XMLHttpRequest는 React Native 레이어에서 content:// URI를 올바르게 처리함.
-export const uploadToS3 = (presignedUrl: string, imageUri: string): Promise<void> =>
-    new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
-        xhr.open('PUT', presignedUrl)
-        xhr.setRequestHeader('Content-Type', 'image/jpeg')
-        xhr.onload = () => {
-            console.log('S3 응답 status:', xhr.status)
-            if (xhr.status >= 200 && xhr.status < 300) {
-                resolve()
-            } else {
-                reject(new Error(`S3 upload failed: ${xhr.status}`))
-            }
-        }
-        xhr.onerror = () => reject(new Error('S3 XHR network error'))
-        xhr.send({ uri: imageUri, type: 'image/jpeg', name: 'upload.jpg' } as any)
+const getMimeType = (uri: string): string => {
+    if (uri.endsWith('.webp')) return 'image/webp'
+    if (uri.endsWith('.png')) return 'image/png'
+    return 'image/jpeg'
+}
+
+// S3 업로드 — FileSystem.uploadAsync가 네이티브 레이어에서 파일을 읽어 PUT으로 전송 (iOS/Android 모두 동작)
+export const uploadToS3 = async (presignedUrl: string, imageUri: string): Promise<void> => {
+    const mimeType = getMimeType(imageUri)
+    const result = await FileSystem.uploadAsync(presignedUrl, imageUri, {
+        httpMethod: 'PUT',
+        headers: { 'Content-Type': mimeType },
     })
+    if (result.status < 200 || result.status >= 300) {
+        throw new Error(`S3 upload failed: ${result.status}`)
+    }
+}

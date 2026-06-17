@@ -1,4 +1,6 @@
-import { StyleSheet, StatusBar, Platform } from "react-native"
+import { StyleSheet, StatusBar, Platform, Dimensions } from "react-native"
+
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window')
 
 const sharedContainer = {
     flex: 1,
@@ -27,13 +29,13 @@ export const editStyles = StyleSheet.create({
 
     logContainer: {
         position: 'relative',
-        height: 645,
+        height: screenHeight - 200,
         borderRadius: 16,
         backgroundColor: '#F8FAFD',
         justifyContent: 'flex-start',
         alignItems: 'center',
         overflow: 'hidden',
-        marginBottom: 15,
+        marginBottom: 10,
     },
 
     header: {
@@ -42,7 +44,7 @@ export const editStyles = StyleSheet.create({
         justifyContent: 'space-between',
         width: '100%',
         paddingHorizontal: 16,
-        marginTop: 15,
+        paddingVertical: 8,
     },
 
     backButton: {
@@ -59,8 +61,8 @@ export const editStyles = StyleSheet.create({
 
     photoBox: {
         position: 'relative',
-        width: 325,
-        height: 170,
+        width: screenWidth * 0.83,
+        height: screenHeight * 0.23,
         borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
@@ -225,7 +227,7 @@ export const editStyles = StyleSheet.create({
         paddingRight: 20, 
         marginBottom: 10,
         gap: 12,
-        bottom: 7,
+        bottom: 5,
     },
 
     albumArt: {
@@ -322,7 +324,7 @@ export const editStyles = StyleSheet.create({
         width: '100%',
         paddingVertical: 12,
         gap: 12,
-        marginRight: 15,
+        marginRight: 10,
     },
 
     publicTitle: {
@@ -360,7 +362,7 @@ export const addStyles = StyleSheet.create({
     container: sharedContainer,
 
     photoContainer: {
-        height: 450,
+        height: screenHeight * 0.53,
         borderRadius: 16,
         backgroundColor: '#F8FAFD',
         justifyContent: 'center',
@@ -378,21 +380,21 @@ export const addStyles = StyleSheet.create({
     photoText: {
         fontSize: 18,
         fontWeight: 'bold',
-        marginTop: 5,
-        marginLeft: 5,
+        marginTop: -10,
+        marginLeft: 30,
     },
 
     albumButton: {
-        width: 320,
-        height: 315,
+        width: screenWidth * 0.82,
+        height: screenHeight * 0.37,
         borderRadius: 16,
         marginBottom: 15,
         overflow: 'hidden',
     },
 
     albumButtonEmpty: {
-        width: 320,
-        height: 315,
+        width: screenWidth * 0.82,
+        height: screenHeight * 0.37,
         borderRadius: 16,
         backgroundColor: '#FFFFFF',
         marginBottom: 15,
@@ -411,8 +413,8 @@ export const addStyles = StyleSheet.create({
     },
 
     photoScrollItem: {
-        width: 320,
-        height: 315,
+        width: screenWidth * 0.82,
+        height: screenHeight * 0.37,
         borderRadius: 16,
     },
 
@@ -428,7 +430,7 @@ export const addStyles = StyleSheet.create({
     },
 
     cameraButton: {
-        width: 240,
+        width: screenWidth * 0.62,
         height: 40,
         justifyContent: 'center',
         alignItems: 'center',
@@ -437,7 +439,7 @@ export const addStyles = StyleSheet.create({
     },
 
     infoContainer: {
-        height: 170,
+        height: screenHeight * 0.2,
         borderRadius: 16,
         backgroundColor: '#F8FAFD',
         justifyContent: 'center',
@@ -459,8 +461,8 @@ export const addStyles = StyleSheet.create({
     },
 
     infoTypeBox: {
-        width: 320,
-        height: 80,
+        width: screenWidth * 0.82,
+        height: screenHeight * 0.095,
         borderRadius: 16,
         backgroundColor: '#FFFFFF',
         justifyContent: 'center',
@@ -474,7 +476,7 @@ export const addStyles = StyleSheet.create({
         fontSize: 14,
         color: '#A0A0A0',
         paddingHorizontal: 10,
-        paddingTop: Platform.OS === 'ios' ? 5 : 0,
+        paddingTop: Platform.OS === 'ios' ? 5 : 10,
         lineHeight: 17,
     },
 

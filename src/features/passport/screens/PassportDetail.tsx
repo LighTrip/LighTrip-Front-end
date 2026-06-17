@@ -38,6 +38,7 @@ import {
 } from '@/src/api/passport/passport.api'
 import { DISTRICT_CATEGORY_MAP } from '@/src/constant/regions'
 import { predictCoverTextColor } from '../cover_ai/coverColorHelper'
+import { getMyPremium } from '@/src/api/payment/payment.api'
 
 type Props = {
     item: any
@@ -92,6 +93,20 @@ const VISIBILITY_LABEL: Record<Visibility, string> = {
 
 const { width, height: screenHeight } = Dimensions.get('window')
 
+const THEME_COLORS = ['#F8FAFD', '#FFF0F5', '#FFF4EE', '#FFFBEE', '#EEFFF5']
+
+const hexToRgb = (hex: string): string => {
+    const r = parseInt(hex.slice(1, 3), 16)
+    const g = parseInt(hex.slice(3, 5), 16)
+    const b = parseInt(hex.slice(5, 7), 16)
+    return `${r},${g},${b}`
+}
+
+const rgbToHex = (rgb: string): string => {
+    const [r, g, b] = rgb.split(',').map(Number)
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`.toUpperCase()
+}
+
 type MusicDisplayItem = { title: string; artist: string; artwork: string } | null
 
 const MusicBox = ({ music, onPress, styles }: { music: MusicDisplayItem; onPress?: () => void; styles: any }) => {
@@ -140,6 +155,10 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
     const [editAddress, setEditAddress] = useState(item.address ?? '')
     const [editLat, setEditLat] = useState<number>(item.latitude ?? 0)
     const [editLng, setEditLng] = useState<number>(item.longitude ?? 0)
+    const [isPremium, setIsPremium] = useState(false)
+    const [themeColor, setThemeColor] = useState(
+        item.theme ? rgbToHex(item.theme) : '#F8FAFD'
+    )
 
     const districtCount = (item as any)._districtPassportCount ?? districts?.find(d => d.displayName === editDistrict)?.passportCount ?? 0
 
@@ -160,6 +179,12 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                 .catch(() => {})
         }
     }, [item.musicTitle, item.musicArtist])
+
+    useEffect(() => {
+        getMyPremium().then(res => {
+            if (res.data?.data?.premium) setIsPremium(true)
+        }).catch(() => {})
+    }, [])
 
     const handleDelete = async () => {
         Alert.alert(
@@ -218,6 +243,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                 address: editAddress,
                 latitude: editLat,
                 longitude: editLng,
+                theme: isPremium ? hexToRgb(themeColor) : undefined,
             }
 
             if (isNewDistrict) {
@@ -292,6 +318,14 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                 <View style={{ borderRadius: 16, overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
                     <NoiseOverlay />
                 </View>
+                {themeColor !== '#F8FAFD' && (
+                    <View style={{
+                        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: themeColor,
+                        opacity: 0.45,
+                        borderRadius: 16,
+                    }} />
+                )}
 
                 {/* 윗부분 */}
                 <View style={styles.topHalf}>
@@ -433,6 +467,25 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                             onChange={(newDate) => setEditDate(newDate)}
                             onClose={() => setShowDatePicker(false)}
                         />
+
+                        {isEditing && isPremium && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, top: 15, right: -105 }}>
+                                {THEME_COLORS.map((color) => (
+                                    <TouchableOpacity
+                                        key={color}
+                                        onPress={() => setThemeColor(color)}
+                                        style={{
+                                            width: 20,
+                                            height: 20,
+                                            borderRadius: 10,
+                                            backgroundColor: color,
+                                            borderWidth: themeColor === color ? 2 : 1,
+                                            borderColor: themeColor === color ? '#1A3A6B' : '#ccc',
+                                        }}
+                                    />
+                                ))}
+                            </View>
+                        )}
                     </View>
                 </View>
 
@@ -717,7 +770,7 @@ const styles = StyleSheet.create({
 
     stampImage: {
         position: 'absolute',
-        top: 20,
+        top: 10,
         right: 0,
         width: 180,
         height: 180,
