@@ -44,11 +44,7 @@
       [
         "@mj-studio/react-native-naver-map",
         {
-          "client_id": "js0oliz8v9",
-          "android": {
-            "ACCESS_FINE_LOCATION": true,
-            "ACCESS_COARSE_LOCATION": true
-          }
+          "client_id": "js0oliz8v9"
         }
       ],
       [
@@ -58,7 +54,7 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "./plugin/withNaverMapMaven"
+      "./plugins/withNaverMapsRepository.js"
     ],
     "experiments": {
       "typedRoutes": true
