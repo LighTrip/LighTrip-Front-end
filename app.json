@@ -39,8 +39,7 @@
       [
         "@mj-studio/react-native-naver-map",
         {
-          "android": { "CLIENT_ID": "js0oliz8v9" },
-          "ios": { "CLIENT_ID": "js0oliz8v9" }
+          "client_id": "js0oliz8v9"
         }
       ],
       [
@@ -49,7 +48,8 @@
           "cameraPermission": "사진 촬영을 위해 카메라 접근이 필요해요."
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "./plugins/withNaverMapsRepository.js"
     ],
     "experiments": {
       "typedRoutes": true
