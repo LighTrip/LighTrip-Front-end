@@ -23,6 +23,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const NAVY = "#0F2744";
+const GREEN = "#34D399";
+const GREEN_DARK = "#065F46";
+const GREEN_MID = "#059669";
 const TAB_BAR_HEIGHT = 70;
 const NCP_CLIENT_ID = process.env.EXPO_PUBLIC_NCP_CLIENT_ID ?? "";
 const NCP_CLIENT_SECRET = process.env.EXPO_PUBLIC_NCP_CLIENT_SECRET ?? "";
@@ -57,7 +60,7 @@ interface FrontCluster {
   id: string;
   centerLat: number;
   centerLng: number;
-  items: LightItem[]; // 단일 마커들만
+  items: LightItem[];
 }
 
 // ─── 상수 ────────────────────────────────────────────────────────────────
@@ -72,8 +75,6 @@ const INITIAL_BBOX: BBox = {
 // ─── 유틸 함수 ────────────────────────────────────────────────────────────
 
 function cameraToBBox(event: any): BBox | null {
-  // onCameraChanged 이벤트의 region은 남서쪽(SW) 좌표 + 위경도 delta 형태로 내려온다.
-  // (contentBounds.northEast/southWest 같은 필드는 존재하지 않음 — 항상 미존재 → fallback)
   const region = event?.region;
   if (
     region &&
@@ -101,21 +102,14 @@ function cameraToBBox(event: any): BBox | null {
   };
 }
 
-/**
- * 현재 화면 BBox 크기 기반으로 클러스터 반경 계산
- * BBox 대각선의 8% → 줌아웃할수록 넓게 묶고 확대하면 잘게 분리
- */
 function clusterRadiusFromBBox(bbox: BBox | null): number {
   if (!bbox) return 0.01;
   const latSpan = bbox.maxLat - bbox.minLat;
   const lngSpan = bbox.maxLng - bbox.minLng;
   const diagonal = Math.sqrt(latSpan * latSpan + lngSpan * lngSpan);
-  // 하한을 거의 0으로 둬서 최대 줌에서는 실거리가 있는 항목들은 모두 낱개로 분리되게 한다.
-  // (동일 좌표에 가까운 중복 항목만 묶이도록 아주 작은 값만 유지)
   return Math.max(0.000003, diagonal * 0.08);
 }
 
-/** 단일 마커들을 그리디 거리 기반으로 프론트 클러스터링 */
 function clusterSingleMarkers(
   items: LightItem[],
   bbox: BBox | null,
@@ -205,17 +199,17 @@ async function naverReverseGeocode(
 function ExplorationLegend() {
   return (
     <View style={styles.legendCard}>
-      <Text style={styles.legendTitle}>탐험 진행도</Text>
+      <Text style={styles.legendTitle}>여행 진행도</Text>
       <View style={styles.legendRow}>
-        <View style={[styles.legendDot, { backgroundColor: "#CBD5E1" }]} />
+        <View style={[styles.legendDot, { backgroundColor: "#D1FAE5" }]} />
         <Text style={styles.legendLabel}>미탐험 구역</Text>
       </View>
       <View style={styles.legendRow}>
-        <View style={[styles.legendDot, { backgroundColor: "#818CF8" }]} />
+        <View style={[styles.legendDot, { backgroundColor: GREEN }]} />
         <Text style={styles.legendLabel}>발견된 가게</Text>
       </View>
       <View style={styles.legendRow}>
-        <View style={[styles.legendDot, { backgroundColor: "#1E3A5F" }]} />
+        <View style={[styles.legendDot, { backgroundColor: GREEN_DARK }]} />
         <Text style={styles.legendLabel}>탐험 완료</Text>
       </View>
     </View>
@@ -236,7 +230,9 @@ function PassportMarker({ spaceName }: { spaceName: string }) {
   return (
     <View style={styles.passportMarkerWrapper}>
       <View style={styles.passportMarkerBubble}>
-        <Text style={styles.passportMarkerEmoji}>🛂</Text>
+        <View style={styles.passportMarkerIconCircle}>
+          <Text style={styles.passportMarkerEmoji}>🛂</Text>
+        </View>
         <Text style={styles.passportMarkerLabel} numberOfLines={1}>
           {spaceName}
         </Text>
@@ -337,10 +333,8 @@ function ClusterBottomSheet({
           },
         ]}
       >
-        {/* 핸들 */}
         <View style={styles.sheetHandle} />
 
-        {/* 헤더 */}
         <View style={styles.sheetHeader}>
           <Text style={styles.sheetTitle}>
             이 근처 장소 {cluster.items.length}곳
@@ -350,7 +344,6 @@ function ClusterBottomSheet({
           </TouchableOpacity>
         </View>
 
-        {/* 목록 */}
         <ScrollView
           style={styles.sheetScroll}
           contentContainerStyle={styles.sheetScrollContent}
@@ -409,7 +402,7 @@ function PassportPreviewCard({
 
       {loading && (
         <View style={styles.previewCenter}>
-          <ActivityIndicator color={NAVY} />
+          <ActivityIndicator color={GREEN_MID} />
           <Text style={styles.previewLoadingText}>불러오는 중...</Text>
         </View>
       )}
@@ -551,18 +544,13 @@ export default function MapScreen() {
   );
   const [addressLoading, setAddressLoading] = useState(false);
 
-  // 프론트 클러스터 바텀시트
   const [activeCluster, setActiveCluster] = useState<FrontCluster | null>(null);
 
   const mapRef = useRef<any>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const baseBottom = TAB_BAR_HEIGHT + safeBottom + 12;
 
-  // ── 프론트 클러스터 계산 ───────────────────────────────────────────────
-
   const frontClusters = clusterSingleMarkers(lights, currentBBox);
-
-  // ── 불빛 fetch ────────────────────────────────────────────────────────
 
   const loadLights = useCallback(async (bbox: BBox) => {
     try {
@@ -605,8 +593,6 @@ export default function MapScreen() {
     [pickingLocation, loadLights],
   );
 
-  // ── 마커 탭 ───────────────────────────────────────────────────────────
-
   const handleSinglePinTap = async (item: LightItem) => {
     setPreviewVisible(true);
     setPreviewData(null);
@@ -644,7 +630,6 @@ export default function MapScreen() {
 
   const handleFrontClusterTap = (cluster: FrontCluster) => {
     if (cluster.items.length === 1) {
-      // 단일이면 바로 프리뷰
       handleSinglePinTap(cluster.items[0]);
     } else {
       setActiveCluster(cluster);
@@ -670,8 +655,6 @@ export default function MapScreen() {
       setDetailLoading(false);
     }
   };
-
-  // ── 위치 선택 핸들러 ──────────────────────────────────────────────────
 
   const handleRegisterPress = () => {
     setShowRegisterBtn(false);
@@ -721,20 +704,17 @@ export default function MapScreen() {
     });
   };
 
-  // ── 렌더 ─────────────────────────────────────────────────────────────
-
   return (
     <View style={styles.container}>
       <NaverMapView
         ref={mapRef}
         style={styles.map}
         camera={{ latitude: 37.5665, longitude: 126.978, zoom: 12 }}
-        isNightModeEnabled={true} // 야간 모드 on
-        lightness={-0.2} // 약간 더 어둡게 (-1~1)
+        isNightModeEnabled={true}
+        lightness={-0.2}
         isShowZoomControls={!pickingLocation}
         onCameraChanged={handleCameraChanged}
       >
-        {/* 유저 위치 */}
         {userLocation && (
           <NaverMapMarkerOverlay
             latitude={userLocation.latitude}
@@ -747,7 +727,6 @@ export default function MapScreen() {
           </NaverMapMarkerOverlay>
         )}
 
-        {/* 서버 클러스터 마커 */}
         {lights
           .filter((it) => it.isCluster)
           .map((item, idx) => (
@@ -764,10 +743,8 @@ export default function MapScreen() {
             </NaverMapMarkerOverlay>
           ))}
 
-        {/* 프론트 클러스터 마커 */}
         {frontClusters.map((cluster) =>
           cluster.items.length === 1 ? (
-            // 단일 → 기존 PassportMarker
             <NaverMapMarkerOverlay
               key={cluster.id}
               latitude={cluster.centerLat}
@@ -780,7 +757,6 @@ export default function MapScreen() {
               <PassportMarker spaceName={cluster.items[0].spaceName} />
             </NaverMapMarkerOverlay>
           ) : (
-            // 복수 → 숫자 핀
             <NaverMapMarkerOverlay
               key={cluster.id}
               latitude={cluster.centerLat}
@@ -796,10 +772,8 @@ export default function MapScreen() {
         )}
       </NaverMapView>
 
-      {/* 위치 선택 핀 */}
       {pickingLocation && <CenterPin />}
 
-      {/* 범례 */}
       {!pickingLocation && (
         <View
           style={[styles.legendWrapper, { bottom: baseBottom + 64 }]}
@@ -809,7 +783,6 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* 하단 바 (일반) */}
       {!pickingLocation && (
         <View style={[styles.bottomBar, { bottom: baseBottom }]}>
           <TouchableOpacity
@@ -833,7 +806,6 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* 위치 선택 모드 하단 바 */}
       {pickingLocation && !showLocationConfirm && (
         <>
           <View style={styles.pickingGuideWrapper}>
@@ -858,7 +830,7 @@ export default function MapScreen() {
               disabled={addressLoading}
             >
               {addressLoading ? (
-                <ActivityIndicator color={NAVY} />
+                <ActivityIndicator color={GREEN_MID} />
               ) : (
                 <Text style={styles.registerButtonText}>이 위치로 고정</Text>
               )}
@@ -867,7 +839,6 @@ export default function MapScreen() {
         </>
       )}
 
-      {/* 위치 확인 카드 */}
       {pickingLocation && showLocationConfirm && pickedLocation && (
         <View style={[styles.discoveryWrapper, { bottom: baseBottom + 60 }]}>
           <LocationConfirmCard
@@ -880,7 +851,6 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* 여권 프리뷰 카드 */}
       {previewVisible && !pickingLocation && (
         <View style={[styles.discoveryWrapper, { bottom: baseBottom + 60 }]}>
           <PassportPreviewCard
@@ -896,14 +866,12 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* 상세 로딩 오버레이 */}
       {detailLoading && (
         <View style={styles.detailLoadingOverlay}>
-          <ActivityIndicator size="large" color={NAVY} />
+          <ActivityIndicator size="large" color={GREEN_MID} />
         </View>
       )}
 
-      {/* 여권 상세 */}
       {detailItem && (
         <View style={StyleSheet.absoluteFill}>
           <PassportDetail
@@ -917,7 +885,6 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* 장소 등록 */}
       {showAddPlace && (
         <View style={StyleSheet.absoluteFill}>
           <AddPlaceScreen
@@ -935,7 +902,6 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* 프론트 클러스터 바텀시트 */}
       <ClusterBottomSheet
         cluster={activeCluster}
         onClose={() => setActiveCluster(null)}
@@ -962,68 +928,80 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "rgba(66, 133, 244, 0.25)",
+    backgroundColor: "rgba(52, 211, 153, 0.25)",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: "rgba(66, 133, 244, 0.4)",
+    borderColor: "rgba(52, 211, 153, 0.5)",
   },
   userLocationInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: "#4285F4",
+    backgroundColor: GREEN,
     borderWidth: 2,
     borderColor: "white",
-    shadowColor: "#4285F4",
-    shadowOpacity: 0.5,
+    shadowColor: GREEN,
+    shadowOpacity: 0.6,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 0 },
     elevation: 4,
   },
 
-  // 여권 마커
+  // 여권 마커 — 아이콘 분리 버블
   passportMarkerWrapper: { alignItems: "center" },
   passportMarkerBubble: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: NAVY,
-    borderRadius: 20,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    gap: 4,
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 5,
-    maxWidth: 125,
+    backgroundColor: GREEN_DARK,
+    borderRadius: 22,
+    paddingVertical: 4,
+    paddingRight: 12,
+    paddingLeft: 4,
+    gap: 6,
+    shadowColor: GREEN_DARK,
+    shadowOpacity: 0.45,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 6,
+    maxWidth: 150,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.18)",
   },
-  passportMarkerEmoji: { fontSize: 13 },
+  passportMarkerIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: GREEN,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  passportMarkerEmoji: { fontSize: 14 },
   passportMarkerLabel: {
     color: "white",
     fontSize: 11,
     fontWeight: "700",
     flexShrink: 1,
+    letterSpacing: 0.2,
   },
   passportMarkerTail: {
     width: 0,
     height: 0,
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
-    borderTopWidth: 8,
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderTopWidth: 7,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
-    borderTopColor: NAVY,
+    borderTopColor: GREEN_DARK,
   },
 
-  // 서버 클러스터
+  // 서버 클러스터 — 초록 계열
   clusterWrapper: { alignItems: "center" },
   clusterBubble: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#6366F1",
+    backgroundColor: GREEN_MID,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
@@ -1043,16 +1021,16 @@ const styles = StyleSheet.create({
     borderTopWidth: 7,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
-    borderTopColor: "#6366F1",
+    borderTopColor: GREEN_MID,
   },
 
-  // 프론트 클러스터
+  // 프론트 클러스터 — 초록 계열
   frontClusterWrapper: { alignItems: "center" },
   frontClusterOuter: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "rgba(15, 39, 68, 0.12)",
+    backgroundColor: "rgba(52, 211, 153, 0.18)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1060,7 +1038,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: NAVY,
+    backgroundColor: GREEN_MID,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
@@ -1080,7 +1058,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 7,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
-    borderTopColor: NAVY,
+    borderTopColor: GREEN_MID,
   },
 
   // 프리뷰 카드
@@ -1109,7 +1087,7 @@ const styles = StyleSheet.create({
   previewImagePlaceholder: {
     width: "100%",
     height: 120,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "#F0FDF4",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1131,7 +1109,7 @@ const styles = StyleSheet.create({
   previewRowText: { fontSize: 13, color: "#475569", flexShrink: 1 },
   previewDetailBtn: {
     marginTop: 12,
-    backgroundColor: NAVY,
+    backgroundColor: GREEN_MID,
     paddingVertical: 13,
     borderRadius: 12,
     alignItems: "center",
@@ -1167,7 +1145,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   pickingGuideCard: {
-    backgroundColor: "rgba(15, 39, 68, 0.85)",
+    backgroundColor: "rgba(6, 95, 70, 0.88)",
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 20,
@@ -1310,7 +1288,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#CBD5E1",
+    backgroundColor: "#BBF7D0",
     alignSelf: "center",
     marginTop: 12,
     marginBottom: 4,
@@ -1322,7 +1300,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: "#F0FDF4",
   },
   sheetTitle: { fontSize: 16, fontWeight: "700", color: "#1E293B" },
   sheetCloseText: { fontSize: 16, color: "#94A3B8", padding: 4 },
@@ -1341,7 +1319,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: `rgba(15,39,68,0.08)`,
+    backgroundColor: "rgba(52, 211, 153, 0.12)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1349,5 +1327,5 @@ const styles = StyleSheet.create({
   sheetItemBody: { flex: 1 },
   sheetItemName: { fontSize: 14, fontWeight: "700", color: "#1E293B" },
   sheetItemSub: { fontSize: 12, color: "#94A3B8", marginTop: 2 },
-  sheetItemChevron: { fontSize: 20, color: "#CBD5E1", fontWeight: "300" },
+  sheetItemChevron: { fontSize: 20, color: "#BBF7D0", fontWeight: "300" },
 });
