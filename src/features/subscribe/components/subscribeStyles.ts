@@ -13,7 +13,7 @@ export const subscribeStyles = StyleSheet.create({
     topBox: {
         backgroundColor: "#1A3A6B",
         width: "100%",
-        height: 220,
+        height: "28%",
         borderBottomLeftRadius: 30,
         borderBottomRightRadius: 30,
         marginTop: -60,
@@ -21,13 +21,14 @@ export const subscribeStyles = StyleSheet.create({
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.5,
         shadowRadius: 7,
+        elevation: 5,
     },
 
     topLine: {
         flexDirection: "row",
         width: '80%',
         height: 30,
-        top: 84,
+        top: 68,
         left: 40,
         alignItems: "center",
         justifyContent: "center",
@@ -50,7 +51,7 @@ export const subscribeStyles = StyleSheet.create({
     dotLine: {
         flexDirection: 'row',
         width: '100%',
-        top: 105,
+        top: 90,
         gap: 4,
         justifyContent: 'center',
         alignItems: 'center',
@@ -65,7 +66,7 @@ export const subscribeStyles = StyleSheet.create({
 
     classLine: {
         position: 'absolute',
-        top: 177,
+        top: 170,
         flexDirection: 'row',
         width: '100%',
         alignItems: 'center',
@@ -100,13 +101,13 @@ export const subscribeStyles = StyleSheet.create({
         color: "#FFFFFF",
         fontSize: 22,
         fontWeight: "bold",
-        top: 70,
+        top: 50,
         left: 38,
     },
 
     closeButton: {
         position: 'absolute',
-        top: 71,
+        top: 55,
         left: 10,
         zIndex: 10,
     },
@@ -133,6 +134,7 @@ export const subscribeStyles = StyleSheet.create({
 
     textContentBottom: {
         marginTop: 10,
+        marginBottom: 10,
         fontSize: 18,
         fontWeight: 'bold',
         color: '#000000',
@@ -162,7 +164,7 @@ export const subscribeStyles = StyleSheet.create({
         position: 'absolute',
         height: '50%',
         width: '100%',
-        top: 10,
+        top: 5,
         left: 0,
         gap: 10,
         borderRadius: 15,
@@ -288,7 +290,7 @@ export const subscribeStyles = StyleSheet.create({
     subscribeBox: {
         width: '90%',
         height: 600,
-        top: 10,
+        top: 20,
         backgroundColor: '#FFFFFF',
         justifyContent: 'center',
         borderRadius: 15,
@@ -296,6 +298,7 @@ export const subscribeStyles = StyleSheet.create({
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.5,
         shadowRadius: 2,
+        elevation: 5,
     },
 
     notch: {
@@ -315,15 +318,16 @@ export const subscribeStyles = StyleSheet.create({
     },
 
     subscribeSummary: { 
-        fontSize: 15, 
+        fontSize: 18, 
         fontWeight: 'bold', 
         color: '#1A3A6B',
-        marginBottom: 15,
+        marginTop: 20,
+        marginBottom: 20,
     },
 
     subscribeBanner: { 
         flexDirection: 'row', 
-        gap: 10, 
+        gap: 15, 
         flexWrap: 'wrap', 
         justifyContent: 'center',
     },
@@ -349,7 +353,7 @@ export const subscribeStyles = StyleSheet.create({
         width: '90%',
         height: 40,
         gap: 4,
-        marginTop: 30,
+        marginTop: 40,
     },
 
     scrollTopText: {
@@ -361,7 +365,7 @@ export const subscribeStyles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         width: '90%',
-        marginTop: 15,
+        marginTop: 20,
     },
 
     endText: {
@@ -376,18 +380,61 @@ export const subscribeStyles = StyleSheet.create({
     },
 
     payButton: {
-        marginTop: 30,
+        marginTop: 50,
         width: '90%',
         height: 50,
         backgroundColor: '#1A3A6B',
         borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
+        bottom: 10,
     },
     
     payButtonText: {
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+
+    ticketBody: {
+        position: 'absolute',
+        top: 38,
+        left: 40,
+        right: 96,
+        bottom: 8,
+        justifyContent: 'center',
+    },
+
+    ticketInfoCols: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 20,
+    },
+
+    ticketInfoItem: {
+        alignItems: 'flex-start',
+    },
+
+    ticketInfoLabel: {
+        fontSize: 9,
+        color: '#999999',
+        letterSpacing: 0.5,
+        marginBottom: 3,
+        marginLeft: 5,
+        fontFamily: 'Freesentation-400',
+    },
+
+    ticketInfoValue: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#000000',
+        fontFamily: 'Freesentation-700',
+        marginLeft: 5,
+    },
+
+    ticketInfoDivider: {
+        width: 1,
+        height: "120%",
+        backgroundColor: '#E0E0E0',
     },
 })
