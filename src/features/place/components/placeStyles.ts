@@ -45,6 +45,7 @@ export const editStyles = StyleSheet.create({
         width: '100%',
         paddingHorizontal: 16,
         paddingVertical: 8,
+        top: 5,
     },
 
     backButton: {

@@ -52,13 +52,13 @@ export const passportStyles = StyleSheet.create({
     },
     
     listCard: {
-        flexDirection: 'row',
+        flexDirection: 'column',
         width: LIST_CARD_WIDTH,
         backgroundColor: '#FFFFFF',
-        alignContent: 'center',
         borderRadius: 18,
         marginTop: 8,
         marginBottom: 10,
+        overflow: 'hidden',
         shadowColor: '#4C4C4C',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.16,

@@ -32,7 +32,7 @@ export type CreatePassportRequest = {
     spaceName?: string
     musicTitle?: string
     musicArtist?: string
-    teamId?: string
+    teamId?: number
     theme?: string
 }
 
@@ -102,7 +102,7 @@ export type MyPassport = {
 }
 
 // 내 여권 목록 조회
-export const getMyPassports = (params?: { category?: string; districtCategory?: string; cursor?: number; size?: number }) =>
+export const getMyPassports = (params?: { category?: string; districtCategory?: string; cursor?: number; size?: number; teamId?: string }) =>
     axiosInstance.get(API_ENDPOINTS.PASSPORT.GET_MY_LIST, { params })
 
 // 여권 상세 조회
@@ -110,16 +110,16 @@ export const getPassportDetail = (passportId: number) =>
     axiosInstance.get(API_ENDPOINTS.PASSPORT.GET_DETAIL(passportId))
 
 // 여권 통계 조회
-export const getMyPassportStats = () =>
-    axiosInstance.get(API_ENDPOINTS.PASSPORT.GET_MY_STATS)
+export const getMyPassportStats = (teamId?: string) =>
+    axiosInstance.get(API_ENDPOINTS.PASSPORT.GET_MY_STATS, { params: teamId ? { teamId } : undefined })
 
 // 여권 지역 목록 조회 (커버)
-export const getMyPassportDistricts = () =>
-    axiosInstance.get(API_ENDPOINTS.PASSPORT.GET_MY_DISTRICTS)
+export const getMyPassportDistricts = (teamId?: string) =>
+    axiosInstance.get(API_ENDPOINTS.PASSPORT.GET_MY_DISTRICTS, { params: teamId ? { teamId } : undefined })
 
 // 여권 지역별 상세 조회
-export const getDistrictsPassports = (districtCategory: string) =>
-    axiosInstance.get(API_ENDPOINTS.PASSPORT.GET_DISTRICT_PASSPORTS(districtCategory))
+export const getDistrictsPassports = (districtCategory: string, teamId?: string) =>
+    axiosInstance.get(API_ENDPOINTS.PASSPORT.GET_DISTRICT_PASSPORTS(districtCategory), { params: teamId ? { teamId } : undefined })
 
 // 여권 공개 범위 수정
 export const changePassportVisibility = (passportId: number, visibility: Visibility) =>

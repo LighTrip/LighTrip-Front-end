@@ -709,9 +709,9 @@ export default function MapScreen() {
       <NaverMapView
         ref={mapRef}
         style={styles.map}
-        camera={{ latitude: 37.5665, longitude: 126.978, zoom: 12 }}
-        isNightModeEnabled={true}
-        lightness={-0.2}
+        initialCamera={{ latitude: 37.5665, longitude: 126.978, zoom: 12 }}
+        isNightModeEnabled={false}
+        lightness={0}
         isShowZoomControls={!pickingLocation}
         onCameraChanged={handleCameraChanged}
       >

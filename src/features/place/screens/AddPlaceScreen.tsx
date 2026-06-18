@@ -154,12 +154,21 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
 
     const extractFromExif = async (exif: any) => {
         try {
+            console.log('[EXIF] raw keys:', Object.keys(exif ?? {}))
+
             if (exif?.DateTimeOriginal) {
                 const raw = exif.DateTimeOriginal as string
                 const [datePart, timePart] = raw.split(' ')
                 const [year, month, day] = datePart.split(':')
                 const parsed = new Date(`${year}-${month}-${day}T${timePart}`)
-                if (!isNaN(parsed.getTime())) setVisitDate(parsed)
+                if (!isNaN(parsed.getTime())) {
+                    setVisitDate(parsed)
+                    console.log('[EXIF] 날짜:', parsed.toISOString())
+                } else {
+                    console.warn('[EXIF] 날짜 파싱 실패:', raw)
+                }
+            } else {
+                console.warn('[EXIF] DateTimeOriginal 없음')
             }
 
             if (exif?.GPSLatitude && exif?.GPSLongitude) {
@@ -171,12 +180,14 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                 let lng = toDegrees(exif.GPSLongitude)
                 if (exif.GPSLatitudeRef === 'S') lat = -lat
                 if (exif.GPSLongitudeRef === 'W') lng = -lng
+                console.log(`[EXIF] GPS: lat=${lat}, lng=${lng} (raw: ${exif.GPSLatitude}, ${exif.GPSLongitude})`)
 
                 setLatitude(lat)
                 setLongitude(lng)
 
                 const [place] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng })
                 if (place) {
+                    console.log('[EXIF] reverseGeocode:', JSON.stringify(place))
                     const fullAddress = [place.city, place.district, place.street]
                         .filter(Boolean)
                         .join(' ')
@@ -184,10 +195,13 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                     if (place.district) {
                         const allDistricts = Object.values(REGIONS).flat()
                         const matched = allDistricts.find(r => place.district!.includes(r))
+                        console.log(`[EXIF] district="${place.district}" → matched="${matched ?? '없음'}"`)
                         if (matched) setLocationRegion(matched)
                     }
                 }
                 await fetchPlaceNameFromCoords(lat, lng)
+            } else {
+                console.warn('[EXIF] GPS 정보 없음')
             }
         } catch (err) {
             console.error('EXIF 추출 실패:', err)
