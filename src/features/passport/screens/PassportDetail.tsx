@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
     },
 
     passportCard: {
-        height: screenHeight * 0.7,
+        height: screenHeight * 0.67,
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
         shadowColor: '#000',
@@ -876,7 +876,7 @@ const styles = StyleSheet.create({
     },
 
     musicBox: {
-        bottom: 50,
+        bottom: 70,
         flexDirection: 'row',
         height: screenHeight * 0.09,
         width: '100%',
@@ -911,7 +911,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 1,
-        bottom: 67,
+        bottom: 89,
     },
 
     editText: {

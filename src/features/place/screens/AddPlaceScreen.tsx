@@ -316,7 +316,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                 offset={[0, 2]}
                 style={{ width: CARD_WIDTH, marginBottom: 5, borderRadius: 16 }}
             >
-                <View style={[styles.photoContainer, { height: screenHeight * 0.55 }]}>
+                <View style={[styles.photoContainer, { height: screenHeight * 0.52 }]}>
                     <NoiseOverlay />
                     <View style={[styles.photoTextbox, { flexDirection: 'row', alignItems: 'center' }]}>
                         <TouchableOpacity
