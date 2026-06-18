@@ -1,8 +1,206 @@
-import { TeamModeProvider, useTeamMode } from "@/src/components/common/TeamModeContext";
+import LogoWhiteIcon from "@/assets/icons/logo-white.svg";
+import LogoIcon from "@/assets/icons/logo.svg";
+import {
+  TeamModeProvider,
+  useTeamMode,
+} from "@/src/components/common/TeamModeContext";
 import colors from "@/src/constant/colors";
 import { Ionicons } from "@expo/vector-icons";
+import {
+  BottomTabBarProps,
+  BottomTabNavigationOptions,
+} from "@react-navigation/bottom-tabs";
 import { Tabs, useRouter } from "expo-router";
-import { View } from "react-native";
+import { useEffect, useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
+import Animated, {
+  SharedValue,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const SPRING = { damping: 18, stiffness: 200, mass: 0.8 };
+
+type TabRoute = {
+  name: string;
+  icon: (color: string) => React.ReactNode;
+  activeIcon?: () => React.ReactNode;
+};
+
+function getTabRoutes(isTeamMode: boolean): TabRoute[] {
+  return [
+    {
+      name: "passport",
+      icon: (c) => <Ionicons name="id-card" size={24} color={c} />,
+    },
+    {
+      name: "profile",
+      icon: (c) => <Ionicons name="person" size={24} color={c} />,
+    },
+    {
+      name: "index",
+      icon: () => <LogoIcon width={26} height={26} />,
+      activeIcon: () => <LogoWhiteIcon width={26} height={26} />,
+    },
+    {
+      name: "social",
+      icon: (c) => <Ionicons name="people" size={24} color={c} />,
+    },
+    {
+      name: "search",
+      icon: (c) => (
+        <Ionicons
+          name={isTeamMode ? "people-circle" : "search"}
+          size={24}
+          color={c}
+        />
+      ),
+    },
+  ];
+}
+
+function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const { bottom } = useSafeAreaInsets();
+  const router = useRouter();
+  const { isTeamMode } = useTeamMode();
+
+  const TAB_ROUTES = getTabRoutes(isTeamMode);
+  const visibleRoutes = state.routes.filter((r) =>
+    TAB_ROUTES.some((t) => t.name === r.name),
+  );
+  const tabCount = visibleRoutes.length;
+  const activeIndex = visibleRoutes.findIndex(
+    (r) => r.key === state.routes[state.index]?.key,
+  );
+
+  const pillX = useSharedValue(activeIndex >= 0 ? activeIndex : 0);
+  const [barWidth, setBarWidth] = useState(0);
+  const [visualIndex, setVisualIndex] = useState(activeIndex >= 0 ? activeIndex : 0);
+
+  useEffect(() => {
+    if (activeIndex >= 0) {
+      pillX.value = withSpring(activeIndex, SPRING);
+      setVisualIndex(activeIndex);
+    }
+  }, [activeIndex]);
+
+  const itemWidth = barWidth > 0 ? barWidth / tabCount : 0;
+  const pillW = itemWidth * 0.82 + 4;
+  const pillH = 46;
+
+  return (
+    <View style={[styles.wrapper, { paddingBottom: bottom + 4 }]}>
+      <View
+        style={styles.bar}
+        onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
+      >
+        {barWidth > 0 && (
+          <Pill
+            pillX={pillX}
+            itemWidth={itemWidth}
+            pillW={pillW}
+            pillH={pillH}
+          />
+        )}
+
+        {visibleRoutes.map((route, i) => {
+          const tabDef = TAB_ROUTES.find((t) => t.name === route.name);
+          if (!tabDef) return null;
+
+          const isFocused = i === visualIndex;
+          const options: BottomTabNavigationOptions =
+            descriptors[route.key]?.options ?? {};
+
+          const onPress = () => {
+            if (route.name === "search" && isTeamMode) {
+              pillX.value = withSpring(i, SPRING);
+              setVisualIndex(i);
+              router.push("/team");
+              return;
+            }
+            const event = navigation.emit({
+              type: "tabPress",
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
+
+          return (
+            <Pressable
+              key={route.key}
+              onPress={onPress}
+              style={styles.tabItem}
+              accessibilityRole="button"
+              accessibilityState={isFocused ? { selected: true } : {}}
+              accessibilityLabel={options.tabBarAccessibilityLabel}
+            >
+              <TabIcon tabDef={tabDef} isFocused={isFocused} />
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function Pill({
+  pillX,
+  itemWidth,
+  pillW,
+  pillH,
+}: {
+  pillX: SharedValue<number>;
+  itemWidth: number;
+  pillW: number;
+  pillH: number;
+}) {
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: pillX.value * itemWidth + itemWidth / 2 - pillW / 2 },
+    ],
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        styles.pill,
+        { width: pillW, height: pillH, borderRadius: pillH / 2 },
+        animStyle,
+      ]}
+    />
+  );
+}
+
+function TabIcon({
+  tabDef,
+  isFocused,
+}: {
+  tabDef: TabRoute;
+  isFocused: boolean;
+}) {
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    scale.value = withSpring(isFocused ? 1.1 : 1, SPRING);
+  }, [isFocused]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={[styles.iconWrap, animStyle]}>
+      {isFocused && tabDef.activeIcon
+        ? tabDef.activeIcon()
+        : tabDef.icon(isFocused ? "#FFFFFF" : "#888888")}
+    </Animated.View>
+  );
+}
 
 function TabsLayoutContent() {
   const router = useRouter();
@@ -10,93 +208,16 @@ function TabsLayoutContent() {
 
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: colors.background.nav,
-          borderTopWidth: 0,
-          height: 70,
-          borderRadius: 30,
-          marginHorizontal: 16,
-          marginBottom: 16,
-          position: "absolute",
-        },
-        tabBarActiveTintColor: colors.tab.active,
-        tabBarInactiveTintColor: colors.tab.inactive,
-        tabBarShowLabel: true,
-        tabBarLabelStyle: {
-          fontSize: 11,
-        },
-      }}
+      tabBar={(props) => <CustomTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
     >
-      <Tabs.Screen
-        name="passport"
-        options={{
-          title: "여권",
-          tabBarItemStyle: { marginTop: 10 },
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="id-card" size={24} color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "프로필",
-          tabBarItemStyle: { marginTop: 10 },
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="person" size={24} color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "",
-          tabBarItemStyle: { marginTop: 15 },
-          tabBarIcon: () => (
-            <View
-              style={{
-                width: 85,
-                height: 55,
-                borderRadius: 30,
-                backgroundColor: colors.brand.primary,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Ionicons name="map" size={28} color={colors.text.primary} />
-            </View>
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="social"
-        options={{
-          title: "소셜",
-          tabBarItemStyle: { marginTop: 10 },
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="people" size={24} color={color} />
-          ),
-        }}
-      />
-
+      <Tabs.Screen name="passport" options={{ title: "여권" }} />
+      <Tabs.Screen name="profile" options={{ title: "프로필" }} />
+      <Tabs.Screen name="index" options={{ title: "지도" }} />
+      <Tabs.Screen name="social" options={{ title: "소셜" }} />
       <Tabs.Screen
         name="search"
-        options={{
-          title: isTeamMode ? "팀" : "둘러보기",
-          tabBarItemStyle: { marginTop: 10 },
-          tabBarIcon: ({ color }) => (
-            <Ionicons
-              name={isTeamMode ? "people-circle" : "search"}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
+        options={{ title: isTeamMode ? "팀" : "둘러보기" }}
         listeners={{
           tabPress: (e) => {
             if (isTeamMode) {
@@ -106,20 +227,8 @@ function TabsLayoutContent() {
           },
         }}
       />
-
-      <Tabs.Screen
-        name="team"
-        options={{
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
-        name="profile/subscribe"
-        options={{
-          href: null,
-        }}
-      />
+      <Tabs.Screen name="team" options={{ href: null }} />
+      <Tabs.Screen name="profile/subscribe" options={{ href: null }} />
     </Tabs>
   );
 }
@@ -131,3 +240,41 @@ export default function TabLayout() {
     </TeamModeProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  wrapper: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    backgroundColor: "transparent",
+  },
+  bar: {
+    flexDirection: "row",
+    height: 68,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 999,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+    overflow: "hidden",
+  },
+  pill: {
+    position: "absolute",
+    backgroundColor: colors.brand.primary,
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100%",
+  },
+  iconWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
