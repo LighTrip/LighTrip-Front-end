@@ -91,7 +91,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const pillH = 46;
 
   return (
-    <View style={[styles.wrapper, { paddingBottom: bottom + 4 }]}>
+    <View style={[styles.wrapper, { paddingBottom: Math.max(bottom, 12) + 4 }]}>
       <View
         style={styles.bar}
         onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
