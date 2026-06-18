@@ -13,6 +13,7 @@ export default function RootLayout() {
     Griun_Gellyroll: require("../assets/fonts/Griun_Gellyroll-Rg.ttf"),
     Moneygraphy: require("../assets/fonts/Moneygraphy-Pixel.ttf"),
     Freesentation: require("../assets/fonts/Freesentation-4Regular.ttf"),
+    'Freesentation-3Light': require("../assets/fonts/Freesentation-3Light.ttf"),
   });
 
   useEffect(() => {

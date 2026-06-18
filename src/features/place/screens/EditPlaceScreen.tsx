@@ -8,8 +8,10 @@ import {
     View,
     Platform,
     KeyboardAvoidingView,
+    StatusBar,
 } from 'react-native'
 import React, { useState, useEffect } from 'react'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Shadow } from 'react-native-shadow-2'
 import { Ionicons } from '@expo/vector-icons'
 import DatePickerModal from '@/src/components/passport/DatePickerModal'
@@ -26,6 +28,7 @@ import { getPresignedUrl, uploadToS3 } from '@/src/api/passport/image.api'
 import { createPassport, getMyPassportDistricts, textColor, changeCoverImage, CATEGORY_MAP, Visibility } from '@/src/api/passport/passport.api'
 import { getMyPremium } from '@/src/api/payment/payment.api'
 import { predictCoverTextColor } from '@/src/features/passport/cover_ai/coverColorHelper'
+import { useTeamMode } from '@/src/components/common/TeamModeContext'
 
 const { width, height: screenHeight } = Dimensions.get('window')
 const CARD_WIDTH = width * 0.91
@@ -90,6 +93,11 @@ const EditPlaceScreen = ({
     aiDraft,
 }: Props) => {
 
+    const insets = useSafeAreaInsets()
+    const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 49 : 56
+    const containerPaddingTop = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 65
+    const logContainerHeight = screenHeight - containerPaddingTop - TAB_BAR_HEIGHT - insets.bottom - 20
+
     const [date, setDate] = useState(visitDate ?? new Date())
     const [showDatePicker, setShowDatePicker] = useState(false)
 
@@ -133,6 +141,7 @@ const EditPlaceScreen = ({
     const [music, setMusic] = useState<{ title: string; artist: string; artwork: string } | null>(null)
     const [musicModalOpen, setMusicModalOpen] = useState(false)
 
+    const { isTeamMode, teamId } = useTeamMode()
     const [isPremium, setIsPremium] = useState(false)
     const [themeColor, setThemeColor] = useState('#F8FAFD')
 
@@ -141,7 +150,9 @@ const EditPlaceScreen = ({
     useEffect(() => {
         if (aiDraft?.draft) setContent(aiDraft.draft)
         if (aiDraft?.category) {
-            const matched = PLACE_TYPES.find(type => type.includes(aiDraft.category))
+            const matched = PLACE_TYPES.find(type =>
+                type.includes(aiDraft.category) || CATEGORY_MAP[type] === aiDraft.category
+            )
             if (matched) setPlaceType(matched)
         }
         getMyPremium().then(res => {
@@ -199,6 +210,8 @@ const EditPlaceScreen = ({
                 musicTitle: music?.title,
                 musicArtist: music?.artist,
                 theme: isPremium ? hexToRgb(themeColor) : undefined,
+                teamId: isTeamMode && teamId ? Number(teamId) : undefined,
+                aiCategory: aiDraft?.category,
             })
 
             const resData = res.data?.data ?? res.data
@@ -206,7 +219,7 @@ const EditPlaceScreen = ({
 
             try {
                 const districtCategory = DISTRICT_CATEGORY_MAP[region] ?? region
-                const districtsRes = await getMyPassportDistricts()
+                const districtsRes = await getMyPassportDistricts(isTeamMode && teamId ? teamId : undefined)
                 const districts: any[] = districtsRes.data?.data ?? []
                 const targetDistrict = districts.find(
                     (d: any) => d.displayName === region || d.districtCategory === districtCategory
@@ -215,9 +228,11 @@ const EditPlaceScreen = ({
                     await changeCoverImage(targetDistrict.coverId, imageUrls[0])
                     const colorHex = await predictCoverTextColor(imageUrls[0], region)
                     await textColor(targetDistrict.coverId, colorHex)
+                } else {
+                    console.error('[커버] targetDistrict:', JSON.stringify(targetDistrict), '/ imageUrls[0]:', imageUrls[0])
                 }
-            } catch (aiErr) {
-                console.warn('커버 설정 실패:', aiErr)
+            } catch (aiErr: any) {
+                console.error('[커버 설정 실패]', aiErr?.response?.status, JSON.stringify(aiErr?.response?.data))
             }
 
             onComplete({createdPassportId})
@@ -243,7 +258,7 @@ const EditPlaceScreen = ({
                 offset={[0, 2]}
                 style={{ width: CARD_WIDTH, marginBottom: 5, borderRadius: 16 }}
             >
-                <View style={styles.logContainer}>
+                <View style={[styles.logContainer, { height: logContainerHeight }]}>
                     <NoiseOverlay />
                     <View style={{
                         position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -255,7 +270,14 @@ const EditPlaceScreen = ({
                         <TouchableOpacity onPress={onBack} style={styles.backButton}>
                             <Ionicons name="chevron-back" size={22} color="#333" />
                         </TouchableOpacity>
-                        <Text style={styles.headerTitle}>기록 편집</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={styles.headerTitle}>기록 편집</Text>
+                            {isTeamMode && (
+                                <View style={{ backgroundColor: '#1A3A6B', borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2, left: 120 }}>
+                                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}>팀</Text>
+                                </View>
+                            )}
+                        </View>
                         <View style={{ width: 20 }} />
                     </View>
 

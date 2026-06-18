@@ -289,7 +289,7 @@ export const subscribeStyles = StyleSheet.create({
 
     subscribeBox: {
         width: '90%',
-        height: 600,
+        height: '48%',
         top: 20,
         backgroundColor: '#FFFFFF',
         justifyContent: 'center',
@@ -336,6 +336,13 @@ export const subscribeStyles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         color: '#000000',
+    },
+
+    subscribeItemExplain: {
+        marginTop: 10,
+        fontSize: 14,
+        fontWeight: 'semibold',
+        color: '#292929',
     },
 
     itemDivider: {

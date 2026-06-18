@@ -8,7 +8,7 @@ import {
     FlatList,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router'
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { COVER_WIDTH, COVER_HEIGHT } from './passportStyles';
 import PlaceListView from './PlaceListView';
 import SearchBar from './SearchBar'
@@ -25,24 +25,47 @@ type Props = {
     initialTab?: 'cover' | 'list'
     onTabChange?: (tab: 'cover' | 'list') => void
     refreshTrigger?: number
+    teamId?: string | null
+    isTeamMode?: boolean
 }
 
-const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange, refreshTrigger }: Props) => {
+const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange, refreshTrigger, teamId, isTeamMode }: Props) => {
     const [selected, setSelected] = useState<'cover' | 'list'>(initialTab)
     const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null)
-    const [districts, setDistricts] = useState<any[]>([])  
+    const [districts, setDistricts] = useState<any[]>([])
     const [passports, setPassports] = useState<MyPassport[]>([])
     const [coverSortOrder, setCoverSortOrder] = useState('최근 방문순')
     const [listSortOrder, setListSortOrder] = useState('최근 방문순')
     const [searchQuery, setSearchQuery] = useState('')
 
+    const teamIdRef = useRef(teamId)
+    const isTeamModeRef = useRef(isTeamMode)
+    teamIdRef.current = teamId
+    isTeamModeRef.current = isTeamMode
+
     useFocusEffect(
         useCallback(() => {
-            fetchDistricts()
-            fetchPassports()   // 도장 탭용
+            const tid = teamIdRef.current
+            const teamMode = isTeamModeRef.current
+            if (teamMode && !tid) {
+                setPassports([])
+                setDistricts([])
+                return
+            }
+            getMyPassports(tid ? { teamId: tid } : undefined)
+                .then(res => setPassports(res.data?.data?.content ?? []))
+                .catch((e) => console.error('[PassportList] passports 에러:', e?.response?.status, e?.message))
+            getMyPassportDistricts(tid ?? undefined)
+                .then(res => setDistricts(res.data?.data ?? []))
+                .catch((e) => console.error('[PassportList] districts 에러:', e?.response?.status, e?.message))
         }, [])
     )
-    
+
+    useEffect(() => {
+        fetchDistricts()
+        fetchPassports()
+    }, [teamId, isTeamMode])
+
     useEffect(() => {
         if (initialTab) setSelected(initialTab)
     }, [initialTab])
@@ -80,8 +103,12 @@ const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange, refres
     })
 
     const fetchPassports = async () => {
+        if (isTeamMode && !teamId) {
+            setPassports([])
+            return
+        }
         try {
-            const res = await getMyPassports()
+            const res = await getMyPassports(teamId ? { teamId } : undefined)
             setPassports(res.data?.data?.content ?? [])
         } catch (e) {
             console.error(e)
@@ -89,8 +116,12 @@ const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange, refres
     }
 
     const fetchDistricts = async () => {
+        if (isTeamMode && !teamId) {
+            setDistricts([])
+            return
+        }
         try {
-            const res = await getMyPassportDistricts()
+            const res = await getMyPassportDistricts(teamId ?? undefined)
             setDistricts(res.data?.data ?? [])
         } catch (e) {
             console.error(e)
@@ -99,7 +130,7 @@ const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange, refres
 
     const handleDistrictPress = async (district: any) => {
         try {
-            const res = await getDistrictsPassports(district.districtCategory)
+            const res = await getDistrictsPassports(district.districtCategory, teamId ?? undefined)
             const rawItems: MyPassport[] = res.data?.data?.content ?? []
             const items = rawItems.map(i => ({
                 ...i,
@@ -137,14 +168,17 @@ const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange, refres
                             style={styles.passportCover}
                             onPress={() => handleDistrictPress(district)}
                         >
-                            <Image
-                                source={{ uri: district.thumbnailUrl }}
-                                style={[StyleSheet.absoluteFillObject, {
-                                    borderTopRightRadius: 16, 
-                                    borderBottomRightRadius: 16,
-                                }]}
-                                resizeMode="cover"
-                            />
+                            <View style={[StyleSheet.absoluteFillObject, styles.passportCoverInner]}>
+                                {district.thumbnailUrl ? (
+                                    <Image
+                                        source={{ uri: district.thumbnailUrl }}
+                                        style={{ width: '100%', height: '100%' }}
+                                        resizeMode="cover"
+                                    />
+                                ) : (
+                                    <View style={{ flex: 1, backgroundColor: '#C8D8F0' }} />
+                                )}
+                            </View>
                             <Text style={[styles.placeName, { color: district.textColor ?? '#FFFFFF' }]}>{district.displayName}</Text>
                         </TouchableOpacity>
                     ))}
@@ -255,6 +289,13 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 2,
         elevation: 4,
+        overflow: 'hidden',
+    },
+
+    passportCoverInner: {
+        borderTopRightRadius: 16,
+        borderBottomRightRadius: 16,
+        overflow: 'hidden',
     },
 
     placeName: {

@@ -47,7 +47,6 @@ export function getFreesentationTypeface(): Promise<SkTypeface | null> {
 
       const data = Skia.Data.fromBase64(base64);
       const typeface = Skia.Typeface.MakeFreeTypeFaceFromData(data);
-      console.log('[font] Freesentation 로딩:', typeface ? '성공 ✓' : '실패 (null 반환)');
       return typeface;
     } catch (e) {
       console.warn('getFreesentationTypeface: failed to load font, falling back to default', e);
@@ -284,7 +283,6 @@ export async function buildTitleMask(
   paint.setAntiAlias(true);
 
   const textWidth = font.getTextWidth(text);
-  console.log(`[buildTitleMask] font textWidth="${text}": ${textWidth.toFixed(1)}px (fontSize=${fontSize})`);
 
   // ---- 카드(cardWidth x cardHeight) 기준 텍스트 x 좌표 계산 ----
   let xCard: number;
@@ -301,7 +299,6 @@ export async function buildTitleMask(
   const yTopInROI = cardTop - TITLE_ROI.y;
   const y = yTopInROI + fontSize * baselineRatio; // baseline 보정
 
-  console.log(`[buildTitleMask] text="${text}" | canvas(${w}x${h}) | cardTop=${card?.top} | ROI.y=${TITLE_ROI.y} | xCard=${xCard.toFixed(1)} | x(ROI)=${x.toFixed(1)} | yTopInROI=${yTopInROI.toFixed(1)} | baseline(ROI)=${y.toFixed(1)}`);
   canvas.drawText(text, x, y, paint, font);
 
   const image = surface.makeImageSnapshot();
@@ -323,8 +320,6 @@ export async function buildTitleMask(
     mask[i] = alpha > alphaThreshold ? 1 : 0;
     if (mask[i]) nonZero++;
   }
-  console.log(`[buildTitleMask] 마스크 비율: ${nonZero}/${w * h} px (${(nonZero / (w * h) * 100).toFixed(1)}%) | baseline y=${y.toFixed(1)} (canvas 0~${h - 1})`);
-
   return mask; // length = 36 * 136 = 4896
 }
 
