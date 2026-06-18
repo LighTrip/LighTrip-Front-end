@@ -80,7 +80,7 @@ export const editStyles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         gap: 6,
-        marginTop: 200,
+        marginTop: 147,
     },
 
     photoIndicatorDot: {

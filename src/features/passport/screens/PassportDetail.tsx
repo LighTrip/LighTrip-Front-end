@@ -771,7 +771,7 @@ const styles = StyleSheet.create({
 
     coverBadge: {
         position: 'absolute',
-        bottom: 192,
+        bottom: 194,
         left: -10,
         flexDirection: 'row',
         alignItems: 'center',
