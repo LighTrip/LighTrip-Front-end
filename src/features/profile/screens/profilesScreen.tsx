@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
     },
     menuItemBorder: {
         borderBottomWidth: 1,
-        borderBottomColor: "#262626",  
+        borderBottomColor: "#E0E0E0",  
     },
     menuLeft: {
         flexDirection: "row",
