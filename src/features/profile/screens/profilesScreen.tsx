@@ -28,7 +28,7 @@ const TAB_BAR_HEIGHT = 90;
 export default function ProfileView() {
     const router = useRouter();
 
-    const { isTeamMode, setIsTeamMode } = useTeamMode();
+    const { isTeamMode, toggleTeamMode } = useTeamMode();
     const [user, setUser] = useState<ProfileUser>(profileUserDummy);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -245,7 +245,7 @@ export default function ProfileView() {
                                     styles.teamToggle,
                                     isTeamMode ? styles.teamToggleOn : styles.teamToggleOff,
                                 ]}
-                                onPress={() => setIsTeamMode(!isTeamMode)}
+                                onPress={toggleTeamMode}
                             >
                                 <View
                                     style={[

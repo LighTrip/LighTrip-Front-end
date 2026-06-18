@@ -29,6 +29,7 @@ import {
     updatePassport,
     createPassport,
     getPassportDetail,
+    getMyPassportDistricts,
     CreatePassportRequest,
     changePassportVisibility,
     Visibility,
@@ -47,6 +48,7 @@ type Props = {
     onNext?: () => void
     onPrev?: () => void
     editable?: boolean
+    sourceLabel?: string
 }
 
 const STAMP_MAP: Record<string, any> = {
@@ -135,7 +137,7 @@ const MusicBox = ({ music, onPress, styles }: { music: MusicDisplayItem; onPress
     )
 }
 
-const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = true }: Props) => {
+const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = true, sourceLabel }: Props) => {
     const [isEditing, setIsEditing] = useState(false)
     const [editReview, setEditReview] = useState(item.content ?? '')
     const [editCategory, setEditCategory] = useState(CATEGORY_TO_KOREAN[item.category] ?? '선택')
@@ -277,15 +279,33 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
 
     const handleSetCover = async () => {
         try {
-            const coverId = item._coverId ?? item.coverId
-            if (coverId == null) return
+            let coverId = item._coverId ?? item.coverId ?? null
 
-            let imageUrl = item.imageUrls?.[0]
-            if (!imageUrl) {
-                const detailRes = await getPassportDetail(item.passportId)
-                imageUrl = detailRes.data?.data?.imageUrls?.[0]
+            if (coverId == null) {
+                const districtsRes = await getMyPassportDistricts()
+                const allDistricts: any[] = districtsRes.data?.data ?? []
+                const match = allDistricts.find(
+                    (d: any) => d.districtCategory === editDistrictCategory || d.displayName === editDistrict
+                )
+                coverId = match?.coverId ?? null
             }
-            if (!imageUrl) return
+
+            if (coverId == null) {
+                Alert.alert('설정 실패', '지역 커버 정보를 찾을 수 없어요.')
+                return
+            }
+
+            let imageUrl: string | undefined = item.imageUrls?.[0]
+            if (!imageUrl) {
+                try {
+                    const detailRes = await getPassportDetail(item.passportId)
+                    imageUrl = detailRes.data?.data?.imageUrls?.[0]
+                } catch (_) {}
+            }
+            if (!imageUrl) {
+                Alert.alert('설정 실패', '사진이 없어요.')
+                return
+            }
 
             await changeCoverImage(coverId, imageUrl)
 
@@ -296,6 +316,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
             Alert.alert('대표 사진으로 설정되었습니다.')
         } catch (e: any) {
             console.error('대표 사진 설정 실패:', e.response?.data)
+            Alert.alert('설정 실패', '잠시 후 다시 시도해 주세요.')
         }
     }
 
@@ -309,8 +330,10 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                 <View style={{ borderRadius: 16, overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
                     <NoiseOverlay />
                 </View>
-                <Text style={styles.districtTitle}>{editDistrict}</Text>
-                <Text style={styles.visitText}>{editDistrict}를 {districtCount}번 탐험했어요 ♪</Text>
+                <Text style={styles.districtTitle}>{sourceLabel ?? editDistrict}</Text>
+                {!sourceLabel && (
+                    <Text style={styles.visitText}>{editDistrict}를 {districtCount}번 탐험했어요 ♪</Text>
+                )}
             </View>
 
             {/* 여권 카드 */}
@@ -587,9 +610,6 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
             <KakaoPlaceSearch
                 visible={placeSearchOpen}
                 onSelect={(place) => {
-                    console.log('[KakaoPlace] address_name:', place.address_name)
-                    console.log('[KakaoPlace] road_address_name:', place.road_address_name)
-
                     setEditSpaceName(place.place_name)
                     const addressStr = place.address_name || place.road_address_name || ''
                     setEditAddress(addressStr)

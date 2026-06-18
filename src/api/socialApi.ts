@@ -1,10 +1,11 @@
 import {
     Friend,
+    FriendLight,
     FriendMapDistrict,
     FriendPassport,
     MutualFriend,
     PublicUserProfile,
-    RecommendedFriend
+    RecommendedFriend,
 } from "@/src/features/social/types/social.types";
 import * as Securestore from "expo-secure-store";
 import { BASE_URL } from "./config";
@@ -90,6 +91,14 @@ type FriendMapResponse = {
     code: string;
     message: string;
     data: FriendMapDistrict[];
+}
+
+// 친구 불빛 타입
+type FriendLightResponse = {
+    success: boolean;
+    code: string;
+    message: string;
+    data: FriendLight[];
 }
 
 // 1. 토큰 발급
@@ -310,3 +319,40 @@ export const getFriendMap = async (
 
     return data.data;
 };
+
+// 11. 친구 불빛 조회
+export const getFriendLights = async (
+    userId: number,
+    minLat: number,
+    maxLat: number,
+    minLng: number,
+    maxLng: number,
+): Promise<FriendLight[]> => {
+    const params = new URLSearchParams();
+
+    params.append("minLat", String(minLat));
+    params.append("maxLat", String(maxLat));
+    params.append("minLng", String(minLng));
+    params.append("maxLng", String(maxLng));
+
+    const requestUrl = `${BASE_URL}/api/v1/lights/${userId}?${params.toString()}`;
+
+    console.log("친구 불빛 조회 요청 URL:", requestUrl);
+
+    const response = await fetch(requestUrl, {
+        method: "GET",
+        headers: await authHeaders(),
+    });
+
+    const data: FriendLightResponse = await response.json();
+
+    console.log("친구 불빛 조회 응답 상태:", response.status);
+    console.log("친구 불빛 조회 응답 데이터:", data);
+
+    if (!response.ok || !data.success) {
+        throw new Error(data.message || "친구 불빛 조회에 실패했습니다.");
+    }
+
+    return data.data ?? [];
+
+}

@@ -301,15 +301,16 @@ export default function SubscribePage() {
                     style={styles.subscribeBox}
                 >
                     {[
-                        '광고 제거',
-                        '테마 변경',
-                        '사진 여러 장',
-                        'AI 초안 기능 무제한',
-                        '팀 만들기',
+                        { title: '광고 제거', desc: '광고 없이 나만의 LighTrip을 이용해 보세요' },
+                        { title: '테마 변경', desc: '여권 색상 변경으로 나만의 여권을 꾸며 보세요' },
+                        { title: '사진 여러 장', desc: '구독 시 사진 최대 5장까지 등록 가능' },
+                        { title: 'AI 초안 기능 무제한', desc: '기본 주 5회 ➡️ 무제한으로 사용 가능!' },
+                        { title: '팀 만들기', desc: '친구들이랑 같이 지도를 밝혀 보세요' },
                     ].map((item, index, arr) => (
-                        <View key={item}>
+                        <View key={item.title}>
                             <View style={styles.subscribeItem}>
-                                <Text style={styles.subscribeItemText}>{item}</Text>
+                                <Text style={styles.subscribeItemText}>{item.title}</Text>
+                                <Text style={styles.subscribeItemExplain}>{item.desc}</Text>
                             </View>
                             {index < arr.length - 1 && (
                                 <View style={{ position: 'relative' }}>
@@ -364,15 +365,6 @@ export default function SubscribePage() {
                         source={{ uri: webViewUrl ?? '' }}
                         javaScriptEnabled={true}
                         domStorageEnabled={true}
-                        onError={(e) => console.log('WebView 에러:', e.nativeEvent)}
-                        onHttpError={(e) => console.log('HTTP 에러:', e.nativeEvent.statusCode)}
-                        injectedJavaScript={`
-                            window.onerror = function(msg, src, line, col, err) {
-                                window.ReactNativeWebView.postMessage('JS Error: ' + msg + ' at ' + src + ':' + line);
-                            };
-                            true;
-                        `}
-                        onMessage={(e) => console.log('WebView 메시지:', e.nativeEvent.data)}
                         onShouldStartLoadWithRequest={(req) => {
                             const url = req.url
                             if (url.startsWith(SUCCESS_URL)) {

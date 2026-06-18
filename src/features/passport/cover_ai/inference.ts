@@ -127,7 +127,6 @@ export async function runInference(
   const top1Index = Number(raw);
   const color = getColorFromIndex(top1Index);
 
-  console.log(`[ONNX] top1_index=${top1Index} | hex=${color.hex} | name=${color.name} | group=${color.group}`);
 
   return { top1Index, color };
 }

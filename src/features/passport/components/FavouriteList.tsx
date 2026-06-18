@@ -56,7 +56,7 @@ const FavouriteList = <T,>({
     )
 
     return (
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, marginBottom: 90 }}>
             <FlatList
                 data={items}
                 keyExtractor={keyExtractor}

@@ -13,7 +13,7 @@ import PassportDetail from "@/src/features/passport/screens/PassportDetail";
 import AddPlaceScreen from "@/src/features/place/screens/AddPlaceScreen";
 import {
   NaverMapMarkerOverlay,
-  NaverMapView,
+  NaverMapView
 } from "@mj-studio/react-native-naver-map";
 import * as Location from "expo-location";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -871,9 +871,9 @@ export default function MapScreen() {
       <NaverMapView
         ref={mapRef}
         style={styles.map}
-        camera={{ latitude: 37.5665, longitude: 126.978, zoom: 12 }}
-        isNightModeEnabled={true}
-        lightness={-0.2}
+        initialCamera={{ latitude: 37.5665, longitude: 126.978, zoom: 12 }}
+        isNightModeEnabled={false}
+        lightness={0}
         isShowZoomControls={!pickingLocation}
         onCameraChanged={handleCameraChanged}
       >
