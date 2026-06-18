@@ -36,13 +36,7 @@ export const settingMenuDummy: ProfileMenuItem[] = [
         description: "스크랩 누른 장소 모아보기",
         icon: "bookmark",
         route: "/profile/scrap"
-    },
-    {
-        id: "theme",
-        title: "테마 설정",
-        description: "여권 & 배경 테마 변경",
-        icon: "color-palette",
-    },   
+    }, 
 ]
 
 export const accountMenuDummy: ProfileMenuItem[] = [

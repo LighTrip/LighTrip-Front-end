@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     },
 
     dropdownLabel: {
-        fontSize: 13,
+        fontSize: 11,
         color: '#555',
         fontWeight: '500',
     },
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     },
 
     dropdownText: {
-        fontSize: 14,
+        fontSize: 11,
         color: '#222',
     },
 
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     },
 
     backText: {
-        fontSize: 13,
+        fontSize: 11,
         color: '#1A3A6B',
         fontWeight: '600',
     },

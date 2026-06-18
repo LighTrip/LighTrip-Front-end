@@ -11,7 +11,9 @@ const sharedContainer = {
 }
 
 const sharedClickContainer = {
-    width: '100%' as const,
+    width: '92%' as const,
+    alignSelf: 'center' as const,
+    marginTop: 1,
     height: 45,
     borderRadius: 16,
     backgroundColor: '#1A3A6B',
@@ -29,13 +31,14 @@ export const editStyles = StyleSheet.create({
 
     logContainer: {
         position: 'relative',
-        height: screenHeight - 200,
+        height: screenHeight - 145,
         borderRadius: 16,
         backgroundColor: '#F8FAFD',
         justifyContent: 'flex-start',
         alignItems: 'center',
         overflow: 'hidden',
         marginBottom: 10,
+        marginTop: 20,
     },
 
     header: {
@@ -55,7 +58,7 @@ export const editStyles = StyleSheet.create({
     },
 
     headerTitle: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
         color: '#222',
     },
@@ -63,7 +66,7 @@ export const editStyles = StyleSheet.create({
     photoBox: {
         position: 'relative',
         width: screenWidth * 0.83,
-        height: screenHeight * 0.2,
+        height: screenHeight * 0.17,
         borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
@@ -110,7 +113,7 @@ export const editStyles = StyleSheet.create({
     },
 
     infoText: {
-        fontSize: 15,
+        fontSize: 12,
         color: '#222',
         fontWeight: '600',
         flex: 1,
@@ -162,7 +165,7 @@ export const editStyles = StyleSheet.create({
     },
 
     modalItemText: {
-        fontSize: 14,
+        fontSize: 10,
         color: '#333',
     },
 
@@ -189,7 +192,7 @@ export const editStyles = StyleSheet.create({
     },
 
     contentLabel: {
-        fontSize: 14,
+        fontSize: 11,
         color: '#555',
         fontWeight: '500',
     },
@@ -201,12 +204,12 @@ export const editStyles = StyleSheet.create({
     },
 
     generatingText: {
-        fontSize: 12,
+        fontSize: 11,
         color: '#1A3A6B',
     },
 
     contentInput: {
-        fontSize: 14,
+        fontSize: 11,
         color: '#222',
         lineHeight: 24,
         borderBottomWidth: 1,
@@ -219,7 +222,7 @@ export const editStyles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         width: '91%',
-        height: 60,
+        height: 70,
         borderRadius: 16,
         borderWidth: 1,
         borderColor: '#E0E0E0',
@@ -229,7 +232,7 @@ export const editStyles = StyleSheet.create({
         marginTop: 4,
         marginBottom: 10,
         gap: 12,
-        bottom: 35,
+        bottom: 10,
     },
 
     albumArt: {
@@ -247,13 +250,13 @@ export const editStyles = StyleSheet.create({
     },
 
     musicTitle: {
-        fontSize: 15,
+        fontSize: 12,
         fontWeight: 'bold',
         color: '#222',
     },
 
     musicArtist: {
-        fontSize: 13,
+        fontSize: 10,
         color: '#888',
     },
 
@@ -281,7 +284,7 @@ export const editStyles = StyleSheet.create({
 
     musicSearchInput: {
         flex: 1,
-        fontSize: 14,
+        fontSize: 11,
         color: '#222',
     },
 
@@ -295,8 +298,8 @@ export const editStyles = StyleSheet.create({
     },
 
     musicResultArt: {
-        width: 48,
-        height: 48,
+        width: 10,
+        height: 10,
         borderRadius: 8,
         backgroundColor: '#ddd',
     },
@@ -330,14 +333,14 @@ export const editStyles = StyleSheet.create({
     },
 
     publicTitle: {
-        fontSize: 14,
+        fontSize: 10,
         fontWeight: '600',
         textAlign: 'right',
         color: '#222',
     },
 
     publicSub: {
-        fontSize: 12,
+        fontSize: 8,
         color: '#888',
     },
 
@@ -354,7 +357,7 @@ export const editStyles = StyleSheet.create({
 
     visibilityButtonText: {
         color: '#ffffff',
-        fontSize: 13,
+        fontSize: 10,
         fontWeight: '600',
     },
     scrollContent: {
@@ -387,15 +390,15 @@ export const addStyles = StyleSheet.create({
     },
 
     photoText: {
-        fontSize: 18,
+        fontSize: 14,
         fontWeight: 'bold',
-        marginTop: -10,
+        marginTop: 14,
         marginLeft: 30,
     },
 
     albumButton: {
         width: screenWidth * 0.82,
-        height: screenHeight * 0.37,
+        height: screenHeight * 0.42,
         borderRadius: 16,
         marginBottom: 15,
         overflow: 'hidden',
@@ -403,9 +406,10 @@ export const addStyles = StyleSheet.create({
 
     albumButtonEmpty: {
         width: screenWidth * 0.82,
-        height: screenHeight * 0.37,
+        height: screenHeight * 0.42,
         borderRadius: 16,
         backgroundColor: '#FFFFFF',
+        marginTop: 5,
         marginBottom: 15,
         overflow: 'hidden',
         alignItems: 'center',
@@ -439,12 +443,13 @@ export const addStyles = StyleSheet.create({
     },
 
     cameraButton: {
-        width: screenWidth * 0.62,
-        height: 40,
+        width: screenWidth * 0.57,
+        height: screenHeight * 0.04,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#1A3A6B',
         borderRadius: 20,
+        marginBottom: 25,
     },
 
     infoContainer: {
@@ -464,25 +469,27 @@ export const addStyles = StyleSheet.create({
     },
 
     infotitleText: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 'bold',
         marginLeft: 5,
+        marginTop: 5,
     },
 
     infoTypeBox: {
         width: screenWidth * 0.82,
-        height: screenHeight * 0.095,
+        height: screenHeight * 0.125,
         borderRadius: 16,
         backgroundColor: '#FFFFFF',
         justifyContent: 'center',
         paddingHorizontal: 10,
         paddingVertical: 5,
+        marginBottom: 5,
     },
 
     infoTypeText: {
         width: '100%',
         textAlign: 'center',
-        fontSize: 14,
+        fontSize: 12,
         color: '#A0A0A0',
         paddingHorizontal: 10,
         paddingTop: Platform.OS === 'ios' ? 5 : 10,
@@ -494,7 +501,7 @@ export const addStyles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: '#F8FAFD',
         paddingTop: StatusBar.currentHeight || 65,
-        paddingBottom: 100,
+        paddingBottom: 0,
     },
     clickContainer: sharedClickContainer,
 

@@ -45,7 +45,7 @@ export default function SearchUserCard({item, onAddFriend, isRequested}: SearchU
                         style={styles.addButton} 
                         onPress={() => onAddFriend(item.writerFriendCode)}
                     >
-                        <Ionicons name="person-add-outline" size={20} color="#000000" />
+                        <Ionicons name="person-add-outline" size={15} color="#000000" />
                     </TouchableOpacity>
                 )
             )}
@@ -59,6 +59,7 @@ const styles=StyleSheet.create({
         paddingLeft: 22,
         paddingRight: 22,
         paddingTop: 22,
+        height: 90,
     },
     userRow: {
         flexDirection: "row",

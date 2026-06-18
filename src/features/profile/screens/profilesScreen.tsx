@@ -15,6 +15,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import LogoIcon from "../../../../assets/icons/logo-white.svg";
 import FriendManageModal from "../components/FriendManageModal";
 import TeamManageModal from "../components/TeamManageModal";
 import {
@@ -219,7 +220,7 @@ export default function ProfileView() {
                     </View>
     
                     <View style={styles.bannerIcon}>
-                        <MaterialCommunityIcons name="map" size={24} color="#333333" />
+                        <LogoIcon width={30} height={30}/>
                     </View>
                 </TouchableOpacity>
     
@@ -379,7 +380,7 @@ const styles = StyleSheet.create({
     },
     fixedHeader: {
         paddingHorizontal: 20,
-        paddingTop: 22,
+        paddingTop: 11,
         backgroundColor: "#F8FAFD",
     },
     scrollArea: {
@@ -398,7 +399,7 @@ const styles = StyleSheet.create({
         color: "#000000",
         fontSize: 24,
         fontWeight: "700",
-        marginBottom: 20,
+        marginBottom: 12,
     },
     profileCard: {
         backgroundColor: "#1A3A6B",
@@ -478,6 +479,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 5,
+        marginBottom: 5,
     },
     premium: {
         color: "#B38E06",
