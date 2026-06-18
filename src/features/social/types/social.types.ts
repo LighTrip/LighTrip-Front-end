@@ -30,7 +30,7 @@ export type RecommendedFriend = {
     status: string;
     createdAt: string;
 
-    stampCount?: number; // 도장 개수
+    passportCount?: number; // 도장 개수
     mutualFriends?: MutualFriend[]; // 함께 아는 친구
 }
 
@@ -62,4 +62,22 @@ export type FriendMapDistrict = {
     thumbnailUrl: string;
     textColor: string;
     coverId: number;
+}
+
+// 친구 불빛
+export type FriendLight = {
+    passportId: number;
+    latitude: number;
+    longitude: number;
+    category: string;
+    districtCategory: string;
+    spaceName: string;
+    thumbnailUrl: string;
+    visitedAt: string;
+    likeCount: number;
+    scrapCount: number;
+    isCluster: boolean;
+    count: number;
+    centerLatitude: number;
+    centerLongitude: number;
 }

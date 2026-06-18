@@ -4,8 +4,7 @@ import PassportDetail from "@/src/features/passport/screens/PassportDetail";
 import AddPlaceScreen from "@/src/features/place/screens/AddPlaceScreen";
 import {
   NaverMapMarkerOverlay,
-  NaverMapPolygonOverlay,
-  NaverMapView,
+  NaverMapView
 } from "@mj-studio/react-native-naver-map";
 import * as Location from "expo-location";
 import { useCallback, useEffect, useRef, useState } from "react";
