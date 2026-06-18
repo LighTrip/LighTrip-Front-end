@@ -1,34 +1,34 @@
-import {
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    Image,
-    Dimensions,
-    View,
-    Platform,
-    KeyboardAvoidingView,
-    StatusBar,
-} from 'react-native'
-import React, { useState, useEffect } from 'react'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Shadow } from 'react-native-shadow-2'
-import { Ionicons } from '@expo/vector-icons'
 import DatePickerModal from '@/src/components/passport/DatePickerModal'
 import KakaoPlaceSearch from '@/src/components/passport/KakaoPlaceSearch'
 import MusicSearch from '@/src/components/passport/MusicSearch'
+import { Ionicons } from '@expo/vector-icons'
+import React, { useEffect, useState } from 'react'
+import {
+    Dimensions,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StatusBar,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Shadow } from 'react-native-shadow-2'
 
-import NoiseOverlay from '@/src/components/common/NoiseOverlay'
 import Dropdown from '@/src/components/common/Dropdown'
-import { REGIONS, DISTRICT_CATEGORY_MAP } from '@/src/constant/regions'
+import NoiseOverlay from '@/src/components/common/NoiseOverlay'
+import { DISTRICT_CATEGORY_MAP, REGIONS } from '@/src/constant/regions'
 import { editStyles as styles } from '../components/placeStyles'
 
 // API
 import { getPresignedUrl, uploadToS3 } from '@/src/api/passport/image.api'
-import { createPassport, getMyPassportDistricts, textColor, changeCoverImage, CATEGORY_MAP, Visibility } from '@/src/api/passport/passport.api'
+import { CATEGORY_MAP, changeCoverImage, createPassport, getMyPassportDistricts, textColor, Visibility } from '@/src/api/passport/passport.api'
 import { getMyPremium } from '@/src/api/payment/payment.api'
-import { predictCoverTextColor } from '@/src/features/passport/cover_ai/coverColorHelper'
 import { useTeamMode } from '@/src/components/common/TeamModeContext'
+import { predictCoverTextColor } from '@/src/features/passport/cover_ai/coverColorHelper'
 
 const { width, height: screenHeight } = Dimensions.get('window')
 const CARD_WIDTH = width * 0.91
@@ -248,10 +248,16 @@ const EditPlaceScreen = ({
     return (
         <View style={{ flex: 1, backgroundColor: '#F8FAFD' }}>
         <KeyboardAvoidingView
-            style={styles.container}
+            style={{flex: 1, backgroundColor: "#F8FAFD"}}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-            <View style={{ marginTop: 10, alignSelf: 'center' }}>
+            <ScrollView
+                style={{ flex: 1, width: "100%", backgroundColor: "#F8FAFD" }}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+            >
+                <View style={{ marginTop: 10, alignSelf: 'center' }}>
             <Shadow
                 distance={6}
                 startColor={'#00000012'}
@@ -464,11 +470,20 @@ const EditPlaceScreen = ({
             </View>
 
             <TouchableOpacity
-                style={styles.clickContainer}
+                style={[
+                    styles.clickContainer,
+                    {
+                        width: CARD_WIDTH,
+                        alignSelf: 'center',
+                        marginTop: 8,
+                        marginBottom: 20,
+                    }
+                ]}
                 onPress={handleSubmit}
             >
                 <Text style={styles.clickText}>등록하기</Text>
             </TouchableOpacity>
+            </ScrollView>
         </KeyboardAvoidingView>
         </View>
     )

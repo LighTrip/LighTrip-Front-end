@@ -1,8 +1,9 @@
-import * as ImagePicker from 'expo-image-picker'
+import { Ionicons } from '@expo/vector-icons'
 import * as FileSystem from 'expo-file-system/legacy'
-import * as SecureStore from 'expo-secure-store'
+import * as ImagePicker from 'expo-image-picker'
 import * as Location from 'expo-location'
 import { useRouter } from 'expo-router'
+import * as SecureStore from 'expo-secure-store'
 import React, { useEffect, useState } from 'react'
 import {
     Alert,
@@ -17,17 +18,16 @@ import {
     View,
 } from 'react-native'
 import { Shadow } from 'react-native-shadow-2'
-import { Ionicons } from '@expo/vector-icons'
 
-import NoiseOverlay from '@/src/components/common/NoiseOverlay'
-import EditPlaceScreen from './EditPlaceScreen'
-import PassportDetail from '../../passport/screens/PassportDetail'
-import { REGIONS } from '@/src/constant/regions'
 import { generateAIDraft } from '@/src/api/passport/ai.api'
 import { getPresignedUrl, uploadToS3 } from '@/src/api/passport/image.api'
 import { getMyPremium } from '@/src/api/payment/payment.api'
+import NoiseOverlay from '@/src/components/common/NoiseOverlay'
+import { REGIONS } from '@/src/constant/regions'
+import PassportDetail from '../../passport/screens/PassportDetail'
+import EditPlaceScreen from './EditPlaceScreen'
 
-import { addStyles as styles, editStyles } from '../components/placeStyles'
+import { editStyles, addStyles as styles } from '../components/placeStyles'
 
 const { width, height: screenHeight } = Dimensions.get('window')
 export const CARD_WIDTH = width * 0.91
@@ -300,10 +300,17 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
     }
 
     return (
+        <View style={{ flex: 1, backgroundColor: '#F8FAFD' }}>
         <KeyboardAvoidingView
-            style={styles.container}
+            style={{flex: 1, backgroundColor: '#F8FAFD'}}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
+            <ScrollView
+                style={{ flex: 1, width: '100%', backgroundColor: "#F8FAFD" }}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+            >
             <View style={{ marginTop: 10, alignSelf: 'center' }}>
             <Shadow
                 distance={6}
@@ -419,7 +426,14 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
             </Shadow>
 
             <TouchableOpacity
-                style={[styles.clickContainer, { marginBottom: 20 }]}
+                style={[
+                    styles.clickContainer, 
+                    { 
+                        width: CARD_WIDTH,
+                        alignSelf: 'center',
+                        marginTop: 0,
+                        marginBottom: 20
+                    }]}
                 onPress={handleCreateWithAI}
                 disabled={isGenerating}
             >
@@ -427,7 +441,9 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                     {isGenerating ? 'AI 작성 중...' : '기록 생성하기 with AI'}
                 </Text>
             </TouchableOpacity>
+            </ScrollView>
         </KeyboardAvoidingView>
+    </View>
     )
 }
 
