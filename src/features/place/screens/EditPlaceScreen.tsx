@@ -238,7 +238,7 @@ const EditPlaceScreen = ({
             style={{flex: 1, backgroundColor: "#F8FAFD"}}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-                <View style={{ marginTop: 10, alignSelf: 'center' }}>
+                <View style={{ marginTop: 16, alignSelf: 'center' }}>
             <Shadow
                 distance={6}
                 startColor={'#00000012'}

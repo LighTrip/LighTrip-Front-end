@@ -734,7 +734,7 @@ const styles = StyleSheet.create({
     imageBackground: {
         position: 'absolute',
         width: width * 0.48,
-        height: screenHeight * 0.27,
+        height: screenHeight * 0.25,
         left: -8,
         top: 5,
         backgroundColor: '#FFFFFF',
@@ -748,7 +748,7 @@ const styles = StyleSheet.create({
 
     placeImage: {
         width: width * 0.435,
-        height: screenHeight * 0.245,
+        height: screenHeight * 0.225,
         borderRadius: 4,
         marginBottom: 10,
         marginTop: 10,
@@ -771,7 +771,7 @@ const styles = StyleSheet.create({
 
     coverBadge: {
         position: 'absolute',
-        bottom: 208,
+        bottom: 211,
         left: -10,
         flexDirection: 'row',
         alignItems: 'center',
@@ -864,7 +864,7 @@ const styles = StyleSheet.create({
 
     editReviewInput: {
         width: '102%',
-        height: 140,
+        height: screenHeight * 0.15,
         borderRadius: 16,
         paddingHorizontal: 20,
         fontSize: 13,
@@ -911,7 +911,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 1,
-        bottom: 89,
+        bottom: 86,
     },
 
     editText: {
