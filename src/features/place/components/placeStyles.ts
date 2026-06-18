@@ -1,4 +1,4 @@
-import { StyleSheet, StatusBar, Platform, Dimensions } from "react-native"
+import { Dimensions, Platform, StatusBar, StyleSheet } from "react-native"
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window')
 
@@ -11,7 +11,7 @@ const sharedContainer = {
 }
 
 const sharedClickContainer = {
-    width: '91%' as const,
+    width: '100%' as const,
     height: 45,
     borderRadius: 16,
     backgroundColor: '#1A3A6B',
@@ -63,7 +63,7 @@ export const editStyles = StyleSheet.create({
     photoBox: {
         position: 'relative',
         width: screenWidth * 0.83,
-        height: screenHeight * 0.23,
+        height: screenHeight * 0.2,
         borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
@@ -219,16 +219,17 @@ export const editStyles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         width: '91%',
-        height: 75,
+        height: 60,
         borderRadius: 16,
         borderWidth: 1,
         borderColor: '#E0E0E0',
         backgroundColor: '#FFFFFF',
         padding: 12,
         paddingRight: 20, 
+        marginTop: 4,
         marginBottom: 10,
         gap: 12,
-        bottom: 5,
+        bottom: 35,
     },
 
     albumArt: {
@@ -356,6 +357,13 @@ export const editStyles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '600',
     },
+    scrollContent: {
+        flexGrow: 1,
+        alignItems: 'center',
+        backgroundColor: '#F8FAFD',
+        paddingTop: StatusBar.currentHeight || 65,
+        paddingBottom: 100,
+    },
 })
 
 
@@ -481,6 +489,13 @@ export const addStyles = StyleSheet.create({
         lineHeight: 17,
     },
 
+    scrollContent: {
+        flexGrow: 1,
+        alignItems: 'center',
+        backgroundColor: '#F8FAFD',
+        paddingTop: StatusBar.currentHeight || 65,
+        paddingBottom: 100,
+    },
     clickContainer: sharedClickContainer,
 
     clickText: sharedClickText,

@@ -872,8 +872,8 @@ export default function MapScreen() {
         ref={mapRef}
         style={styles.map}
         initialCamera={{ latitude: 37.5665, longitude: 126.978, zoom: 12 }}
-        isNightModeEnabled={false}
-        lightness={0}
+        isNightModeEnabled={true}
+        lightness={-0.2}
         isShowZoomControls={!pickingLocation}
         onCameraChanged={handleCameraChanged}
       >
