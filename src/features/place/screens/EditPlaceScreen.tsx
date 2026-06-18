@@ -258,7 +258,7 @@ const EditPlaceScreen = ({
                 offset={[0, 2]}
                 style={{ width: CARD_WIDTH, marginBottom: 5, borderRadius: 16 }}
             >
-                <View style={[styles.logContainer, { height: logContainerHeight }]}>
+                <View style={[styles.logContainer, { height: logContainerHeight - 70 }]}>
                     <NoiseOverlay />
                     <View style={{
                         position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,

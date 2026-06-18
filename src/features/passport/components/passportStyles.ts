@@ -83,7 +83,7 @@ export const passportStyles = StyleSheet.create({
     textArea: {
         position: 'absolute',
         flex: 1,
-        paddingVertical: 20,
+        paddingVertical: 15,
         left: LIST_STAMP_SIZE,
         gap: 5,
         flexDirection: 'column',
