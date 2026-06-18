@@ -13,7 +13,7 @@ const sharedContainer = {
 const sharedClickContainer = {
     width: '92%' as const,
     alignSelf: 'center' as const,
-    marginTop: 1,
+    marginTop: -2,
     height: 45,
     borderRadius: 16,
     backgroundColor: '#1A3A6B',
@@ -31,7 +31,7 @@ export const editStyles = StyleSheet.create({
 
     logContainer: {
         position: 'relative',
-        height: screenHeight - 168,
+        height: screenHeight - 178,
         borderRadius: 16,
         backgroundColor: '#F8FAFD',
         justifyContent: 'flex-start',
@@ -66,7 +66,7 @@ export const editStyles = StyleSheet.create({
     photoBox: {
         position: 'relative',
         width: screenWidth * 0.83,
-        height: screenHeight * 0.17,
+        height: screenHeight * 0.155,
         borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',

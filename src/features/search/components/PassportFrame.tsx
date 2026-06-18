@@ -154,7 +154,7 @@ export default function PassportFrame({item}: PassportFrameProps) {
 const styles = StyleSheet.create({
   passportCard: {
     width: "100%",
-    height: screenHeight * 0.68,
+    height: screenHeight * 0.65,
     position: "relative",
     backgroundColor: "#F8FAFD",
     borderRadius: 16,
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 18,
     gap: 14,
-    marginTop: 240,
+    marginTop: 210,
     marginBottom: 10,
   },
   musicImage: {
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     color: "#333333",
     textAlign: "center",
     fontFamily: 'Griun_Gellyroll',   
-    marginTop: 330,
+    marginTop: 298,
 
   }
 })
