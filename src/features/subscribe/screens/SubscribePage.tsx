@@ -248,11 +248,11 @@ export default function SubscribePage() {
                                                     )}
                                                     <TouchableOpacity
                                                         style={{
-                                                            borderColor: selectedIndex === plan.idx ? '#1A3A6B' : '#d1d1d1',
-                                                            borderWidth: selectedIndex === plan.idx ? 2 : 1,
+                                                            borderColor: '#d1d1d1',
+                                                            borderWidth: 1,
                                                             borderRadius: 15,
                                                             padding: 16,
-                                                            backgroundColor: '#FFFFFF',
+                                                            backgroundColor: selectedIndex === plan.idx ? '#EDF6EC' : '#FFFFFF',
                                                         }}
                                                         onPress={() => setSelectedIndex(plan.idx)}
                                                     >
