@@ -93,16 +93,20 @@ export default function MapScreen() {
 
   useEffect(() => {
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") return;
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      const { latitude, longitude } = location.coords;
-      setUserLocation({ latitude, longitude });
-      setDiscoverBanner({ address: null });
-      const address = await naverReverseGeocode(latitude, longitude);
-      setDiscoverBanner({ address });
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") return;
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        const { latitude, longitude } = location.coords;
+        setUserLocation({ latitude, longitude });
+        setDiscoverBanner({ address: null });
+        const address = await naverReverseGeocode(latitude, longitude);
+        setDiscoverBanner({ address });
+      } catch {
+        // 에뮬레이터 등 위치 사용 불가 환경에서는 무시
+      }
     })();
   }, []);
 
@@ -291,22 +295,26 @@ export default function MapScreen() {
   };
 
   const handleLocationPress = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      alert("위치 권한이 필요합니다.");
-      return;
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        alert("위치 권한이 필요합니다.");
+        return;
+      }
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      const { latitude, longitude } = location.coords;
+      setUserLocation({ latitude, longitude });
+      mapRef.current?.animateCameraTo({
+        latitude,
+        longitude,
+        zoom: 16,
+        duration: 500,
+      });
+    } catch {
+      alert("현재 위치를 가져올 수 없습니다.");
     }
-    const location = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
-    });
-    const { latitude, longitude } = location.coords;
-    setUserLocation({ latitude, longitude });
-    mapRef.current?.animateCameraTo({
-      latitude,
-      longitude,
-      zoom: 16,
-      duration: 500,
-    });
   };
 
   return (

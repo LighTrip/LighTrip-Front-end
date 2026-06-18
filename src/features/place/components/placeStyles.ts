@@ -31,7 +31,7 @@ export const editStyles = StyleSheet.create({
 
     logContainer: {
         position: 'relative',
-        height: screenHeight - 145,
+        height: screenHeight - 168,
         borderRadius: 16,
         backgroundColor: '#F8FAFD',
         justifyContent: 'flex-start',
@@ -232,7 +232,7 @@ export const editStyles = StyleSheet.create({
         marginTop: 4,
         marginBottom: 10,
         gap: 12,
-        bottom: 10,
+        bottom: 20,
     },
 
     albumArt: {
@@ -398,7 +398,8 @@ export const addStyles = StyleSheet.create({
 
     albumButton: {
         width: screenWidth * 0.82,
-        height: screenHeight * 0.42,
+        height: screenHeight * 0.38,
+        marginTop: 8,
         borderRadius: 16,
         marginBottom: 15,
         overflow: 'hidden',
@@ -406,10 +407,10 @@ export const addStyles = StyleSheet.create({
 
     albumButtonEmpty: {
         width: screenWidth * 0.82,
-        height: screenHeight * 0.42,
+        height: screenHeight * 0.38,
         borderRadius: 16,
         backgroundColor: '#FFFFFF',
-        marginTop: 5,
+        marginTop: 8,
         marginBottom: 15,
         overflow: 'hidden',
         alignItems: 'center',

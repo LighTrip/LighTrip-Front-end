@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
 
     passportCover: {
         width: COVER_WIDTH,
-        height: COVER_HEIGHT * 0.98,
+        height: COVER_HEIGHT * 0.94,
         borderTopRightRadius: 16,
         borderBottomRightRadius: 16,
         borderTopLeftRadius: 0,
