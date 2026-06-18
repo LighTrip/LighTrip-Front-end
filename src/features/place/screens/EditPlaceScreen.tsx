@@ -19,8 +19,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Shadow } from 'react-native-shadow-2'
 
 import Dropdown from '@/src/components/common/Dropdown'
+import RegionDropdown from '@/src/components/common/RegionDropdown'
 import NoiseOverlay from '@/src/components/common/NoiseOverlay'
-import { DISTRICT_CATEGORY_MAP, REGIONS } from '@/src/constant/regions'
+import { DISTRICT_CATEGORY_MAP, matchDistrictFromAddress } from '@/src/constant/regions'
 import { editStyles as styles } from '../components/placeStyles'
 
 // API
@@ -45,13 +46,6 @@ const hexToRgb = (hex: string): string => {
 const PLACE_TYPES = ['☕ 카페', '🍽️ 식당', '🍶 술집', '🏞️ 공원', '🎬 문화', '🏋️ 운동', '🛍️ 쇼핑', '📦 기타']
 
 // 주소에서 도시에 해당하는 구 목록 찾기
-const findDistrictsByAddress = (address: string): string[] => {
-    const matchedCity = Object.keys(REGIONS).find(city => {
-        const abbrev = city.replace('특별시', '').replace('광역시', '').replace('특별자치시', '')
-        return address.includes(city) || address.includes(abbrev)
-    })
-    return matchedCity ? REGIONS[matchedCity] : REGIONS['서울특별시']
-}
 
 const InfoRow = ({ iconName, text, onPress }: { iconName: string; text: string; onPress?: () => void }) => (
     <View style={styles.infoRowWrapper}>
@@ -107,10 +101,6 @@ const EditPlaceScreen = ({
 
     const [placeType, setPlaceType] = useState('☕ 카페')
 
-    // 구 목록 (장소 선택 시 도시에 맞게 자동 변경)
-    const [availableDistricts, setAvailableDistricts] = useState<string[]>(
-        Object.values(REGIONS).flat()
-    )
     const [region, setRegion] = useState<string>(locationRegion ?? '선택')
 
     // 장소 이름 (수동 검색으로 변경 가능)
@@ -169,10 +159,7 @@ const EditPlaceScreen = ({
         setCurrentLat(parseFloat(item.y) ?? 0)  // 카카오: y가 위도
         setCurrentLng(parseFloat(item.x) ?? 0)  // 카카오: x가 경도
 
-        const districts = findDistrictsByAddress(address)
-        setAvailableDistricts(districts)
-        const matchedDistrict = districts.find(r => address.includes(r))
-        setRegion(matchedDistrict ?? '선택')
+        setRegion(matchDistrictFromAddress(address) ?? '선택')
 
         setPlaceSearchOpen(false)
     }
@@ -368,10 +355,9 @@ const EditPlaceScreen = ({
                             options={PLACE_TYPES}
                             onSelect={setPlaceType}
                         />
-                        <Dropdown
+                        <RegionDropdown
                             label="방문 지역"
                             value={region}
-                            options={availableDistricts}
                             onSelect={setRegion}
                         />
                     </View>

@@ -23,7 +23,7 @@ import { generateAIDraft } from '@/src/api/passport/ai.api'
 import { getPresignedUrl, uploadToS3 } from '@/src/api/passport/image.api'
 import { getMyPremium } from '@/src/api/payment/payment.api'
 import NoiseOverlay from '@/src/components/common/NoiseOverlay'
-import { REGIONS } from '@/src/constant/regions'
+import { matchDistrictFromAddress } from '@/src/constant/regions'
 import PassportDetail from '../../passport/screens/PassportDetail'
 import EditPlaceScreen from './EditPlaceScreen'
 
@@ -192,12 +192,10 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                         .filter(Boolean)
                         .join(' ')
                     setLocationAddress(fullAddress)
-                    if (place.district) {
-                        const allDistricts = Object.values(REGIONS).flat()
-                        const matched = allDistricts.find(r => place.district!.includes(r))
-                        console.log(`[EXIF] district="${place.district}" → matched="${matched ?? '없음'}"`)
-                        if (matched) setLocationRegion(matched)
-                    }
+                    const geoAddress = [place.region, place.city, place.district].filter(Boolean).join(' ')
+                    const matched = matchDistrictFromAddress(geoAddress)
+                    console.log(`[EXIF] geoAddress="${geoAddress}" → matched="${matched ?? '없음'}"`)
+                    if (matched) setLocationRegion(matched)
                 }
                 await fetchPlaceNameFromCoords(lat, lng)
             } else {
