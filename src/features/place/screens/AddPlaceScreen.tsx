@@ -316,20 +316,20 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                 offset={[0, 2]}
                 style={{ width: CARD_WIDTH, marginBottom: 5, borderRadius: 16 }}
             >
-                <View style={[styles.photoContainer, { height: screenHeight * 0.56 }]}>
+                <View style={[styles.photoContainer, { height: screenHeight * 0.55 }]}>
                     <NoiseOverlay />
                     <View style={[styles.photoTextbox, { flexDirection: 'row', alignItems: 'center' }]}>
                         <TouchableOpacity
                             onPress={() => onClose ? onClose() : router.back()}
-                            style={{ padding: 4, marginRight: 4, marginTop: -7 }}
+                            style={{ padding: 4, marginRight: 10, top: 7 }}
                         >
-                            <Ionicons name="chevron-back" size={24} color="#333" />
+                            <Ionicons name="chevron-back" size={20} color="#333" />
                         </TouchableOpacity>
                         <Text style={styles.photoText}>장소의 사진을 등록해 주세요!</Text>
                     </View>
 
                     {photos.length > 1 ? (
-                        <View style={[styles.albumButton, { width: CARD_WIDTH * 0.91, height: screenHeight * 0.42 }]}>
+                        <View style={styles.albumButton}>
                             <ScrollView
                                 horizontal
                                 style={{ flex: 1 }}
@@ -371,7 +371,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                         </View>
                     ) : photos.length === 1 ? (
                         <TouchableOpacity
-                            style={[styles.albumButton, { width: CARD_WIDTH * 0.91, height: screenHeight * 0.42 }]}
+                            style={styles.albumButton}
                             onPress={openAlbum}
                         >
                             <Image
@@ -382,7 +382,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                         </TouchableOpacity>
                     ) : (
                         <TouchableOpacity
-                            style={[styles.albumButtonEmpty, { width: CARD_WIDTH * 0.91, height: screenHeight * 0.42 }]}
+                            style={styles.albumButtonEmpty}
                             onPress={openAlbum}
                         >
                             <Text style={{ color: '#aaa' }}>앨범에서 선택하기</Text>
@@ -390,10 +390,10 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                     )}
 
                     <TouchableOpacity
-                        style={[styles.cameraButton, { width: CARD_WIDTH * 0.67 }]}
+                        style={styles.cameraButton}
                         onPress={openCamera}
                     >
-                        <Text style={styles.clickText}>카메라로 촬영</Text>
+                        <Text style={[styles.clickText, { fontSize: 12 }]}>카메라로 촬영</Text>
                     </TouchableOpacity>
                 </View>
             </Shadow>
@@ -410,7 +410,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                     <View style={styles.infoTextbox}>
                         <Text style={styles.infotitleText}>어떤 곳인지 간단히 설명해 주세요.</Text>
                     </View>
-                    <View style={[styles.infoTypeBox, { width: CARD_WIDTH * 0.91, height: screenHeight * 0.12 }]}>
+                    <View style={styles.infoTypeBox}>
                         <TextInput
                             style={styles.infoTypeText}
                             placeholder="카페에 가서 커피를 마셨다!"
@@ -424,14 +424,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
             </Shadow>
 
             <TouchableOpacity
-                style={[
-                    styles.clickContainer, 
-                    { 
-                        width: CARD_WIDTH,
-                        alignSelf: 'center',
-                        marginTop: 0,
-                        marginBottom: 20
-                    }]}
+                style={styles.clickContainer}
                 onPress={handleCreateWithAI}
                 disabled={isGenerating}
             >

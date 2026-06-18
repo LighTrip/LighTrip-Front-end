@@ -238,20 +238,14 @@ const EditPlaceScreen = ({
             style={{flex: 1, backgroundColor: "#F8FAFD"}}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-            <ScrollView
-                style={{ flex: 1, width: "100%", backgroundColor: "#F8FAFD" }}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-            >
                 <View style={{ marginTop: 10, alignSelf: 'center' }}>
             <Shadow
                 distance={6}
                 startColor={'#00000012'}
-                offset={[0, 2]}
-                style={{ width: CARD_WIDTH, marginBottom: 5, borderRadius: 16 }}
+                offset={[0, 20]}
+                style={{ width: CARD_WIDTH, borderRadius: 16 }}
             >
-                <View style={[styles.logContainer, { height: logContainerHeight - 70 }]}>
+                <View style={styles.logContainer}>
                     <NoiseOverlay />
                     <View style={{
                         position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -261,7 +255,7 @@ const EditPlaceScreen = ({
 
                     <View style={styles.header}>
                         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                            <Ionicons name="chevron-back" size={22} color="#333" />
+                            <Ionicons name="chevron-back" size={16} color="#333" />
                         </TouchableOpacity>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <Text style={styles.headerTitle}>기록 편집</Text>
@@ -333,7 +327,7 @@ const EditPlaceScreen = ({
                         <TouchableOpacity onPress={() => setShowDatePicker(true)}>
                             <View style={styles.infoRowWrapper}>
                                 <View style={styles.infoRow}>
-                                    <Ionicons name="calendar-outline" size={18} color="#4A6FA5" />
+                                    <Ionicons name="calendar-outline" size={17} color="#4A6FA5" />
                                     <Text style={styles.infoText}>{formatDate(date)}</Text>
                                 </View>
                                 <View style={styles.divider} />
@@ -424,8 +418,8 @@ const EditPlaceScreen = ({
                                         key={color}
                                         onPress={() => setThemeColor(color)}
                                         style={{
-                                            width: 20,
-                                            height: 20,
+                                            width: 15,
+                                            height: 15,
                                             borderRadius: 10,
                                             backgroundColor: color,
                                             borderWidth: themeColor === color ? 2 : 1,
@@ -456,20 +450,11 @@ const EditPlaceScreen = ({
             </View>
 
             <TouchableOpacity
-                style={[
-                    styles.clickContainer,
-                    {
-                        width: CARD_WIDTH,
-                        alignSelf: 'center',
-                        marginTop: 8,
-                        marginBottom: 20,
-                    }
-                ]}
+                style={styles.clickContainer}
                 onPress={handleSubmit}
             >
                 <Text style={styles.clickText}>등록하기</Text>
             </TouchableOpacity>
-            </ScrollView>
         </KeyboardAvoidingView>
         </View>
     )
