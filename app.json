@@ -24,7 +24,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.lightrip.LighTrip",
+      "package": "com.seoyeon.lightrip",
       "permissions": ["android.permission.RECORD_AUDIO"]
     },
     "web": {
