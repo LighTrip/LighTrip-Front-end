@@ -1,6 +1,7 @@
 import {
     Friend,
     FriendLight,
+    FriendLightClusterPage,
     FriendMapDistrict,
     FriendPassport,
     MutualFriend,
@@ -100,6 +101,13 @@ type FriendLightResponse = {
     message: string;
     data: FriendLight[];
 }
+
+type FriendLightClusterResponse = {
+    success: boolean;
+    code: string;
+    message: string;
+    data: FriendLightClusterPage;
+};
 
 // 1. 토큰 발급
 const getAccessToken = async () => {
@@ -356,3 +364,50 @@ export const getFriendLights = async (
     return data.data ?? [];
 
 }
+
+// 12. 클러스터 API
+export const getFriendLightCluster = async (
+    minLat: number,
+    maxLat: number,
+    minLng: number,
+    maxLng: number,
+    cursor?: number | null,
+    size: number = 10,
+    teamId?: number,
+): Promise<FriendLightClusterPage> => {
+    const params = new URLSearchParams();
+
+    params.append("minLat", String(minLat));
+    params.append("maxLat", String(maxLat));
+    params.append("minLng", String(minLng));
+    params.append("maxLng", String(maxLng));
+    params.append("size", String(size));
+
+    if (cursor !== undefined && cursor !== null) {
+        params.append("cursor", String(cursor));
+    }
+
+    if (teamId !== undefined) {
+        params.append("teamId", String(teamId));
+    }
+
+    const requestUrl = `${BASE_URL}/api/v1/lights/cluster?${params.toString()}`;
+
+    console.log("불빛 클러스터 상세 요청 URL:", requestUrl);
+
+    const response = await fetch(requestUrl, {
+        method: "GET",
+        headers: await authHeaders(),
+    });
+
+    const data: FriendLightClusterResponse = await response.json();
+
+    console.log("불빛 클러스터 상세 응답 상태:", response.status);
+    console.log("불빛 클러스터 상세 응답 데이터:", data);
+
+    if (!response.ok || !data.success) {
+        throw new Error(data.message || "클러스터 상세 조회에 실패했습니다.");
+    }
+
+    return data.data;
+};
