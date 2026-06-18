@@ -54,7 +54,7 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "./plugins/withNaverMapsRepository.js"
+      "./plugin/withNaverMapMaven"
     ],
     "experiments": {
       "typedRoutes": true

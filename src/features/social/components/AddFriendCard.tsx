@@ -17,7 +17,7 @@ const getMutualFriendText = (
     }
 
     if (mutualFriends.length === 1) {
-        return `${mutualFriends[0].nickname}와 함께`
+        return `${mutualFriends[0].nickname} 님과 함께`
     }
 
     return `${mutualFriends[0].nickname} 외 ${mutualFriends.length -1}명과 함께 `;
@@ -46,7 +46,7 @@ export default function AddFriendCard({friend, onAdd, onPress}: AddFriendProps) 
 
             <View style={styles.info}>
                 <Text style={styles.name}>{friend.nickname}</Text>
-                <Text style={styles.stamp}>도장 {friend.stampCount ?? 0}개</Text>
+                <Text style={styles.stamp}>도장 {friend.passportCount ?? 0}개</Text>
                 <Text style={styles.description}>
                     {getMutualFriendText(friend.mutualFriends)}
                 </Text>

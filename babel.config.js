@@ -1,5 +1,7 @@
-const plugin = require("tailwindcss");
+module.exports = function (api) {
+  api.cache(true);
 
-module.exports = {
-  presets: ["babel-preset-expo"],
+  return {
+    presets: ["babel-preset-expo"],
+  };
 };
