@@ -14,6 +14,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import FriendManageModal from "../components/FriendManageModal";
 import TeamManageModal from "../components/TeamManageModal";
 import {
@@ -159,7 +160,7 @@ export default function ProfileView() {
     }
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             {/* 고정 영역 */}
             <View style={styles.fixedHeader}>
                 <Text style={styles.headerTitle}>마이페이지</Text>
@@ -366,7 +367,7 @@ export default function ProfileView() {
                 visible={isFriendModalOpen}
                 onClose={() => setIsFriendModalOpen(false)}
             />
-        </View>
+        </SafeAreaView>
     );
 }
 
@@ -378,6 +379,7 @@ const styles = StyleSheet.create({
     },
     fixedHeader: {
         paddingHorizontal: 20,
+        paddingTop: 22,
         backgroundColor: "#F8FAFD",
     },
     scrollArea: {
@@ -396,8 +398,7 @@ const styles = StyleSheet.create({
         color: "#000000",
         fontSize: 24,
         fontWeight: "700",
-        marginBottom: 30,
-        marginTop: 35,
+        marginBottom: 20,
     },
     profileCard: {
         backgroundColor: "#1A3A6B",
