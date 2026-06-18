@@ -102,7 +102,7 @@ export function coverResizeAndCrop(
 }
 
 // Title ROI는 150x200 기준 고정 좌표
-export const TITLE_ROI = { x: 7, y: 56, width: 136, height: 36 } as const;
+export const TITLE_ROI = { x: 7, y: 48, width: 136, height: 36 } as const;
 
 /**
  * 원본 이미지 -> 150x200 center crop -> title ROI(136x36) crop까지 수행하고
