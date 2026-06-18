@@ -1,34 +1,35 @@
-import {
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    Image,
-    Dimensions,
-    View,
-    Platform,
-    KeyboardAvoidingView,
-    StatusBar,
-} from 'react-native'
-import React, { useState, useEffect } from 'react'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Shadow } from 'react-native-shadow-2'
-import { Ionicons } from '@expo/vector-icons'
 import DatePickerModal from '@/src/components/passport/DatePickerModal'
 import KakaoPlaceSearch from '@/src/components/passport/KakaoPlaceSearch'
 import MusicSearch from '@/src/components/passport/MusicSearch'
+import { Ionicons } from '@expo/vector-icons'
+import React, { useEffect, useState } from 'react'
+import {
+    Dimensions,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StatusBar,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Shadow } from 'react-native-shadow-2'
 
-import NoiseOverlay from '@/src/components/common/NoiseOverlay'
 import Dropdown from '@/src/components/common/Dropdown'
-import { REGIONS, DISTRICT_CATEGORY_MAP } from '@/src/constant/regions'
+import RegionDropdown from '@/src/components/common/RegionDropdown'
+import NoiseOverlay from '@/src/components/common/NoiseOverlay'
+import { DISTRICT_CATEGORY_MAP, matchDistrictFromAddress } from '@/src/constant/regions'
 import { editStyles as styles } from '../components/placeStyles'
 
 // API
 import { getPresignedUrl, uploadToS3 } from '@/src/api/passport/image.api'
-import { createPassport, getMyPassportDistricts, textColor, changeCoverImage, CATEGORY_MAP, Visibility } from '@/src/api/passport/passport.api'
+import { CATEGORY_MAP, changeCoverImage, createPassport, getMyPassportDistricts, textColor, Visibility } from '@/src/api/passport/passport.api'
 import { getMyPremium } from '@/src/api/payment/payment.api'
-import { predictCoverTextColor } from '@/src/features/passport/cover_ai/coverColorHelper'
 import { useTeamMode } from '@/src/components/common/TeamModeContext'
+import { predictCoverTextColor } from '@/src/features/passport/cover_ai/coverColorHelper'
 
 const { width, height: screenHeight } = Dimensions.get('window')
 const CARD_WIDTH = width * 0.91
@@ -45,13 +46,6 @@ const hexToRgb = (hex: string): string => {
 const PLACE_TYPES = ['☕ 카페', '🍽️ 식당', '🍶 술집', '🏞️ 공원', '🎬 문화', '🏋️ 운동', '🛍️ 쇼핑', '📦 기타']
 
 // 주소에서 도시에 해당하는 구 목록 찾기
-const findDistrictsByAddress = (address: string): string[] => {
-    const matchedCity = Object.keys(REGIONS).find(city => {
-        const abbrev = city.replace('특별시', '').replace('광역시', '').replace('특별자치시', '')
-        return address.includes(city) || address.includes(abbrev)
-    })
-    return matchedCity ? REGIONS[matchedCity] : REGIONS['서울특별시']
-}
 
 const InfoRow = ({ iconName, text, onPress }: { iconName: string; text: string; onPress?: () => void }) => (
     <View style={styles.infoRowWrapper}>
@@ -107,10 +101,6 @@ const EditPlaceScreen = ({
 
     const [placeType, setPlaceType] = useState('☕ 카페')
 
-    // 구 목록 (장소 선택 시 도시에 맞게 자동 변경)
-    const [availableDistricts, setAvailableDistricts] = useState<string[]>(
-        Object.values(REGIONS).flat()
-    )
     const [region, setRegion] = useState<string>(locationRegion ?? '선택')
 
     // 장소 이름 (수동 검색으로 변경 가능)
@@ -169,10 +159,7 @@ const EditPlaceScreen = ({
         setCurrentLat(parseFloat(item.y) ?? 0)  // 카카오: y가 위도
         setCurrentLng(parseFloat(item.x) ?? 0)  // 카카오: x가 경도
 
-        const districts = findDistrictsByAddress(address)
-        setAvailableDistricts(districts)
-        const matchedDistrict = districts.find(r => address.includes(r))
-        setRegion(matchedDistrict ?? '선택')
+        setRegion(matchDistrictFromAddress(address) ?? '선택')
 
         setPlaceSearchOpen(false)
     }
@@ -248,10 +235,16 @@ const EditPlaceScreen = ({
     return (
         <View style={{ flex: 1, backgroundColor: '#F8FAFD' }}>
         <KeyboardAvoidingView
-            style={styles.container}
+            style={{flex: 1, backgroundColor: "#F8FAFD"}}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-            <View style={{ marginTop: 10, alignSelf: 'center' }}>
+            <ScrollView
+                style={{ flex: 1, width: "100%", backgroundColor: "#F8FAFD" }}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+            >
+                <View style={{ marginTop: 10, alignSelf: 'center' }}>
             <Shadow
                 distance={6}
                 startColor={'#00000012'}
@@ -362,10 +355,9 @@ const EditPlaceScreen = ({
                             options={PLACE_TYPES}
                             onSelect={setPlaceType}
                         />
-                        <Dropdown
+                        <RegionDropdown
                             label="방문 지역"
                             value={region}
-                            options={availableDistricts}
                             onSelect={setRegion}
                         />
                     </View>
@@ -464,11 +456,20 @@ const EditPlaceScreen = ({
             </View>
 
             <TouchableOpacity
-                style={styles.clickContainer}
+                style={[
+                    styles.clickContainer,
+                    {
+                        width: CARD_WIDTH,
+                        alignSelf: 'center',
+                        marginTop: 8,
+                        marginBottom: 20,
+                    }
+                ]}
                 onPress={handleSubmit}
             >
                 <Text style={styles.clickText}>등록하기</Text>
             </TouchableOpacity>
+            </ScrollView>
         </KeyboardAvoidingView>
         </View>
     )

@@ -81,3 +81,24 @@ export type FriendLight = {
     centerLatitude: number;
     centerLongitude: number;
 }
+
+export type FriendLightClusterItem = {
+    passportId: number;
+    thumbnailUrl: string;
+    spaceName: string;
+    districtCategory: string;
+    districtDisplayName: string;
+    category: string;
+    categoryDisplayName: string;
+    visitedAt: string;
+    visibility: string;
+    likeCount: number;
+    scrapCount: number;
+    theme: string;
+};
+
+export type FriendLightClusterPage = {
+    content: FriendLightClusterItem[];
+    hasNext: boolean;
+    nextCursor: number | null;
+};
