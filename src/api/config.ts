@@ -17,6 +17,7 @@ export const API_ENDPOINTS = {
 
   LIGHTS: {
     GET_MY_LIGHTS: "/api/v1/lights/me",
+    GET_CLUSTER_DETAIL: "/api/v1/lights/cluster",
   },
 
   SIGNUP: {},
