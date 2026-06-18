@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
 
     placeName: {
         position: 'absolute',
-        top: '30%',
+        top: 56,
         fontSize: 28,
         fontFamily: 'Freesentation',
     },
