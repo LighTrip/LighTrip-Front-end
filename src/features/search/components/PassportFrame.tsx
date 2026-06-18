@@ -154,7 +154,7 @@ export default function PassportFrame({item}: PassportFrameProps) {
 const styles = StyleSheet.create({
   passportCard: {
     width: "100%",
-    height: screenHeight * 0.65,
+    height: screenHeight * 0.64,
     position: "relative",
     backgroundColor: "#F8FAFD",
     borderRadius: 16,
