@@ -26,5 +26,28 @@ export type BBoxParams = {
   teamId?: number;
 };
 
+export type ClusterDetailItem = {
+  passportId: number;
+  thumbnailUrl: string;
+  spaceName: string;
+  districtCategory: string;
+  districtDisplayName: string;
+  category: string;
+  categoryDisplayName: string;
+  visitedAt: string;
+  visibility: string;
+  likeCount: number;
+  scrapCount: number;
+  theme?: string;
+};
+
+export type ClusterDetailParams = BBoxParams & {
+  cursor?: number;
+  size?: number;
+};
+
 export const getMyLights = (params: BBoxParams) =>
   axiosInstance.get(API_ENDPOINTS.LIGHTS.GET_MY_LIGHTS, { params });
+
+export const getClusterDetail = (params: ClusterDetailParams) =>
+  axiosInstance.get(API_ENDPOINTS.LIGHTS.GET_CLUSTER_DETAIL, { params });
