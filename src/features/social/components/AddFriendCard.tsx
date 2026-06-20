@@ -10,17 +10,45 @@ import { RecommendedFriend } from "../types/social.types";
 const defaultProfile = require("../../../../assets/images/default_profile.png");
 
 const getMutualFriendText = (
-    mutualFriends?: {nickname: string}[]
+    mutualFriends?: { nickname: string }[]
 ) => {
     if (!mutualFriends || mutualFriends.length === 0) {
-        return "함께 아는 친구 없음"
+        return "함께 아는 친구 없음";
     }
 
     if (mutualFriends.length === 1) {
-        return `${mutualFriends[0].nickname} 님과 함께`
+        return `${mutualFriends[0].nickname}님과 함께`;
     }
 
-    return `${mutualFriends[0].nickname} 외 ${mutualFriends.length -1}명과 함께 `;
+    return `${mutualFriends[0].nickname} 외 ${mutualFriends.length - 1}명과 함께`;
+};
+
+const isRequestPending = (status?: string | null) => {
+    const normalizedStatus = status?.toUpperCase().replace(/[\s-]/g, "_");
+
+    if (!normalizedStatus) {
+        return false;
+    }
+
+    const addableStatuses = new Set([
+        "NONE",
+        "NOT_FRIEND",
+        "AVAILABLE",
+        "RECOMMENDED",
+        "REJECTED",
+    ]);
+
+    if (addableStatuses.has(normalizedStatus)) {
+        return false;
+    }
+
+    return (
+        normalizedStatus.includes("PENDING") ||
+        normalizedStatus.includes("REQUESTED") ||
+        normalizedStatus.includes("REQUEST_SENT") ||
+        normalizedStatus.includes("SENT") ||
+        normalizedStatus.includes("WAIT")
+    );
 };
 
 type AddFriendProps = {
@@ -29,34 +57,55 @@ type AddFriendProps = {
     onPress: (friend: RecommendedFriend) => void;
 };
 
-export default function AddFriendCard({friend, onAdd, onPress}: AddFriendProps) {
+export default function AddFriendCard({ friend, onAdd, onPress }: AddFriendProps) {
+    const requestPending = isRequestPending(friend.status);
+
     return (
-        <TouchableOpacity 
+        <TouchableOpacity
             style={styles.card}
             activeOpacity={0.8}
             onPress={() => onPress(friend)}
         >
-            <Image 
+            <Image
                 source={
                     friend.profileImg
-                        ? {uri: friend.profileImg}
+                        ? { uri: friend.profileImg }
                         : defaultProfile
-                } style={styles.image} 
+                }
+                style={styles.image}
             />
 
             <View style={styles.info}>
                 <Text style={styles.name}>{friend.nickname}</Text>
-                <Text style={styles.stamp}>도장 {friend.passportCount ?? 0}개</Text>
+                <Text style={styles.stamp}>여권 {friend.passportCount ?? 0}개</Text>
                 <Text style={styles.description}>
                     {getMutualFriendText(friend.mutualFriends)}
                 </Text>
             </View>
 
-            <TouchableOpacity style={styles.addButton} onPress={() => onAdd(friend)}>
-                <Text style={styles.addButtonText}>추가</Text>
+            <TouchableOpacity
+                style={[
+                    styles.addButton,
+                    requestPending && styles.pendingButton,
+                ]}
+                onPress={() => {
+                    if (!requestPending) {
+                        onAdd(friend);
+                    }
+                }}
+                disabled={requestPending}
+            >
+                <Text
+                    style={[
+                        styles.addButtonText,
+                        requestPending && styles.pendingButtonText,
+                    ]}
+                >
+                    {requestPending ? "요청됨" : "추가"}
+                </Text>
             </TouchableOpacity>
         </TouchableOpacity>
-    )
+    );
 }
 
 const styles = StyleSheet.create({
@@ -69,7 +118,7 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     image: {
-        width: 60, 
+        width: 60,
         height: 60,
         borderRadius: 60,
         marginLeft: -10,
@@ -101,10 +150,15 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
     },
+    pendingButton: {
+        backgroundColor: "#E5E7EB",
+    },
     addButtonText: {
         fontSize: 13,
         fontWeight: "500",
         color: "#FFFFFF",
     },
-
-})
+    pendingButtonText: {
+        color: "#6B7280",
+    },
+});
