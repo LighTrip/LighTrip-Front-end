@@ -14,6 +14,8 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import LogoIcon from "../../../../assets/icons/logo-white.svg";
 import FriendManageModal from "../components/FriendManageModal";
 import TeamManageModal from "../components/TeamManageModal";
 import {
@@ -159,7 +161,7 @@ export default function ProfileView() {
     }
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             {/* 고정 영역 */}
             <View style={styles.fixedHeader}>
                 <Text style={styles.headerTitle}>마이페이지</Text>
@@ -218,7 +220,7 @@ export default function ProfileView() {
                     </View>
     
                     <View style={styles.bannerIcon}>
-                        <MaterialCommunityIcons name="map" size={24} color="#333333" />
+                        <LogoIcon width={30} height={30}/>
                     </View>
                 </TouchableOpacity>
     
@@ -366,7 +368,7 @@ export default function ProfileView() {
                 visible={isFriendModalOpen}
                 onClose={() => setIsFriendModalOpen(false)}
             />
-        </View>
+        </SafeAreaView>
     );
 }
 
@@ -378,6 +380,7 @@ const styles = StyleSheet.create({
     },
     fixedHeader: {
         paddingHorizontal: 20,
+        paddingTop: 11,
         backgroundColor: "#F8FAFD",
     },
     scrollArea: {
@@ -396,8 +399,7 @@ const styles = StyleSheet.create({
         color: "#000000",
         fontSize: 24,
         fontWeight: "700",
-        marginBottom: 30,
-        marginTop: 35,
+        marginBottom: 12,
     },
     profileCard: {
         backgroundColor: "#1A3A6B",
@@ -477,6 +479,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 5,
+        marginBottom: 5,
     },
     premium: {
         color: "#B38E06",
@@ -573,7 +576,7 @@ const styles = StyleSheet.create({
     },
     menuItemBorder: {
         borderBottomWidth: 1,
-        borderBottomColor: "#262626",  
+        borderBottomColor: "#E0E0E0",  
     },
     menuLeft: {
         flexDirection: "row",

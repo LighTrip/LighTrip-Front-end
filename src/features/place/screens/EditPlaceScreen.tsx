@@ -19,8 +19,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Shadow } from 'react-native-shadow-2'
 
 import Dropdown from '@/src/components/common/Dropdown'
+import RegionDropdown from '@/src/components/common/RegionDropdown'
 import NoiseOverlay from '@/src/components/common/NoiseOverlay'
-import { DISTRICT_CATEGORY_MAP, REGIONS } from '@/src/constant/regions'
+import { DISTRICT_CATEGORY_MAP, matchDistrictFromAddress } from '@/src/constant/regions'
 import { editStyles as styles } from '../components/placeStyles'
 
 // API
@@ -45,13 +46,6 @@ const hexToRgb = (hex: string): string => {
 const PLACE_TYPES = ['☕ 카페', '🍽️ 식당', '🍶 술집', '🏞️ 공원', '🎬 문화', '🏋️ 운동', '🛍️ 쇼핑', '📦 기타']
 
 // 주소에서 도시에 해당하는 구 목록 찾기
-const findDistrictsByAddress = (address: string): string[] => {
-    const matchedCity = Object.keys(REGIONS).find(city => {
-        const abbrev = city.replace('특별시', '').replace('광역시', '').replace('특별자치시', '')
-        return address.includes(city) || address.includes(abbrev)
-    })
-    return matchedCity ? REGIONS[matchedCity] : REGIONS['서울특별시']
-}
 
 const InfoRow = ({ iconName, text, onPress }: { iconName: string; text: string; onPress?: () => void }) => (
     <View style={styles.infoRowWrapper}>
@@ -107,10 +101,6 @@ const EditPlaceScreen = ({
 
     const [placeType, setPlaceType] = useState('☕ 카페')
 
-    // 구 목록 (장소 선택 시 도시에 맞게 자동 변경)
-    const [availableDistricts, setAvailableDistricts] = useState<string[]>(
-        Object.values(REGIONS).flat()
-    )
     const [region, setRegion] = useState<string>(locationRegion ?? '선택')
 
     // 장소 이름 (수동 검색으로 변경 가능)
@@ -169,10 +159,7 @@ const EditPlaceScreen = ({
         setCurrentLat(parseFloat(item.y) ?? 0)  // 카카오: y가 위도
         setCurrentLng(parseFloat(item.x) ?? 0)  // 카카오: x가 경도
 
-        const districts = findDistrictsByAddress(address)
-        setAvailableDistricts(districts)
-        const matchedDistrict = districts.find(r => address.includes(r))
-        setRegion(matchedDistrict ?? '선택')
+        setRegion(matchDistrictFromAddress(address) ?? '선택')
 
         setPlaceSearchOpen(false)
     }
@@ -251,20 +238,14 @@ const EditPlaceScreen = ({
             style={{flex: 1, backgroundColor: "#F8FAFD"}}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-            <ScrollView
-                style={{ flex: 1, width: "100%", backgroundColor: "#F8FAFD" }}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-            >
-                <View style={{ marginTop: 10, alignSelf: 'center' }}>
+                <View style={{ marginTop: 16, alignSelf: 'center' }}>
             <Shadow
                 distance={6}
                 startColor={'#00000012'}
-                offset={[0, 2]}
-                style={{ width: CARD_WIDTH, marginBottom: 5, borderRadius: 16 }}
+                offset={[0, 20]}
+                style={{ width: CARD_WIDTH, borderRadius: 16 }}
             >
-                <View style={[styles.logContainer, { height: logContainerHeight - 70 }]}>
+                <View style={styles.logContainer}>
                     <NoiseOverlay />
                     <View style={{
                         position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -274,7 +255,7 @@ const EditPlaceScreen = ({
 
                     <View style={styles.header}>
                         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                            <Ionicons name="chevron-back" size={22} color="#333" />
+                            <Ionicons name="chevron-back" size={16} color="#333" />
                         </TouchableOpacity>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <Text style={styles.headerTitle}>기록 편집</Text>
@@ -346,7 +327,7 @@ const EditPlaceScreen = ({
                         <TouchableOpacity onPress={() => setShowDatePicker(true)}>
                             <View style={styles.infoRowWrapper}>
                                 <View style={styles.infoRow}>
-                                    <Ionicons name="calendar-outline" size={18} color="#4A6FA5" />
+                                    <Ionicons name="calendar-outline" size={17} color="#4A6FA5" />
                                     <Text style={styles.infoText}>{formatDate(date)}</Text>
                                 </View>
                                 <View style={styles.divider} />
@@ -368,10 +349,9 @@ const EditPlaceScreen = ({
                             options={PLACE_TYPES}
                             onSelect={setPlaceType}
                         />
-                        <Dropdown
+                        <RegionDropdown
                             label="방문 지역"
                             value={region}
-                            options={availableDistricts}
                             onSelect={setRegion}
                         />
                     </View>
@@ -438,8 +418,8 @@ const EditPlaceScreen = ({
                                         key={color}
                                         onPress={() => setThemeColor(color)}
                                         style={{
-                                            width: 20,
-                                            height: 20,
+                                            width: 15,
+                                            height: 15,
                                             borderRadius: 10,
                                             backgroundColor: color,
                                             borderWidth: themeColor === color ? 2 : 1,
@@ -470,20 +450,11 @@ const EditPlaceScreen = ({
             </View>
 
             <TouchableOpacity
-                style={[
-                    styles.clickContainer,
-                    {
-                        width: CARD_WIDTH,
-                        alignSelf: 'center',
-                        marginTop: 8,
-                        marginBottom: 20,
-                    }
-                ]}
+                style={styles.clickContainer}
                 onPress={handleSubmit}
             >
                 <Text style={styles.clickText}>등록하기</Text>
             </TouchableOpacity>
-            </ScrollView>
         </KeyboardAvoidingView>
         </View>
     )

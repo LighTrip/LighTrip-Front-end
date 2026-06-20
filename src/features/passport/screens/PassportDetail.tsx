@@ -426,7 +426,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                             >
                                 <Ionicons
                                     name={isCover ? 'bookmark' : 'bookmark-outline'}
-                                    size={14}
+                                    size={10}
                                     color="#ffffff"
                                 />
                                 <Text style={styles.coverBadgeText}>
@@ -492,14 +492,14 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                         />
 
                         {isEditing && isPremium && (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, top: 15, right: -105 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, top: 15, right: -90 }}>
                                 {THEME_COLORS.map((color) => (
                                     <TouchableOpacity
                                         key={color}
                                         onPress={() => setThemeColor(color)}
                                         style={{
-                                            width: 20,
-                                            height: 20,
+                                            width: 15,
+                                            height: 15,
                                             borderRadius: 10,
                                             backgroundColor: color,
                                             borderWidth: themeColor === color ? 2 : 1,
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
     },
 
     passportCard: {
-        height: screenHeight * 0.72,
+        height: screenHeight * 0.67,
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
         shadowColor: '#000',
@@ -733,8 +733,8 @@ const styles = StyleSheet.create({
 
     imageBackground: {
         position: 'absolute',
-        width: width * 0.45,
-        height: 260,
+        width: width * 0.48,
+        height: screenHeight * 0.25,
         left: -8,
         top: 5,
         backgroundColor: '#FFFFFF',
@@ -747,8 +747,8 @@ const styles = StyleSheet.create({
     },
 
     placeImage: {
-        width: width * 0.41,
-        height: 240,
+        width: width * 0.435,
+        height: screenHeight * 0.225,
         borderRadius: 4,
         marginBottom: 10,
         marginTop: 10,
@@ -771,7 +771,7 @@ const styles = StyleSheet.create({
 
     coverBadge: {
         position: 'absolute',
-        bottom: 260,
+        bottom: 194,
         left: -10,
         flexDirection: 'row',
         alignItems: 'center',
@@ -783,7 +783,7 @@ const styles = StyleSheet.create({
     },
 
     coverBadgeText: {
-        fontSize: 11,
+        fontSize: 8,
         color: '#ffffff',
         fontWeight: '600',
     },
@@ -791,24 +791,23 @@ const styles = StyleSheet.create({
     stampImage: {
         position: 'absolute',
         top: 10,
-        right: 0,
-        width: 180,
-        height: 180,
+        right: 10,
+        width: screenHeight * 0.16,
+        height: screenHeight * 0.16,
     },
 
     infoArea: {
         position: 'absolute',
-        bottom: 30,
+        bottom: 70,
         left: 120,
         right: 16,
-        gap: 2,
     },
 
     infoRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        paddingLeft: 105,
+        paddingLeft: 90,
     },
 
     infoEditButton: {
@@ -821,16 +820,16 @@ const styles = StyleSheet.create({
 
     infoText: {
         flex: 1,
-        fontSize: 16,
+        fontSize: 12,
         color: '#333',
         textAlign: 'left',
-        lineHeight: 28,
+        lineHeight: 24,
         fontFamily: 'Griun_Gellyroll',
     },
 
     icon: {
-        width: 16,
-        height: 16,
+        width: 12,
+        height: 12,
     },
 
     dividerRow: {
@@ -851,24 +850,25 @@ const styles = StyleSheet.create({
         padding: 5,
         alignItems: 'center',
         justifyContent: 'center',
+        bottom: 40,
     },
 
     reviewText: {
-        fontSize: 16,
+        fontSize: 13,
         color: '#333',
         textAlign: 'center',
-        lineHeight: 28,
+        lineHeight: 20,
         width: '95%',
         fontFamily: 'Griun_Gellyroll',
     },
 
     editReviewInput: {
         width: '102%',
-        height: 140,
+        height: screenHeight * 0.15,
         borderRadius: 16,
         paddingHorizontal: 20,
-        fontSize: 16,
-        lineHeight: 28,
+        fontSize: 13,
+        lineHeight: 20,
         alignContent: 'center',
         justifyContent: 'center',
         backgroundColor: '#ffffff',
@@ -876,8 +876,9 @@ const styles = StyleSheet.create({
     },
 
     musicBox: {
+        bottom: 70,
         flexDirection: 'row',
-        height: 80,
+        height: screenHeight * 0.09,
         width: '100%',
         borderRadius: 16,
         alignItems: 'center',
@@ -909,7 +910,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 5,
+        gap: 1,
+        bottom: 86,
     },
 
     editText: {

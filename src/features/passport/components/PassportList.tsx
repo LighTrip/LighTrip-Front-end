@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
 
     passportCover: {
         width: COVER_WIDTH,
-        height: COVER_HEIGHT * 1.03,
+        height: COVER_HEIGHT * 0.94,
         borderTopRightRadius: 16,
         borderBottomRightRadius: 16,
         borderTopLeftRadius: 0,
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
 
     placeName: {
         position: 'absolute',
-        top: '30%',
+        top: 36,
         fontSize: 28,
         fontFamily: 'Freesentation',
     },

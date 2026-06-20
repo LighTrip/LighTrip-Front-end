@@ -13,10 +13,11 @@ export const subscribeStyles = StyleSheet.create({
     topBox: {
         backgroundColor: "#1A3A6B",
         width: "100%",
-        height: "28%",
+        height: "30%",
         borderBottomLeftRadius: 30,
         borderBottomRightRadius: 30,
-        marginTop: -60,
+        marginTop: -70,
+        marginBottom: -10,
         shadowColor: '#1A3A6B',
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.5,
@@ -28,7 +29,7 @@ export const subscribeStyles = StyleSheet.create({
         flexDirection: "row",
         width: '80%',
         height: 30,
-        top: 68,
+        top: 58,
         left: 40,
         alignItems: "center",
         justifyContent: "center",
@@ -51,7 +52,7 @@ export const subscribeStyles = StyleSheet.create({
     dotLine: {
         flexDirection: 'row',
         width: '100%',
-        top: 90,
+        top: 78,
         gap: 4,
         justifyContent: 'center',
         alignItems: 'center',
@@ -66,7 +67,7 @@ export const subscribeStyles = StyleSheet.create({
 
     classLine: {
         position: 'absolute',
-        top: 170,
+        top: 152,
         flexDirection: 'row',
         width: '100%',
         alignItems: 'center',
@@ -99,9 +100,9 @@ export const subscribeStyles = StyleSheet.create({
 
     topText: {
         color: "#FFFFFF",
-        fontSize: 22,
+        fontSize: 17,
         fontWeight: "bold",
-        top: 50,
+        top: 54,
         left: 38,
     },
 
@@ -117,6 +118,8 @@ export const subscribeStyles = StyleSheet.create({
         height: 70,
         alignItems: 'center',
         justifyContent: 'center',
+        marginBottom: -10,
+        marginTop: -10,
     },
 
     textContainerMiddle: {
@@ -133,8 +136,8 @@ export const subscribeStyles = StyleSheet.create({
     },
 
     textContentBottom: {
-        marginTop: 10,
-        marginBottom: 10,
+        marginTop: 7,
+        marginBottom: 7,
         fontSize: 18,
         fontWeight: 'bold',
         color: '#000000',
@@ -144,8 +147,8 @@ export const subscribeStyles = StyleSheet.create({
         width: '100%',
         justifyContent: 'center',
         alignItems: 'center',
-        gap: 15,
-        marginBottom: 15,
+        gap: 10,
+        marginBottom: 10,
     },
 
     ticketBox: {
@@ -289,8 +292,8 @@ export const subscribeStyles = StyleSheet.create({
 
     subscribeBox: {
         width: '90%',
-        height: '48%',
-        top: 20,
+        height: '50%',
+        top: -60,
         backgroundColor: '#FFFFFF',
         justifyContent: 'center',
         borderRadius: 15,
@@ -318,11 +321,11 @@ export const subscribeStyles = StyleSheet.create({
     },
 
     subscribeSummary: { 
-        fontSize: 18, 
+        fontSize: 15, 
         fontWeight: 'bold', 
         color: '#1A3A6B',
-        marginTop: 20,
-        marginBottom: 20,
+        marginTop: -15,
+        marginBottom: 10,
     },
 
     subscribeBanner: { 
@@ -360,7 +363,8 @@ export const subscribeStyles = StyleSheet.create({
         width: '90%',
         height: 40,
         gap: 4,
-        marginTop: 40,
+        marginTop: -30,
+        marginBottom: 20,
     },
 
     scrollTopText: {
@@ -372,7 +376,7 @@ export const subscribeStyles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         width: '90%',
-        marginTop: 20,
+        marginTop: 10,
     },
 
     endText: {
@@ -415,7 +419,7 @@ export const subscribeStyles = StyleSheet.create({
     ticketInfoCols: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 20,
+        gap: 11,
     },
 
     ticketInfoItem: {
@@ -428,11 +432,12 @@ export const subscribeStyles = StyleSheet.create({
         letterSpacing: 0.5,
         marginBottom: 3,
         marginLeft: 5,
+        marginRight: 3,
         fontFamily: 'Freesentation-400',
     },
 
     ticketInfoValue: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 'bold',
         color: '#000000',
         fontFamily: 'Freesentation-700',

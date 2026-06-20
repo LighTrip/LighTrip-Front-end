@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Dimensions, Image, StyleSheet, Text, View } from "react-native";
 import type { PassportFeedItem } from "../types/passport.types";
 
 type PassportFrameProps = {
   item: PassportFeedItem;
 };
+
+const { width, height: screenHeight } = Dimensions.get('window')
 
 const STAMP_MAP: Record<string, any> = {
   'CAFE': require('@/assets/stamps/cafe.png'),
@@ -91,9 +93,16 @@ export default function PassportFrame({item}: PassportFrameProps) {
             />
 
             <View style={styles.infoArea}>
-              <Text style={styles.infoRow} numberOfLines={1} ellipsizeMode="tail">🏷 {item.categoryDisplayName || item.category}</Text>
-              <Text style={styles.infoRow} numberOfLines={1} ellipsizeMode="tail">📍 {item.spaceName}</Text>
-              <Text style={styles.infoRow} numberOfLines={1} ellipsizeMode="tail">🗓 {item.visitedAt}</Text>
+              {[
+                { emoji: "🏷", text: item.categoryDisplayName || item.category },
+                { emoji: "📍", text: item.spaceName },
+                { emoji: "🗓", text: item.visitedAt },
+              ].map(({ emoji, text }, i) => (
+                <View key={i} style={styles.infoRow}>
+                  <Text style={styles.infoEmoji}>{emoji}</Text>
+                  <Text style={styles.infoText} numberOfLines={1} ellipsizeMode="tail">{text}</Text>
+                </View>
+              ))}
             </View>
           </View>
         </View>
@@ -134,7 +143,7 @@ export default function PassportFrame({item}: PassportFrameProps) {
           </View>
 
           <Text style={styles.scrollText}>
-            {`<<<<<<<<<<<<<< scroll down >>>>>>>>>>>>>>`}
+            {`<<<<<<<<<<<<<<   scroll down   >>>>>>>>>>>>>>`}
           </Text>
         </View>
       </View>
@@ -145,10 +154,12 @@ export default function PassportFrame({item}: PassportFrameProps) {
 const styles = StyleSheet.create({
   passportCard: {
     width: "100%",
+    height: screenHeight * 0.64,
     position: "relative",
     backgroundColor: "#F8FAFD",
     borderRadius: 16,
     overflow: "hidden",
+    marginBottom: 90,
   },
   noiseBackground: {
     position: "absolute",
@@ -169,7 +180,7 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
   },
   photoArea: {
-    width: 165,
+    width: 125,
     height: 190,
     position: "relative",
   },
@@ -181,8 +192,8 @@ const styles = StyleSheet.create({
   },
   tape: {
     position: "absolute",
-    top: 0,
-    left: 100,
+    top: 5,
+    left: 70,
     width: 70,
     height: 50,
     zIndex: 10,
@@ -192,8 +203,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     top: 18,
-    width: 150,
-    height: 150,
+    width: 130,
+    height: 190,
     transform: [{rotate: "-7deg"}], 
     borderWidth: 8,
     borderColor: "#FFFFFF",
@@ -209,14 +220,25 @@ const styles = StyleSheet.create({
     gap: 8,
     alignItems: "flex-start",
     maxWidth: 140,
+    left: 30,
   },
   infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
     width: "100%",
+  },
+  infoEmoji: {
+    width: 18,
+    fontSize: 12,
+    textAlign: "center",
+  },
+  infoText: {
+    flex: 1,
     fontSize: 12,
     color: "#222222",
     fontWeight: "600",
     fontFamily: 'Griun_Gellyroll',
-    textAlign: "left",
+    marginLeft: 4,
   },
   dividerRow: {
     height: 15,
@@ -250,12 +272,15 @@ const styles = StyleSheet.create({
   },
   bottomHalf: {
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 40,
     paddingBottom: 12,
+    alignItems: "center",
+    justifyContent: "center",
   },
   reviewBox: {
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 30,
     marginBottom: 18,
   },
   reviewText: {
@@ -267,6 +292,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Griun_Gellyroll',
   },
   musicBox: {
+    position: "absolute",
+    width: width * 0.8,
     height: 68,
     backgroundColor: "#FFFFFF",
     borderRadius: 10,
@@ -274,7 +301,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 18,
     gap: 14,
-    marginBottom: 12,
+    marginTop: 210,
+    marginBottom: 10,
   },
   musicImage: {
     width: 46,
@@ -296,9 +324,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   scrollText: {
-    fontSize: 13,
+    position: "absolute",
+    fontSize: 11,
     color: "#333333",
     textAlign: "center",
-    fontFamily: 'SpaceMono',
+    fontFamily: 'Griun_Gellyroll',   
+    marginTop: 298,
+
   }
 })

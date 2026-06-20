@@ -142,7 +142,7 @@ export default function SubscribePage() {
 
             <Animated.ScrollView
                 ref={animatedRef}
-                style={{ width: '100%', marginBottom: -20 }}
+                style={{ width: '100%', marginTop: 10, marginBottom: -10 }}
                 contentContainerStyle={{ alignItems: 'center', paddingBottom: 25 }}
             >
                 <View style={styles.textContainerTop}>
@@ -276,8 +276,9 @@ export default function SubscribePage() {
                     <View style={{
                         width: '90%',
                         alignItems: 'center',
-                        gap: 12,
-                        marginBottom: 10,
+                        gap: 1,
+                        marginTop: -30,
+                        marginBottom: 0,
                     }}>
                         <Text style={styles.subscribeSummary}>LighTrip을 더 자유롭게 ✈️</Text>
                         <View style={styles.subscribeBanner}>
@@ -285,15 +286,15 @@ export default function SubscribePage() {
                                 <View key={badge} style={{
                                     backgroundColor: '#EEF2FA',
                                     borderRadius: 20,
-                                    paddingHorizontal: 12,
-                                    paddingVertical: 6,
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 2,
                                 }}>
-                                    <Text style={{ fontSize: 13, color: '#1A3A6B', fontWeight: 'bold' }}>{badge}</Text>
+                                    <Text style={{ fontSize: 10, color: '#1A3A6B', fontWeight: 'bold' }}>{badge}</Text>
                                 </View>
                             ))}
                         </View>
                     </View>
-                    <Ionicons name="caret-down" size={16} color="#000" style={{ marginTop: 10 }} />
+                    <Ionicons name="caret-down" size={16} color="#000" style={{ marginTop: 10, marginBottom: 20 }} />
                 </TouchableOpacity>
 
                 <View

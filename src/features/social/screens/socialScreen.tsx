@@ -206,11 +206,12 @@ const styles = StyleSheet.create({
         backgroundColor: "#F8FAFD",
     },
     header: {
-        marginTop: 20,
-        paddingHorizontal: 14,
         flexDirection: "row",
-        justifyContent: "space-between",
         alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 20,
+        paddingHorizontal: 20,
+        paddingTop: 22,
     },
     title: {
         color: "#000000",

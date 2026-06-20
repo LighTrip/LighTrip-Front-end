@@ -319,6 +319,7 @@ export default function AllSearchContent({
                     keyExtractor={(item) => String(item.passportId)}
                     renderItem={({ item }) => (
                         <View style={[styles.reelsPage, { height: listHeight }]}>
+                            {/* <View style={styles.cardShadow}> */}
                             <View style={styles.card}>
                                 <Image
                                     source={require("@/assets/images/noise.png")}
@@ -327,11 +328,13 @@ export default function AllSearchContent({
                                 />
 
                                 <View style={styles.cardContent}>
-                                    <SearchUserCard
-                                        item={item}
-                                        onAddFriend={handleAddFriend}
-                                        isRequested={requestedFriendCodes.includes(item.writerFriendCode)}
-                                    />
+                                    <View style={styles.userCardArea}>
+                                        <SearchUserCard
+                                            item={item}
+                                            onAddFriend={handleAddFriend}
+                                            isRequested={requestedFriendCodes.includes(item.writerFriendCode)}
+                                        />
+                                    </View>
 
                                     <View style={styles.passportDetailArea}>
                                         <PassportFrame item={item} />
@@ -347,6 +350,7 @@ export default function AllSearchContent({
                                     </View>
                                 </View>
                             </View>
+                            {/* </View> */}
                         </View>
                     )}
                     pagingEnabled
@@ -402,15 +406,20 @@ const styles = StyleSheet.create({
         alignItems: "center",
         paddingHorizontal: 24,
     },
+    // cardShadow: {
+    //     width: CARD_WIDTH,
+    //     height: 700,
+    //     top: 10,
+    //     borderRadius: 16,
+    //     shadowColor: "#707070",
+    //     // shadowOpacity: 0.3,
+    //     // shadowRadius: 6,
+    //     elevation: 5,
+    // },
     card: {
         width: CARD_WIDTH,
-        position: "relative",
-        backgroundColor: "#F8FAFD",
+        height: 700,
         borderRadius: 16,
-        shadowColor: "#000000",
-        shadowOpacity: 0.3,
-        shadowRadius: 6,
-        elevation: 5,
         overflow: "hidden",
     },
     noiseBackground: {
@@ -426,22 +435,18 @@ const styles = StyleSheet.create({
         position: "relative",
         zIndex: 1,
     },
+    userCardArea: {
+        borderBottomWidth: 1,
+        borderBottomColor: "#E0E0E0",
+    },
     passportDetailArea: {
         position: "relative",
         width: "100%",
-        marginTop: -8,
+        height: "82%",
+        top: 10,
         borderRadius: 16,
         overflow: "hidden",
-
-        shadowColor: "#000000",
-        shadowOffset: {
-            width: 0,
-            height: -2,
-        },
-        shadowOpacity: 0.14,
-        shadowRadius: 5,
-        elevation: 6,
-        zIndex: 10,
+        zIndex: 1,
     },
     addMessageBox: {
         position: "absolute",
