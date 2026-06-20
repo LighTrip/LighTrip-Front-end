@@ -16,12 +16,14 @@ import PassportPreview from "./PassportPreview";
 type FriendDetailModalProps = {
     visible: boolean;
     friend: Friend | null;
+    refreshVersion: number;
     onClose: () => void;
 };
 
 export default function FriendDetailModal({
     visible,
     friend,
+    refreshVersion,
     onClose,
 }: FriendDetailModalProps) {
     const [selectedTab, setSelectedTab] = useState<"passport" | "map">("passport");
@@ -137,10 +139,14 @@ export default function FriendDetailModal({
                         {selectedTab === "passport" ? (
                             <PassportPreview 
                                 userId={friend.userId}
+                                refreshVersion={refreshVersion}
                                 onLatestDistrictChange={setLatestDistrict} 
                             />
                         ) : (
-                            <MapPreview userId={friend.userId}/>
+                            <MapPreview
+                                userId={friend.userId}
+                                refreshVersion={refreshVersion}
+                            />
                         )}
             </BottomSheetScrollView>
         </BottomSheet>

@@ -1,6 +1,6 @@
 import { getPendingFriends, respondFriendRequest } from "@/src/api/profileApi";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -39,7 +39,7 @@ export default function FriendManageModal ({
     const [processingFriendId, setProcessingFriendId] = useState<number | null>(null);
 
     // 받은 친구 요청 목록 조회회
-    const fetchPendingFriends = async () => {
+    const fetchPendingFriends = useCallback(async () => {
         try {
             setIsLoading(true);
 
@@ -50,13 +50,21 @@ export default function FriendManageModal ({
         }finally {
             setIsLoading(false);
         }
-    }
+    }, []);
 
     useEffect(() => {
-        if(visible) {
-            fetchPendingFriends();
+        if(!visible) {
+            return;
         }
-    }, [visible]);
+
+        fetchPendingFriends();
+
+        const intervalId = setInterval(() => {
+            fetchPendingFriends();
+        }, 10000);
+
+        return () => clearInterval(intervalId);
+    }, [fetchPendingFriends, visible]);
 
     // 친구 검색
     const filteredRequests = useMemo(() => {

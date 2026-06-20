@@ -1,3 +1,4 @@
+import { getPassportDetail } from "@/src/api/passport/passport.api";
 import { getFriendLights } from "@/src/api/socialApi";
 import {
     NaverMapMarkerOverlay,
@@ -6,8 +7,11 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
+    Image,
+    ScrollView,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View,
 } from "react-native";
 import Svg, {
@@ -20,7 +24,7 @@ import Svg, {
     Stop,
     Text as SvgText,
 } from "react-native-svg";
-import { FriendLight } from "../types/social.types";
+import { FriendLight, FriendLightClusterItem } from "../types/social.types";
 
 const CATEGORY_COLORS: Record<string, { main: string; light: string }> = {
     CAFE: { main: "#F59E0B", light: "#FDE68A" },
@@ -46,6 +50,7 @@ const CATEGORY_PATHS: Record<string, string[]> = {
 
 type MapPreviewProps = {
     userId: number;
+    refreshVersion: number;
 };
 
 type BBox = {
@@ -60,6 +65,10 @@ type FrontCluster = {
     centerLat: number;
     centerLng: number;
     items: FriendLight[];
+};
+
+type LightInfoItem = FriendLightClusterItem & {
+    createdAt?: string;
 };
 
 const NAVY = "#0F2744";
@@ -346,15 +355,184 @@ function dominantCategory(items: { category: string }[]): string {
     return Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "ETC";
 }
 
-export default function MapPreview({ userId }: MapPreviewProps) {
+const mapLightToClusterItem = (light: FriendLight): FriendLightClusterItem => ({
+    passportId: light.passportId,
+    thumbnailUrl: light.thumbnailUrl,
+    spaceName: light.spaceName,
+    districtCategory: light.districtCategory,
+    districtDisplayName: light.districtCategory,
+    category: light.category,
+    categoryDisplayName: light.category,
+    visitedAt: light.visitedAt,
+    visibility: "PUBLIC",
+    likeCount: light.likeCount,
+    scrapCount: light.scrapCount,
+    theme: "",
+});
+
+const formatDate = (dateText?: string) => {
+    if (!dateText) return "";
+
+    const date = new Date(dateText);
+
+    if (Number.isNaN(date.getTime())) {
+        return dateText.slice(0, 10);
+    }
+
+    return date.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+    });
+};
+
+function LightInfoCard({
+    item,
+    onClose,
+}: {
+    item: LightInfoItem;
+    onClose: () => void;
+}) {
+    return (
+        <View style={styles.infoCard}>
+            <TouchableOpacity
+                style={styles.closeButton}
+                onPress={onClose}
+                hitSlop={10}
+            >
+                <Text style={styles.closeButtonText}>×</Text>
+            </TouchableOpacity>
+
+            <View style={styles.infoContent}>
+                {item.thumbnailUrl ? (
+                    <Image
+                        source={{ uri: item.thumbnailUrl }}
+                        style={styles.infoImage}
+                    />
+                ) : (
+                    <View style={styles.infoImagePlaceholder}>
+                        <Text style={styles.infoImagePlaceholderText}>
+                            {item.categoryDisplayName?.slice(0, 1) || item.category.slice(0, 1)}
+                        </Text>
+                    </View>
+                )}
+
+                <View style={styles.infoTextBox}>
+                    <Text style={styles.infoTitle} numberOfLines={1}>
+                        {item.spaceName}
+                    </Text>
+                    <Text style={styles.infoMeta} numberOfLines={1}>
+                        {item.districtDisplayName || item.districtCategory}
+                        {item.categoryDisplayName ? ` · ${item.categoryDisplayName}` : ""}
+                    </Text>
+                    <Text style={styles.infoMeta}>
+                        {formatDate(item.createdAt ?? item.visitedAt)}
+                    </Text>
+                    <Text style={styles.infoStats}>
+                        좋아요 {item.likeCount ?? 0} · 스크랩 {item.scrapCount ?? 0}
+                    </Text>
+                </View>
+            </View>
+        </View>
+    );
+}
+
+function ClusterListSheet({
+    items,
+    loading,
+    error,
+    onClose,
+    onSelect,
+}: {
+    items: FriendLightClusterItem[] | null;
+    loading: boolean;
+    error: string | null;
+    onClose: () => void;
+    onSelect: (item: FriendLightClusterItem) => void;
+}) {
+    return (
+        <View style={styles.clusterSheet}>
+            <View style={styles.clusterSheetHeader}>
+                <Text style={styles.clusterSheetTitle}>이 위치의 불빛</Text>
+                <TouchableOpacity onPress={onClose} hitSlop={10}>
+                    <Text style={styles.closeButtonText}>×</Text>
+                </TouchableOpacity>
+            </View>
+
+            {loading ? (
+                <View style={styles.clusterStateBox}>
+                    <ActivityIndicator color="#1A3A6B" />
+                    <Text style={styles.clusterStateText}>불빛 정보를 불러오는 중...</Text>
+                </View>
+            ) : error ? (
+                <View style={styles.clusterStateBox}>
+                    <Text style={styles.clusterStateText}>{error}</Text>
+                </View>
+            ) : !items || items.length === 0 ? (
+                <View style={styles.clusterStateBox}>
+                    <Text style={styles.clusterStateText}>표시할 불빛이 없습니다.</Text>
+                </View>
+            ) : (
+                <ScrollView
+                    style={styles.clusterList}
+                    showsVerticalScrollIndicator={false}
+                >
+                    {items.map((item) => (
+                        <TouchableOpacity
+                            key={item.passportId}
+                            style={styles.clusterItem}
+                            activeOpacity={0.8}
+                            onPress={() => onSelect(item)}
+                        >
+                            {item.thumbnailUrl ? (
+                                <Image
+                                    source={{ uri: item.thumbnailUrl }}
+                                    style={styles.clusterItemImage}
+                                />
+                            ) : (
+                                <View style={styles.clusterItemImagePlaceholder}>
+                                    <Text style={styles.clusterItemImageText}>
+                                        {item.categoryDisplayName?.slice(0, 1) || item.category.slice(0, 1)}
+                                    </Text>
+                                </View>
+                            )}
+
+                            <View style={styles.clusterItemTextBox}>
+                                <Text style={styles.clusterItemTitle} numberOfLines={1}>
+                                    {item.spaceName}
+                                </Text>
+                                <Text style={styles.clusterItemMeta} numberOfLines={1}>
+                                    {item.districtDisplayName || item.districtCategory}
+                                    {item.categoryDisplayName ? ` · ${item.categoryDisplayName}` : ""}
+                                </Text>
+                            </View>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            )}
+        </View>
+    );
+}
+
+export default function MapPreview({ userId, refreshVersion }: MapPreviewProps) {
     const [lights, setLights] = useState<FriendLight[]>([]);
     const [currentBBox, setCurrentBBox] = useState<BBox | null>(DEFAULT_BBOX);
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [selectedLight, setSelectedLight] = useState<LightInfoItem | null>(null);
+    const [clusterItems, setClusterItems] = useState<FriendLightClusterItem[] | null>(null);
+    const [clusterLoading, setClusterLoading] = useState(false);
+    const [clusterError, setClusterError] = useState<string | null>(null);
 
     const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const frontClusters = clusterSingleMarkers(lights, currentBBox);
+
+    const closeOverlays = useCallback(() => {
+        setSelectedLight(null);
+        setClusterItems(null);
+        setClusterError(null);
+    }, []);
 
     const loadLights = useCallback(
         async (bbox: BBox) => {
@@ -389,6 +567,7 @@ export default function MapPreview({ userId }: MapPreviewProps) {
     useEffect(() => {
         setInitialLoading(true);
         setLoading(true);
+        setCurrentBBox(DEFAULT_BBOX);
         loadLights(DEFAULT_BBOX);
 
         return () => {
@@ -396,7 +575,7 @@ export default function MapPreview({ userId }: MapPreviewProps) {
                 clearTimeout(debounceTimer.current);
             }
         };
-    }, [loadLights]);
+    }, [loadLights, refreshVersion]);
 
     const handleCameraChanged = useCallback(
         (event: any) => {
@@ -411,10 +590,118 @@ export default function MapPreview({ userId }: MapPreviewProps) {
 
                 setCurrentBBox(bbox);
                 setLoading(true);
+                closeOverlays();
                 loadLights(bbox);
             }, 800);
         },
-        [loadLights],
+        [closeOverlays, loadLights],
+    );
+
+    const fetchLightDetail = useCallback(async (
+        item: FriendLightClusterItem,
+    ): Promise<LightInfoItem> => {
+        const response = await getPassportDetail(item.passportId);
+        const detail = response.data.data;
+
+        return {
+            ...item,
+            thumbnailUrl: detail.imageUrls?.[0] ?? item.thumbnailUrl,
+            spaceName: detail.spaceName ?? item.spaceName,
+            districtCategory: detail.districtCategory ?? item.districtCategory,
+            districtDisplayName: detail.district ?? item.districtDisplayName,
+            category: detail.category ?? item.category,
+            categoryDisplayName: detail.category ?? item.categoryDisplayName,
+            visitedAt: detail.visitedAt ?? item.visitedAt,
+            likeCount: detail.likeCount ?? item.likeCount,
+            scrapCount: detail.scrapCount ?? item.scrapCount,
+            createdAt: detail.createdAt,
+        };
+    }, []);
+
+    const showLightInfo = useCallback(async (item: FriendLightClusterItem) => {
+        setClusterItems(null);
+        setClusterError(null);
+
+        const fallbackItem = item;
+        setSelectedLight(fallbackItem);
+
+        try {
+            const detailItem = await fetchLightDetail(fallbackItem);
+            setSelectedLight(detailItem);
+        } catch (err) {
+            console.log("친구 여권 상세 조회 실패:", err);
+        }
+    }, [fetchLightDetail]);
+
+    const handleSingleMarkerTap = useCallback((light: FriendLight) => {
+        showLightInfo(mapLightToClusterItem(light));
+    }, [showLightInfo]);
+
+    const fetchFriendClusterItems = useCallback(
+        async (bbox: BBox) => {
+            try {
+                setClusterLoading(true);
+                setClusterError(null);
+                setSelectedLight(null);
+
+                const friendLights = await getFriendLights(
+                    userId,
+                    bbox.minLat,
+                    bbox.maxLat,
+                    bbox.minLng,
+                    bbox.maxLng,
+                );
+
+                setClusterItems(
+                    friendLights
+                        .filter((light) => !light.isCluster)
+                        .map(mapLightToClusterItem)
+                );
+            } catch (err: any) {
+                console.log("친구 지도 클러스터 상세 조회 실패:", err);
+                setClusterItems([]);
+                setClusterError(err.message || "클러스터 정보를 불러오지 못했습니다.");
+            } finally {
+                setClusterLoading(false);
+            }
+        },
+        [userId],
+    );
+
+    const handleServerClusterTap = useCallback(
+        (light: FriendLight) => {
+            const lat = light.centerLatitude ?? light.latitude;
+            const lng = light.centerLongitude ?? light.longitude;
+            const viewLatSpan = currentBBox ? currentBBox.maxLat - currentBBox.minLat : 0.1;
+            const viewLngSpan = currentBBox ? currentBBox.maxLng - currentBBox.minLng : 0.1;
+            const divisor = 10;
+
+            fetchFriendClusterItems({
+                minLat: lat - viewLatSpan / divisor / 2,
+                maxLat: lat + viewLatSpan / divisor / 2,
+                minLng: lng - viewLngSpan / divisor / 2,
+                maxLng: lng + viewLngSpan / divisor / 2,
+            });
+        },
+        [currentBBox, fetchFriendClusterItems],
+    );
+
+    const handleFrontClusterTap = useCallback(
+        (cluster: FrontCluster) => {
+            if (cluster.items.length === 1) {
+                handleSingleMarkerTap(cluster.items[0]);
+                return;
+            }
+
+            setSelectedLight(null);
+            setClusterError(null);
+            setClusterItems(
+                cluster.items
+                    .filter((light) => !light.isCluster)
+                    .map(mapLightToClusterItem)
+            );
+        },
+        [handleSingleMarkerTap],
     );
 
     if (initialLoading) {
@@ -448,6 +735,7 @@ export default function MapPreview({ userId }: MapPreviewProps) {
                             anchor={{ x: 0.5, y: 0.5 }}
                             width={56}
                             height={56}
+                            onTap={() => handleServerClusterTap(light)}
                         >
                             <ServerClusterMarker
                                 count={light.count ?? 0}
@@ -467,6 +755,7 @@ export default function MapPreview({ userId }: MapPreviewProps) {
                             anchor={{ x: 0.5, y: 0.5 }}
                             width={56}
                             height={56}
+                            onTap={() => handleSingleMarkerTap(cluster.items[0])}
                         >
                             <PassportMarker
                                 spaceName={cluster.items[0].spaceName}
@@ -481,6 +770,7 @@ export default function MapPreview({ userId }: MapPreviewProps) {
                             anchor={{ x: 0.5, y: 0.5 }}
                             width={64}
                             height={64}
+                            onTap={() => handleFrontClusterTap(cluster)}
                         >
                             <FrontClusterMarker
                                 count={cluster.items.length}
@@ -503,6 +793,23 @@ export default function MapPreview({ userId }: MapPreviewProps) {
                 <View style={styles.emptyOverlay}>
                     <Text style={styles.emptyOverlayText}>{error}</Text>
                 </View>
+            )}
+
+            {selectedLight && (
+                <LightInfoCard
+                    item={selectedLight}
+                    onClose={() => setSelectedLight(null)}
+                />
+            )}
+
+            {(clusterItems || clusterLoading || clusterError) && (
+                <ClusterListSheet
+                    items={clusterItems}
+                    loading={clusterLoading}
+                    error={clusterError}
+                    onClose={closeOverlays}
+                    onSelect={showLightInfo}
+                />
             )}
         </View>
     );
@@ -644,6 +951,163 @@ const styles = StyleSheet.create({
         borderRightColor: "transparent",
         borderTopColor: GREEN,
         marginTop: -2,
+    },
+
+    infoCard: {
+        position: "absolute",
+        left: 14,
+        right: 14,
+        bottom: 14,
+        borderRadius: 14,
+        backgroundColor: "#FFFFFF",
+        padding: 12,
+        shadowColor: "#000000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.18,
+        shadowRadius: 10,
+        elevation: 8,
+    },
+    closeButton: {
+        position: "absolute",
+        top: 8,
+        right: 10,
+        zIndex: 2,
+    },
+    closeButtonText: {
+        fontSize: 22,
+        lineHeight: 24,
+        color: "#64748B",
+        fontWeight: "700",
+    },
+    infoContent: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingRight: 18,
+    },
+    infoImage: {
+        width: 64,
+        height: 64,
+        borderRadius: 12,
+        marginRight: 12,
+        backgroundColor: "#E5E7EB",
+    },
+    infoImagePlaceholder: {
+        width: 64,
+        height: 64,
+        borderRadius: 12,
+        marginRight: 12,
+        backgroundColor: "#E0F2FE",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    infoImagePlaceholderText: {
+        fontSize: 20,
+        fontWeight: "800",
+        color: "#1A3A6B",
+    },
+    infoTextBox: {
+        flex: 1,
+    },
+    infoTitle: {
+        fontSize: 16,
+        fontWeight: "800",
+        color: "#111827",
+        marginBottom: 4,
+    },
+    infoMeta: {
+        fontSize: 12,
+        color: "#64748B",
+        marginBottom: 2,
+    },
+    infoStats: {
+        marginTop: 3,
+        fontSize: 12,
+        color: "#1A3A6B",
+        fontWeight: "700",
+    },
+    clusterSheet: {
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        maxHeight: 250,
+        borderTopLeftRadius: 18,
+        borderTopRightRadius: 18,
+        backgroundColor: "#FFFFFF",
+        paddingHorizontal: 14,
+        paddingTop: 12,
+        paddingBottom: 14,
+        shadowColor: "#000000",
+        shadowOffset: { width: 0, height: -3 },
+        shadowOpacity: 0.18,
+        shadowRadius: 10,
+        elevation: 10,
+    },
+    clusterSheetHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 8,
+    },
+    clusterSheetTitle: {
+        fontSize: 15,
+        fontWeight: "800",
+        color: "#111827",
+    },
+    clusterStateBox: {
+        minHeight: 90,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    clusterStateText: {
+        marginTop: 8,
+        fontSize: 12,
+        color: "#64748B",
+        textAlign: "center",
+    },
+    clusterList: {
+        maxHeight: 190,
+    },
+    clusterItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: "#EEF2F7",
+    },
+    clusterItemImage: {
+        width: 46,
+        height: 46,
+        borderRadius: 10,
+        marginRight: 10,
+        backgroundColor: "#E5E7EB",
+    },
+    clusterItemImagePlaceholder: {
+        width: 46,
+        height: 46,
+        borderRadius: 10,
+        marginRight: 10,
+        backgroundColor: "#E0F2FE",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    clusterItemImageText: {
+        fontSize: 16,
+        fontWeight: "800",
+        color: "#1A3A6B",
+    },
+    clusterItemTextBox: {
+        flex: 1,
+    },
+    clusterItemTitle: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#111827",
+        marginBottom: 3,
+    },
+    clusterItemMeta: {
+        fontSize: 12,
+        color: "#64748B",
     },
 
     emptyOverlay: {

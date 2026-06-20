@@ -84,6 +84,10 @@ export type PassportDetailType = {
     district: string
     musicTitle?: string
     musicArtist?: string
+    createdAt?: string
+    updatedAt?: string
+    likeCount?: number
+    scrapCount?: number
 }
 
 // 도장 뷰 목록 조회용

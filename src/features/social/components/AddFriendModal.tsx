@@ -22,6 +22,46 @@ import { PublicUserProfile, RecommendedFriend } from "../types/social.types";
 import AddFriendCard from "./AddFriendCard";
 import PublicUserProfileModal from "./PublicUserProfileModal";
 
+const getRecommendedFriendKey = (item: RecommendedFriend, index: number) => {
+    if (item.friendId !== null && item.friendId !== undefined) {
+        return `friend-${item.friendId}`;
+    }
+
+    if (item.userId !== null && item.userId !== undefined) {
+        return `user-${item.userId}`;
+    }
+
+    if (item.friendCode) {
+        return `code-${item.friendCode}`;
+    }
+
+    return `recommended-${index}`;
+};
+
+const getRecommendedFriendRequestKey = (item: RecommendedFriend) => {
+    if (item.userId !== null && item.userId !== undefined) {
+        return `user-${item.userId}`;
+    }
+
+    if (item.friendCode) {
+        return `code-${item.friendCode}`;
+    }
+
+    return null;
+};
+
+const applyRequestedStatus = (
+    friends: RecommendedFriend[],
+    requestedFriendKeys: Set<string>,
+) =>
+    friends.map((friend) => {
+        const requestKey = getRecommendedFriendRequestKey(friend);
+
+        return requestKey && requestedFriendKeys.has(requestKey)
+            ? { ...friend, status: "PENDING" }
+            : friend;
+    });
+
 type AddFriendModalProps = {
     visible: boolean,
     onClose: () => void;
@@ -32,6 +72,7 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
 
     const [keyword, setKeyword] = useState("");
     const [friends, setFriends] = useState<RecommendedFriend[]>([]);
+    const [requestedFriendKeys, setRequestedFriendKeys] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
@@ -39,14 +80,16 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
     const [profileLoading, setProfileLoading] = useState(false);
 
     // 1. 추천 친구 목록 받아오기 
-    const fetchRecommendedFriends = async () => {
+    const fetchRecommendedFriends = async (
+        nextRequestedFriendKeys = requestedFriendKeys,
+    ) => {
 
         try {
             setLoading(true);
             setErrorMessage("");
 
             const recommendedFriends = await getRecommendedFriends();
-            setFriends(recommendedFriends);
+            setFriends(applyRequestedStatus(recommendedFriends, nextRequestedFriendKeys));
         }catch(error) {
             console.log("추천 친구 목록 조회 에러:", error);
             setErrorMessage("추천 친구 목록을 불러오지 못했습니다.");
@@ -105,13 +148,30 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
 
             await requestFriend(friend.friendCode);
 
+            const requestKey = getRecommendedFriendRequestKey(friend);
+            const nextRequestedFriendKeys = new Set(requestedFriendKeys);
+
+            if (requestKey) {
+                nextRequestedFriendKeys.add(requestKey);
+                setRequestedFriendKeys(nextRequestedFriendKeys);
+            }
+
+            setFriends((currentFriends) =>
+                currentFriends.map((currentFriend) =>
+                    currentFriend.userId === friend.userId ||
+                    currentFriend.friendCode === friend.friendCode
+                        ? { ...currentFriend, status: "PENDING" }
+                        : currentFriend
+                )
+            );
+
             Alert.alert(
                 "친구 요청 완료!",
                 `${friend.nickname}님에게 친구 요청을 보냈습니다.`
             );
 
             // 친구 요청 성공 후 추천 친구 목록 다시 불러오기
-            fetchRecommendedFriends();
+            fetchRecommendedFriends(nextRequestedFriendKeys);
 
             onFriendRequestSuccess?.();
         } catch(error) {
@@ -182,7 +242,7 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
                         <FlatList  
                             style={styles.list}
                             data={friends}
-                            keyExtractor={(item) => String(item.friendId)}
+                            keyExtractor={getRecommendedFriendKey}
                             renderItem={({item}) => (
                                 <AddFriendCard 
                                     friend={item} 
