@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+﻿import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -72,6 +72,7 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
 
     const [keyword, setKeyword] = useState("");
     const [friends, setFriends] = useState<RecommendedFriend[]>([]);
+    const [recommendedFriends, setRecommendedFriends] = useState<RecommendedFriend[]>([]);
     const [requestedFriendKeys, setRequestedFriendKeys] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
@@ -79,7 +80,27 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
     const [selectedUser, setSelectedUser] = useState<PublicUserProfile | null>(null);
     const [profileLoading, setProfileLoading] = useState(false);
 
-    // 1. 추천 친구 목록 받아오기 
+    const filterRecommendedFriendsByNickname = (
+        text: string,
+        sourceFriends = recommendedFriends,
+    ) => {
+        const trimmedText = text.trim().toLowerCase();
+
+        if (trimmedText.length === 0) {
+            return applyRequestedStatus(sourceFriends, requestedFriendKeys);
+        }
+
+        return applyRequestedStatus(
+            sourceFriends.filter((friend) =>
+                friend.nickname
+                    ?.toLowerCase()
+                    .includes(trimmedText)
+            ),
+            requestedFriendKeys,
+        );
+    };
+
+    // 1. ?곕뗄荑?燁살뮄??筌뤴뫖以?獄쏆룇釉??븍┛ 
     const fetchRecommendedFriends = async (
         nextRequestedFriendKeys = requestedFriendKeys,
     ) => {
@@ -88,11 +109,17 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
             setLoading(true);
             setErrorMessage("");
 
-            const recommendedFriends = await getRecommendedFriends();
-            setFriends(applyRequestedStatus(recommendedFriends, nextRequestedFriendKeys));
+            const nextRecommendedFriends = await getRecommendedFriends();
+            const friendsWithRequestedStatus = applyRequestedStatus(
+                nextRecommendedFriends,
+                nextRequestedFriendKeys,
+            );
+
+            setRecommendedFriends(friendsWithRequestedStatus);
+            setFriends(filterRecommendedFriendsByNickname(keyword, friendsWithRequestedStatus));
         }catch(error) {
-            console.log("추천 친구 목록 조회 에러:", error);
-            setErrorMessage("추천 친구 목록을 불러오지 못했습니다.");
+            console.log("?곕뗄荑?燁살뮄??筌뤴뫖以?鈺곌퀬???癒?쑎:", error);
+            setErrorMessage("?곕뗄荑?燁살뮄??筌뤴뫖以???븍뜄???? 筌륁궢六??щ빍??");
         }finally {
             setLoading(false);
         }
@@ -105,12 +132,12 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
         fetchRecommendedFriends();
     }, [visible]);
 
-    // 2. 친구코드로 검색
+    // 2. 燁살뮄?꾥굜遺얜굡嚥?野꺜??
     const handleSearchFriends = async () => {
         const trimmedKeyword = keyword.trim();
 
         if(trimmedKeyword.length === 0) {
-            setErrorMessage("친구 코드를 입력해주세요.");
+            setErrorMessage("燁살뮄???꾨뗀諭띄몴???낆젾??곻폒?紐꾩뒄.");
             fetchRecommendedFriends();
             return;
         }
@@ -119,32 +146,46 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
             setLoading(true);
             setErrorMessage("");
 
+            const nicknameMatches = recommendedFriends.filter((friend) =>
+                friend.nickname
+                    ?.toLowerCase()
+                    .includes(trimmedKeyword.toLowerCase())
+            );
+
+            if (nicknameMatches.length > 0) {
+                setFriends(applyRequestedStatus(nicknameMatches, requestedFriendKeys));
+                return;
+            }
+
             const searchedFriend = await searchFriendByCode(trimmedKeyword);
-            setFriends([searchedFriend])
+            setFriends(applyRequestedStatus([searchedFriend], requestedFriendKeys))
         }catch (error) {
-            console.log("친구 코드 검색 에러:", error);
+            console.log("燁살뮄???꾨뗀諭?野꺜???癒?쑎:", error);
             setFriends([]);
-            setErrorMessage("검색 결과가 없습니다.");
+            setErrorMessage("野꺜??野껉퀗?드첎? ??곷뮸??덈뼄.");
         }finally {
             setLoading(false);
         }
     };
 
-    // 2-1. 검색창 비웠을 때 다시 추천 친구 목록 보이도록
+    // 2-1. 野꺜??깃갯 ??쑴???????쇰뻻 ?곕뗄荑?燁살뮄??筌뤴뫖以?癰귣똻??袁⑥쨯
     const handleChangeKeyword = (text: string) => {
         setKeyword(text);
+        setErrorMessage("");
 
         if(text.trim().length === 0) {
-            setErrorMessage("");
-            fetchRecommendedFriends();
+            setFriends(applyRequestedStatus(recommendedFriends, requestedFriendKeys));
+            return;
         }
+
+        setFriends(filterRecommendedFriendsByNickname(text));
     }
 
-    // 3. 친구 추가
+    // 3. 燁살뮄???곕떽?
     const handleAddFriend = async (friend: RecommendedFriend) => {
     
         try {
-            console.log("보낼 친구 코드:", friend.friendCode);
+            console.log("癰귣?沅?燁살뮄???꾨뗀諭?", friend.friendCode);
 
             await requestFriend(friend.friendCode);
 
@@ -165,42 +206,51 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
                 )
             );
 
-            Alert.alert(
-                "친구 요청 완료!",
-                `${friend.nickname}님에게 친구 요청을 보냈습니다.`
+            setRecommendedFriends((currentFriends) =>
+                currentFriends.map((currentFriend) =>
+                    currentFriend.userId === friend.userId ||
+                    currentFriend.friendCode === friend.friendCode
+                        ? { ...currentFriend, status: "PENDING" }
+                        : currentFriend
+                )
             );
 
-            // 친구 요청 성공 후 추천 친구 목록 다시 불러오기
+            Alert.alert(
+                "燁살뮄???遺욧퍕 ?袁⑥┷!",
+                `${friend.nickname}??뤿퓠野?燁살뮄???遺욧퍕??癰귣?源??щ빍??`
+            );
+
+            // 燁살뮄???遺욧퍕 ?源껊궗 ???곕뗄荑?燁살뮄??筌뤴뫖以???쇰뻻 ?븍뜄???븍┛
             fetchRecommendedFriends(nextRequestedFriendKeys);
 
             onFriendRequestSuccess?.();
         } catch(error) {
-            console.log("친구 요청 에러:", error)
+            console.log("燁살뮄???遺욧퍕 ?癒?쑎:", error)
 
             if(error instanceof Error) {
-                Alert.alert("친구 요청 실패", error.message)
+                Alert.alert("燁살뮄???遺욧퍕 ??쎈솭", error.message)
             }else {
-                Alert.alert("친구 요청 실패", "알 수 없는 오류가 발생했습니다.")
+                Alert.alert("燁살뮄???遺욧퍕 ??쎈솭", "??????용뮉 ??살첒揶쎛 獄쏆뮇源??됰뮸??덈뼄.")
             }
         }
     };
 
-    // 4. 공개 프로필 조회
+    // 4. ?⑤벀而??袁⑥쨮??鈺곌퀬??
     const handlePressFriendCard = async (friend: RecommendedFriend) => {
         try {
             setProfileLoading(true);
 
-            console.log("조회할 사용자 userId:", friend.userId);
+            console.log("鈺곌퀬????????userId:", friend.userId);
 
             const profile = await getPublicUserProfile(friend.userId);
             setSelectedUser(profile);
         }catch(error) {
-            console.log("공개 프로필 조회 에러:", error);
+            console.log("?⑤벀而??袁⑥쨮??鈺곌퀬???癒?쑎:", error);
 
             if(error instanceof Error) {
-                Alert.alert("프로필 조회 실패:", error.message);
+                Alert.alert("?袁⑥쨮??鈺곌퀬????쎈솭:", error.message);
             } else {
-                Alert.alert("프로필 조회 실패", "알 수 없는 오류가 발생했습니다.")
+                Alert.alert("?袁⑥쨮??鈺곌퀬????쎈솭", "??????용뮉 ??살첒揶쎛 獄쏆뮇源??됰뮸??덈뼄.")
             }
         } finally {
             setProfileLoading(false);
@@ -260,10 +310,12 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
                     <View style={styles.searchBox}>
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="친구 코드 입력"
+                            placeholder="닉네임 또는 친구 코드 입력"
                             placeholderTextColor="#d9d9d9"
                             value={keyword}
                             onChangeText={handleChangeKeyword}
+                            onSubmitEditing={handleSearchFriends}
+                            returnKeyType="search"
                         />
 
                         <TouchableOpacity 

@@ -24,13 +24,30 @@ const getMutualFriendText = (
 };
 
 const isRequestPending = (status?: string | null) => {
-    const normalizedStatus = status?.toUpperCase();
+    const normalizedStatus = status?.toUpperCase().replace(/[\s-]/g, "_");
+
+    if (!normalizedStatus) {
+        return false;
+    }
+
+    const addableStatuses = new Set([
+        "NONE",
+        "NOT_FRIEND",
+        "AVAILABLE",
+        "RECOMMENDED",
+        "REJECTED",
+    ]);
+
+    if (addableStatuses.has(normalizedStatus)) {
+        return false;
+    }
 
     return (
-        normalizedStatus === "PENDING" ||
-        normalizedStatus === "REQUESTED" ||
-        normalizedStatus === "SENT" ||
-        normalizedStatus === "WAITING"
+        normalizedStatus.includes("PENDING") ||
+        normalizedStatus.includes("REQUESTED") ||
+        normalizedStatus.includes("REQUEST_SENT") ||
+        normalizedStatus.includes("SENT") ||
+        normalizedStatus.includes("WAIT")
     );
 };
 
