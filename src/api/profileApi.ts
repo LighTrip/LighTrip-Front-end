@@ -10,6 +10,7 @@ import {
     PresignedUrlResponse,
     ProfileEditForm,
     ProfileUser,
+    TeamApiResponse,
     TeamResponseData,
     UpdateLiveLocationSharingRequest,
     UpdateProfileRequest
@@ -19,7 +20,6 @@ import { BASE_URL } from "./config";
 // 로그인 토큰 얻기
 const getAccessToken = async () => {
     const accessToken = await Securestore.getItemAsync("accessToken");
-    console.log("현재 accessToken:", accessToken);
 
     if (!accessToken) {
         throw new Error("로그인 토큰이 없습니다.");
@@ -71,14 +71,30 @@ const requestMyProfile = async (): Promise<MyProfileResponse> => {
 
     const result: MyProfileResponse = await response.json();
 
-    console.log("내 프로필 조회 상태:", response.status);
-    console.log("내 프로필 조회 응답:", result);
-
     if (!response.ok || !result.success) {
         throw new Error(result.message || "내 프로필 조회 실패");
     }
 
     return result;
+};
+
+const extractTeamData = (result: TeamApiResponse): TeamResponseData => {
+    const teamData = result.data ?? result;
+
+    if (
+        typeof teamData.teamId !== "number" ||
+        !teamData.teamName ||
+        !teamData.teamCode
+    ) {
+        throw new Error(result.message || "팀 응답 데이터가 올바르지 않습니다.");
+    }
+
+    return {
+        teamId: teamData.teamId,
+        teamName: teamData.teamName,
+        teamCode: teamData.teamCode,
+        createdAt: teamData.createdAt ?? "",
+    };
 };
 
 // 1. 마이페이지 메인에서 프로필 조회
@@ -120,9 +136,6 @@ export const uploadProfileImage = async (
     const presignedResult: PresignedUrlResponse =
         await presignedResponse.json();
 
-    console.log("Presigned URL 발급 상태:", presignedResponse.status);
-    console.log("Presigned URL 발급 응답:", presignedResult);
-
     if (!presignedResponse.ok) {
         throw new Error("Presigned URL 발급 실패");
     }
@@ -137,8 +150,6 @@ export const uploadProfileImage = async (
         },
         body: imageBlob,
     });
-
-    console.log("S3 이미지 업로드 상태:", uploadResponse.status);
 
     if (!uploadResponse.ok) {
         throw new Error("S3 이미지 업로드 실패");
@@ -164,9 +175,6 @@ export const updateMyProfile = async (
 
     const result: MyProfileResponse = await response.json();
 
-    console.log("프로필 수정 상태:", response.status);
-    console.log("프로필 수정 응답:", result);
-
     if (!response.ok || !result.success) {
         throw new Error(result.message || "프로필 수정 실패");
     }
@@ -175,7 +183,7 @@ export const updateMyProfile = async (
 };
 
 // 5. 회원탈퇴 DELETE 요청
-export const withdrawMember = async () : Promise<void> => {
+export const withdrawMember = async (): Promise<void> => {
     const accessToken = await getAccessToken();
 
     const response = await fetch(`${BASE_URL}/auth/withdraw`, {
@@ -185,22 +193,17 @@ export const withdrawMember = async () : Promise<void> => {
         }
     });
 
-    console.log("회원탈퇴 상태:", response.status);
-
-    if(!response.ok) {
+    if (!response.ok) {
         let errorMessage = "회원탈퇴 실패";
-        
+
         try {
             const result = await response.json();
-            console.log("회원탈퇴 응답:", result);
             errorMessage = result.message || errorMessage;
-        } catch {
-            console.log("회원탈퇴 응답 body 없음");
-        }
+        } catch {}
 
         throw new Error(errorMessage);
     }
-}
+};
 
 // 6. 로그아웃 POST 요청
 export const logout = async (): Promise<void> => {
@@ -211,24 +214,19 @@ export const logout = async (): Promise<void> => {
         headers: {
             Authorization: `Bearer ${accessToken}`,
         }
-    })
+    });
 
-    console.log("로그아웃 상태:", response.status);
-
-    if(!response.ok) {
+    if (!response.ok) {
         let errorMessage = "로그아웃 실패";
 
         try {
             const result = await response.json();
-            console.log("로그아웃 응답:", result);
             errorMessage = result.message || errorMessage;
-        } catch {
-            console.log("로그아웃 응답 body 없음");
-        }
+        } catch {}
 
         throw new Error(errorMessage);
     }
-}
+};
 
 // 7. 받은 친구 요청 목록 조회
 export const getPendingFriends = async (): Promise<PendingFriendResponse["data"]> => {
@@ -244,15 +242,12 @@ export const getPendingFriends = async (): Promise<PendingFriendResponse["data"]
 
     const result: PendingFriendResponse = await response.json();
 
-    console.log("받은 친구 요청 목록 조회 상태:", response.status);
-    console.log("받은 친구 요청 목록 조회 응답:", result);
-
-    if(!response.ok || !result.success) {
+    if (!response.ok || !result.success) {
         throw new Error(result.message || "받은 친구 요청 목록 조회 실패");
     }
 
     return result.data;
-}
+};
 
 // 8. 친구 요청 수락/거절
 export const respondFriendRequest = async (
@@ -270,23 +265,19 @@ export const respondFriendRequest = async (
         body: JSON.stringify({
             action,
         } satisfies FriendRequestActionRequest),
-    })
+    });
 
-    console.log("친구 요청 응답 처리 상태:", response.status);
-
-    if(!response.ok) {
+    if (!response.ok) {
         let errorMessage = "친구 요청 처리 실패";
 
         try {
             const result = await response.json();
-            console.log("친구 요청 응답 처리 에러 응답:", result);
-        }catch{
-            console.log("친구 요청 응답 body 없음")
-        }
+            errorMessage = result.message || errorMessage;
+        } catch {}
 
-        throw new Error(errorMessage)
+        throw new Error(errorMessage);
     }
-}
+};
 
 // 9. 팀 생성
 export const createTeam = async (
@@ -302,19 +293,16 @@ export const createTeam = async (
         },
         body: JSON.stringify({
             teamName,
-        }satisfies CreateTeamRequest),
+        } satisfies CreateTeamRequest),
     });
 
-    const result = await response.json();
+    const result: TeamApiResponse = await response.json();
 
-    console.log("팀 생성 상태:", response.status);
-    console.log("팀 생성 응답:", result);
-
-    if(!response.ok) {
+    if (!response.ok) {
         throw new Error(result.message || "팀 생성 실패");
     }
 
-    const teamData = result as TeamResponseData;
+    const teamData = extractTeamData(result);
 
     await Securestore.setItemAsync("teamId", String(teamData.teamId));
     await Securestore.setItemAsync("teamCode", teamData.teamCode);
@@ -323,7 +311,33 @@ export const createTeam = async (
     return teamData;
 };
 
-// 10. 팀 가입
+// 10. 팀 코드 검색
+export const searchTeamByCode = async (
+    code: string
+): Promise<TeamResponseData> => {
+    const accessToken = await getAccessToken();
+
+    const response = await fetch(
+        `${BASE_URL}/api/v1/teams/search?code=${encodeURIComponent(code)}`,
+        {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${accessToken}`,
+            },
+        }
+    );
+
+    const result: TeamApiResponse = await response.json();
+
+    if (!response.ok) {
+        throw new Error(result.message || "팀 검색 실패");
+    }
+
+    return extractTeamData(result);
+};
+
+// 11. 팀 가입
 export const joinTeam = async (
     teamCode: string
 ): Promise<TeamResponseData> => {
@@ -337,19 +351,16 @@ export const joinTeam = async (
         },
         body: JSON.stringify({
             teamCode,
-        }satisfies JoinTeamRequest),
+        } satisfies JoinTeamRequest),
     });
 
-    const result = await response.json();
+    const result: TeamApiResponse = await response.json();
 
-    console.log("팀 가입 상태:", response.status);
-    console.log("팀 가입 응답:", result);
-
-    if(!response.ok) {
+    if (!response.ok) {
         throw new Error(result.message || "팀 가입 실패");
     }
 
-    const teamData = result as TeamResponseData;
+    const teamData = extractTeamData(result);
 
     await Securestore.setItemAsync("teamId", String(teamData.teamId));
     await Securestore.setItemAsync("teamCode", teamData.teamCode);
@@ -358,7 +369,7 @@ export const joinTeam = async (
     return teamData;
 };
 
-// 11. 위치 공유 온오프 API
+// 12. 위치 공유 온오프 API
 export const updateLiveLocationSharing = async (
     teamId: number,
     sharing: boolean
@@ -379,18 +390,13 @@ export const updateLiveLocationSharing = async (
         }
     );
 
-    console.log("위치 공유 온오프 상태:", response.status);
-
     if (!response.ok) {
         let errorMessage = "위치 공유 설정 변경 실패";
 
         try {
             const result = await response.json();
-            console.log("위치 공유 온오프 에러 응답:", result);
             errorMessage = result.message || errorMessage;
-        } catch {
-            console.log("위치 공유 온오프 응답 body 없음");
-        }
+        } catch {}
 
         throw new Error(errorMessage);
     }
