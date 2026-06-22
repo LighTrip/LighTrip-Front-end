@@ -2,6 +2,13 @@ import type { TeamInfo, TeamLiveLocation, TeamMember } from "@/src/features/team
 import * as Securestore from "expo-secure-store";
 import { BASE_URL } from "./config";
 
+type TeamInfoResponse = {
+    success?: boolean;
+    code?: string;
+    message?: string;
+    data?: TeamInfo;
+} & Partial<TeamInfo>;
+
 // 로그인 토큰 얻기
 const getAccessToken = async () => {
     const accessToken = await Securestore.getItemAsync("accessToken");
@@ -11,6 +18,31 @@ const getAccessToken = async () => {
     }
 
     return accessToken;
+};
+
+const extractTeamInfo = (result: TeamInfoResponse): TeamInfo => {
+    const teamInfo = result.data ?? result;
+
+    if (
+        typeof teamInfo.teamId !== "number" ||
+        !teamInfo.teamName ||
+        !teamInfo.teamCode
+    ) {
+        throw new Error(result.message || "팀 정보를 확인할 수 없습니다.");
+    }
+
+    return {
+        teamId: teamInfo.teamId,
+        teamName: teamInfo.teamName,
+        teamCode: teamInfo.teamCode,
+        createdAt: teamInfo.createdAt ?? "",
+    };
+};
+
+const saveTeamInfo = async (teamInfo: TeamInfo) => {
+    await Securestore.setItemAsync("teamId", String(teamInfo.teamId));
+    await Securestore.setItemAsync("teamCode", teamInfo.teamCode);
+    await Securestore.setItemAsync("teamName", teamInfo.teamName);
 };
 
 // 1. 팀 기본 정보 조회 API
@@ -27,7 +59,7 @@ export const getTeamInfo = async (
         },
     });
 
-    const result = await response.json();
+    const result: TeamInfoResponse = await response.json();
 
     console.log("팀 정보 조회 상태:", response.status);
     console.log("팀 정보 조회 응답:", result);
@@ -36,7 +68,33 @@ export const getTeamInfo = async (
         throw new Error(result.message || "팀 정보 조회 실패");
     }
 
-    return result as TeamInfo;
+    return extractTeamInfo(result);
+};
+
+export const getMyTeam = async (): Promise<TeamInfo> => {
+    const accessToken = await getAccessToken();
+
+    const response = await fetch(`${BASE_URL}/api/v1/teams/me`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+        },
+    });
+
+    const result: TeamInfoResponse = await response.json();
+
+    console.log("내 팀 정보 조회 상태:", response.status);
+    console.log("내 팀 정보 조회 응답:", result);
+
+    if (!response.ok) {
+        throw new Error(result.message || "내 팀 정보 조회 실패");
+    }
+
+    const teamInfo = extractTeamInfo(result);
+    await saveTeamInfo(teamInfo);
+
+    return teamInfo;
 };
 
 // 2. 팀 탈퇴

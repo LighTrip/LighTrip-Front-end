@@ -100,7 +100,7 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
         );
     };
 
-    // 1. ?곕뗄荑?燁살뮄??筌뤴뫖以?獄쏆룇釉??븍┛ 
+    // 1. 추천 친구 목록 받아오기
     const fetchRecommendedFriends = async (
         nextRequestedFriendKeys = requestedFriendKeys,
     ) => {
@@ -118,8 +118,8 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
             setRecommendedFriends(friendsWithRequestedStatus);
             setFriends(filterRecommendedFriendsByNickname(keyword, friendsWithRequestedStatus));
         }catch(error) {
-            console.log("?곕뗄荑?燁살뮄??筌뤴뫖以?鈺곌퀬???癒?쑎:", error);
-            setErrorMessage("?곕뗄荑?燁살뮄??筌뤴뫖以???븍뜄???? 筌륁궢六??щ빍??");
+            console.log("추천 친구 목록 조회 에러:", error);
+            setErrorMessage("추천 친구 목록을 불러오지 못했습니다.");
         }finally {
             setLoading(false);
         }
@@ -132,12 +132,12 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
         fetchRecommendedFriends();
     }, [visible]);
 
-    // 2. 燁살뮄?꾥굜遺얜굡嚥?野꺜??
+    // 2. 닉네임 또는 친구 코드로 검색
     const handleSearchFriends = async () => {
         const trimmedKeyword = keyword.trim();
 
         if(trimmedKeyword.length === 0) {
-            setErrorMessage("燁살뮄???꾨뗀諭띄몴???낆젾??곻폒?紐꾩뒄.");
+            setErrorMessage("닉네임 또는 친구 코드를 입력해주세요.");
             fetchRecommendedFriends();
             return;
         }
@@ -160,15 +160,15 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
             const searchedFriend = await searchFriendByCode(trimmedKeyword);
             setFriends(applyRequestedStatus([searchedFriend], requestedFriendKeys))
         }catch (error) {
-            console.log("燁살뮄???꾨뗀諭?野꺜???癒?쑎:", error);
+            console.log("친구 검색 에러:", error);
             setFriends([]);
-            setErrorMessage("野꺜??野껉퀗?드첎? ??곷뮸??덈뼄.");
+            setErrorMessage("검색 결과가 없습니다.");
         }finally {
             setLoading(false);
         }
     };
 
-    // 2-1. 野꺜??깃갯 ??쑴???????쇰뻻 ?곕뗄荑?燁살뮄??筌뤴뫖以?癰귣똻??袁⑥쨯
+    // 2-1. 검색창을 비우면 추천 친구 목록으로 복원
     const handleChangeKeyword = (text: string) => {
         setKeyword(text);
         setErrorMessage("");
@@ -181,11 +181,11 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
         setFriends(filterRecommendedFriendsByNickname(text));
     }
 
-    // 3. 燁살뮄???곕떽?
+    // 3. 친구 추가
     const handleAddFriend = async (friend: RecommendedFriend) => {
     
         try {
-            console.log("癰귣?沅?燁살뮄???꾨뗀諭?", friend.friendCode);
+            console.log("보낼 친구 코드:", friend.friendCode);
 
             await requestFriend(friend.friendCode);
 
@@ -216,41 +216,41 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
             );
 
             Alert.alert(
-                "燁살뮄???遺욧퍕 ?袁⑥┷!",
-                `${friend.nickname}??뤿퓠野?燁살뮄???遺욧퍕??癰귣?源??щ빍??`
+                "친구 요청 완료!",
+                `${friend.nickname}님에게 친구 요청을 보냈습니다.`
             );
 
-            // 燁살뮄???遺욧퍕 ?源껊궗 ???곕뗄荑?燁살뮄??筌뤴뫖以???쇰뻻 ?븍뜄???븍┛
+            // 친구 요청 성공 후 추천 친구 목록 다시 불러오기
             fetchRecommendedFriends(nextRequestedFriendKeys);
 
             onFriendRequestSuccess?.();
         } catch(error) {
-            console.log("燁살뮄???遺욧퍕 ?癒?쑎:", error)
+            console.log("친구 요청 에러:", error)
 
             if(error instanceof Error) {
-                Alert.alert("燁살뮄???遺욧퍕 ??쎈솭", error.message)
+                Alert.alert("친구 요청 실패", error.message)
             }else {
-                Alert.alert("燁살뮄???遺욧퍕 ??쎈솭", "??????용뮉 ??살첒揶쎛 獄쏆뮇源??됰뮸??덈뼄.")
+                Alert.alert("친구 요청 실패", "알 수 없는 오류가 발생했습니다.")
             }
         }
     };
 
-    // 4. ?⑤벀而??袁⑥쨮??鈺곌퀬??
+    // 4. 공개 프로필 조회
     const handlePressFriendCard = async (friend: RecommendedFriend) => {
         try {
             setProfileLoading(true);
 
-            console.log("鈺곌퀬????????userId:", friend.userId);
+            console.log("조회할 사용자 userId:", friend.userId);
 
             const profile = await getPublicUserProfile(friend.userId);
             setSelectedUser(profile);
         }catch(error) {
-            console.log("?⑤벀而??袁⑥쨮??鈺곌퀬???癒?쑎:", error);
+            console.log("공개 프로필 조회 에러:", error);
 
             if(error instanceof Error) {
-                Alert.alert("?袁⑥쨮??鈺곌퀬????쎈솭:", error.message);
+                Alert.alert("프로필 조회 실패", error.message);
             } else {
-                Alert.alert("?袁⑥쨮??鈺곌퀬????쎈솭", "??????용뮉 ??살첒揶쎛 獄쏆뮇源??됰뮸??덈뼄.")
+                Alert.alert("프로필 조회 실패", "알 수 없는 오류가 발생했습니다.")
             }
         } finally {
             setProfileLoading(false);

@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    BackHandler,
     Image,
     KeyboardAvoidingView,
     Platform,
@@ -38,6 +39,18 @@ export default function ProfileEditView() {
     const [nickname, setNickname] = useState("");
     const [location, setLocation] = useState("");
     const[bio, setBio] = useState("");
+
+    useEffect(() => {
+        const subscription = BackHandler.addEventListener(
+            "hardwareBackPress",
+            () => {
+                router.replace("/profile" as any);
+                return true;
+            },
+        );
+
+        return () => subscription.remove();
+    }, [router]);
 
 
     // 1. 내 프로필 조회 API 연결
@@ -145,7 +158,7 @@ export default function ProfileEditView() {
             setLocation(updatedProfile.location || "")
             setBio(updatedProfile.bio || "")
 
-            router.back();
+            router.replace("/profile" as any);
         } catch(error) {
             console.log("프로필 수정 에러:",error)
         }finally {
@@ -224,7 +237,7 @@ export default function ProfileEditView() {
                 <View style={styles.header}>
                     <TouchableOpacity
                         activeOpacity={0.8}
-                        onPress={() => router.back()}
+                        onPress={() => router.replace("/profile" as any)}
                         style={styles.backButton}
                     >
                         <Ionicons name="chevron-back" size={24} color="#000000" />

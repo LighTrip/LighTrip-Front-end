@@ -1,75 +1,124 @@
-import {
+﻿import {
+    getMyTeam,
     getTeamInfo,
     getTeamLiveLocations,
     getTeamMembers,
     leaveTeam,
 } from "@/src/api/teamApi";
+import { useTeamMode } from "@/src/components/common/TeamModeContext";
+import { naverReverseGeocode } from "@/src/features/map/utils/mapUtils";
+import { Ionicons } from "@expo/vector-icons";
+import {
+    NaverMapMarkerOverlay,
+    NaverMapView,
+} from "@mj-studio/react-native-naver-map";
 import * as Securestore from "expo-secure-store";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
     Image,
     ScrollView,
+    Share,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from "react-native";
-import MapView, { Marker } from "react-native-maps";
 import type {
     TeamInfo,
     TeamLiveLocation,
     TeamMember,
 } from "../types/team.types";
 
+const LIVE_LOCATION_POLL_INTERVAL_MS = 30 * 1000;
+
 export default function TeamView() {
+    const {
+        clearTeamMode,
+        currentUserId,
+        isLocationSharing,
+        isTeamLocationSocketConnected,
+        teamLiveLocations,
+        setTeamLiveLocations,
+    } = useTeamMode();
     const [team, setTeam] = useState<TeamInfo | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // 팀원
     const [members, setMembers] = useState<TeamMember[]>([]);
     const [isMemberOpen, setIsMemberOpen] = useState(false);
     const [isMemberLoading, setIsMemberLoading] = useState(false);
 
-    // 실시간 위치
     const [liveLocations, setLiveLocations] = useState<TeamLiveLocation[]>([]);
     const [isLocationOpen, setIsLocationOpen] = useState(false);
     const [isLocationLoading, setIsLocationLoading] = useState(false);
+    const [locationNames, setLocationNames] = useState<Record<number, string>>({});
+    const visibleLiveLocations = useMemo(
+        () =>
+            liveLocations.filter(
+                (location) => isLocationSharing || location.userId !== currentUserId,
+            ),
+        [currentUserId, isLocationSharing, liveLocations],
+    );
+    const isWaitingForMyLiveLocation =
+        isLocationSharing &&
+        currentUserId !== null &&
+        !visibleLiveLocations.some((location) => location.userId === currentUserId);
 
-    // 1. 팀 정보 조회 호출
+    const getLocationMember = (location: TeamLiveLocation) =>
+        members.find((member) => member.userId === location.userId);
+
+    const getDisplayLocationName = (location: TeamLiveLocation) => {
+        const resolvedName = locationNames[location.userId];
+
+        if (resolvedName) return resolvedName;
+        if (location.placeName && location.placeName !== "현재 위치") {
+            return location.placeName;
+        }
+
+        return "위치 확인 중...";
+    };
+
+    const handleCopyTeamCode = async () => {
+        if (!team?.teamCode) return;
+
+        try {
+            const Clipboard = await import("expo-clipboard");
+            await Clipboard.setStringAsync(team.teamCode);
+            Alert.alert("복사 완료", "팀 코드가 클립보드에 복사되었습니다.");
+        } catch {
+            Alert.alert(
+                "복사 기능 준비 중",
+                "클립보드 모듈을 사용하려면 앱을 새 빌드로 다시 설치해야 합니다.",
+            );
+        }
+    };
+
+    const handleShareTeamCode = async () => {
+        if (!team?.teamCode) return;
+
+        await Share.share({
+            message: `LighTrip 팀에 초대합니다.\n팀 이름: ${team.teamName}\n팀 코드: ${team.teamCode}`,
+        });
+    };
     const fetchTeamInfo = async () => {
         try {
             setIsLoading(true);
 
             const savedTeamId = await Securestore.getItemAsync("teamId");
-            const savedTeamCode = await Securestore.getItemAsync("teamCode");
-            const savedTeamName = await Securestore.getItemAsync("teamName");
+            const teamData = savedTeamId
+                ? await getTeamInfo(Number(savedTeamId))
+                : await getMyTeam();
 
-            console.log("저장된 teamId:", savedTeamId);
-            console.log("저장된 teamCode:", savedTeamCode);
-            console.log("저장된 teamName:", savedTeamName);
-
-            if (!savedTeamId) {
-                setTeam(null);
-                setMembers([]);
-                setLiveLocations([]);
-                setIsMemberOpen(false);
-                setIsLocationOpen(false);
-                return;
-            }
-
-            const teamData = await getTeamInfo(Number(savedTeamId));
             setTeam(teamData);
         } catch (error) {
-            console.error("팀 정보 조회 실패:", error);
-            Alert.alert("오류", "팀 정보를 불러오지 못했습니다.");
+            console.error("팀 실시간 위치 조회 실패:", error);
+            Alert.alert("오류", "팀원들의 위치 정보를 불러오지 못했습니다.");
         } finally {
             setIsLoading(false);
         }
     };
 
-    // 2. 팀 탈퇴 호출
     const handleLeaveTeam = () => {
         if (!team) return;
 
@@ -84,6 +133,7 @@ export default function TeamView() {
                 onPress: async () => {
                     try {
                         await leaveTeam(team.teamId);
+                        clearTeamMode();
 
                         Alert.alert("완료", "팀에서 탈퇴했습니다.");
 
@@ -99,7 +149,7 @@ export default function TeamView() {
                             "탈퇴 실패",
                             error instanceof Error
                                 ? error.message
-                                : "팀 탈퇴에 실패했습니다."
+                                : "팀 탈퇴에 실패했습니다.",
                         );
                     }
                 },
@@ -107,7 +157,6 @@ export default function TeamView() {
         ]);
     };
 
-    // 3. 팀원 목록 조회 호출
     const handlePressMembers = async () => {
         if (!team) return;
 
@@ -123,14 +172,13 @@ export default function TeamView() {
             setMembers(memberData);
             setIsMemberOpen(true);
         } catch (error) {
-            console.error("팀 멤버 목록 조회 실패:", error);
-            Alert.alert("오류", "팀원 목록을 불러오지 못했습니다.");
+            console.error("팀 실시간 위치 조회 실패:", error);
+            Alert.alert("오류", "팀원들의 위치 정보를 불러오지 못했습니다.");
         } finally {
             setIsMemberLoading(false);
         }
     };
 
-    // 4. 실시간 위치 조회 호출
     const handlePressLiveLocations = async () => {
         if (!team) return;
 
@@ -139,14 +187,34 @@ export default function TeamView() {
             return;
         }
 
+        setLiveLocations(teamLiveLocations);
+        setIsLocationOpen(true);
+
         try {
-            setIsLocationLoading(true);
+            setIsLocationLoading(teamLiveLocations.length === 0);
 
-            const locationData = await getTeamLiveLocations(team.teamId);
-            console.log("실시간 위치 데이터:", locationData);
+            const [locationData, memberData] = await Promise.all([
+                getTeamLiveLocations(team.teamId),
+                members.length > 0
+                    ? Promise.resolve(members)
+                    : getTeamMembers(team.teamId),
+            ]);
 
-            setLiveLocations(locationData);
-            setIsLocationOpen(true);
+            const mergedLocationData = [...locationData];
+
+            teamLiveLocations.forEach((cachedLocation) => {
+                const exists = mergedLocationData.some(
+                    (location) => location.userId === cachedLocation.userId,
+                );
+
+                if (!exists) {
+                    mergedLocationData.push(cachedLocation);
+                }
+            });
+
+            setMembers(memberData);
+            setLiveLocations(mergedLocationData);
+            setTeamLiveLocations(mergedLocationData);
         } catch (error) {
             console.error("팀 실시간 위치 조회 실패:", error);
             Alert.alert("오류", "팀원들의 위치 정보를 불러오지 못했습니다.");
@@ -158,6 +226,67 @@ export default function TeamView() {
     useEffect(() => {
         fetchTeamInfo();
     }, []);
+
+    useEffect(() => {
+        if (!isLocationOpen || !team) return;
+
+        const intervalId = setInterval(async () => {
+            try {
+                const locationData = await getTeamLiveLocations(team.teamId);
+                setLiveLocations(locationData);
+                setTeamLiveLocations(locationData);
+            } catch {
+                // 실시간 위치 갱신 실패 시 다음 주기에서 다시 시도합니다.
+            }
+        }, LIVE_LOCATION_POLL_INTERVAL_MS);
+
+        return () => clearInterval(intervalId);
+    }, [isLocationOpen, team, setTeamLiveLocations]);
+
+    useEffect(() => {
+        if (!isLocationOpen) return;
+
+        setLiveLocations(teamLiveLocations);
+    }, [isLocationOpen, teamLiveLocations]);
+
+    useEffect(() => {
+        if (!isLocationOpen || visibleLiveLocations.length === 0) return;
+
+        let isMounted = true;
+
+        const resolveLocationNames = async () => {
+            const entries = await Promise.all(
+                visibleLiveLocations.map(async (location) => {
+                    if (location.placeName && location.placeName !== "현재 위치") {
+                        return [location.userId, location.placeName] as const;
+                    }
+
+                    const address = await naverReverseGeocode(
+                        location.latitude,
+                        location.longitude,
+                    );
+
+                    return [
+                        location.userId,
+                        address ?? "장소명 없음",
+                    ] as const;
+                }),
+            );
+
+            if (!isMounted) return;
+
+            setLocationNames((currentNames) => ({
+                ...currentNames,
+                ...Object.fromEntries(entries),
+            }));
+        };
+
+        resolveLocationNames();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [isLocationOpen, visibleLiveLocations]);
 
     if (isLoading) {
         return (
@@ -195,7 +324,7 @@ export default function TeamView() {
 
             <View style={styles.teamCard}>
                 <View style={styles.teamImage}>
-                    <Text style={styles.teamImageText}>✈️</Text>
+                    <Ionicons name="airplane" size={36} color="#1A3A6B" />
                 </View>
 
                 <Text style={styles.teamName}>{team.teamName}</Text>
@@ -203,6 +332,26 @@ export default function TeamView() {
                 <View style={styles.codeRow}>
                     <Text style={styles.codeLabel}>팀 코드</Text>
                     <Text style={styles.codeValue}>{team.teamCode}</Text>
+                </View>
+
+                <View style={styles.codeActionRow}>
+                    <TouchableOpacity
+                        activeOpacity={0.8}
+                        style={styles.codeActionButton}
+                        onPress={handleCopyTeamCode}
+                    >
+                        <Ionicons name="copy-outline" size={16} color="#1A3A6B" />
+                        <Text style={styles.codeActionText}>복사</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        activeOpacity={0.8}
+                        style={styles.codeActionButton}
+                        onPress={handleShareTeamCode}
+                    >
+                        <Ionicons name="share-social-outline" size={16} color="#1A3A6B" />
+                        <Text style={styles.codeActionText}>공유</Text>
+                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.infoRow}>
@@ -218,16 +367,17 @@ export default function TeamView() {
                 </View>
             </View>
 
-            {/* 팀원 목록 */}
             <TouchableOpacity
                 style={styles.menuItem}
                 onPress={handlePressMembers}
             >
                 <View style={styles.menuTitleRow}>
                     <Text style={styles.menuTitle}>팀원 목록</Text>
-                    <Text style={styles.menuArrow}>
-                        {isMemberOpen ? "▲" : "▼"}
-                    </Text>
+                    <Ionicons
+                        name={isMemberOpen ? "caret-up" : "caret-down"}
+                        size={18}
+                        color="#888888"
+                    />
                 </View>
 
                 <Text style={styles.menuDescription}>
@@ -306,16 +456,17 @@ export default function TeamView() {
                 </View>
             )}
 
-            {/* 실시간 위치 */}
             <TouchableOpacity
                 style={styles.menuItem}
                 onPress={handlePressLiveLocations}
             >
                 <View style={styles.menuTitleRow}>
                     <Text style={styles.menuTitle}>실시간 위치</Text>
-                    <Text style={styles.menuArrow}>
-                        {isLocationOpen ? "▲" : "▼"}
-                    </Text>
+                    <Ionicons
+                        name={isLocationOpen ? "caret-up" : "caret-down"}
+                        size={18}
+                        color="#888888"
+                    />
                 </View>
 
                 <Text style={styles.menuDescription}>
@@ -325,6 +476,21 @@ export default function TeamView() {
 
             {isLocationOpen && (
                 <View style={styles.locationMapBox}>
+                    {(isWaitingForMyLiveLocation ||
+                        (isLocationSharing && !isTeamLocationSocketConnected)) && (
+                        <View style={styles.locationGuideBox}>
+                            <ActivityIndicator size="small" color="#1A3A6B" />
+                            <View style={styles.locationGuideTextBox}>
+                                <Text style={styles.locationGuideTitle}>
+                                    실시간 위치를 준비 중입니다.
+                                </Text>
+                                <Text style={styles.locationGuideDescription}>
+                                    GPS와 실시간 연결이 준비되면 지도에 위치가 표시됩니다.
+                                </Text>
+                            </View>
+                        </View>
+                    )}
+
                     {isLocationLoading ? (
                         <View style={styles.memberLoadingBox}>
                             <ActivityIndicator size="small" />
@@ -332,45 +498,62 @@ export default function TeamView() {
                                 위치 정보를 불러오는 중...
                             </Text>
                         </View>
-                    ) : liveLocations.length === 0 ? (
+                    ) : visibleLiveLocations.length === 0 ? (
                         <Text style={styles.emptyMemberText}>
                             현재 위치를 공유 중인 팀원이 없습니다.
                         </Text>
                     ) : (
                         <>
                             <View style={styles.mapContainer}>
-                                <MapView
+                                <NaverMapView
                                     style={styles.map}
-                                    initialRegion={{
-                                        latitude: liveLocations[0].latitude,
-                                        longitude: liveLocations[0].longitude,
-                                        latitudeDelta: 0.03,
-                                        longitudeDelta: 0.03,
+                                    initialCamera={{
+                                        latitude: visibleLiveLocations[0].latitude,
+                                        longitude: visibleLiveLocations[0].longitude,
+                                        zoom: 14,
                                     }}
-                                    scrollEnabled={false}
-                                    zoomEnabled={true}
-                                    rotateEnabled={false}
-                                    pitchEnabled={false}
+                                    isNightModeEnabled={true}
+                                    lightness={-0.2}
+                                    isShowZoomControls={false}
                                 >
-                                    {liveLocations.map((location) => (
-                                        <Marker
+                                    {visibleLiveLocations.map((location) => (
+                                        <NaverMapMarkerOverlay
                                             key={location.userId}
-                                            coordinate={{
-                                                latitude: location.latitude,
-                                                longitude: location.longitude,
-                                            }}
-                                            title={location.nickname}
-                                            description={
-                                                location.placeName ||
-                                                "위치 공유 중"
-                                            }
-                                        />
+                                            latitude={location.latitude}
+                                            longitude={location.longitude}
+                                            anchor={{ x: 0.5, y: 1 }}
+                                            width={82}
+                                            height={84}
+                                        >
+                                            <View style={styles.liveMarker}>
+                                                {getLocationMember(location)?.profileImg ? (
+                                                    <Image
+                                                        source={{
+                                                            uri: getLocationMember(location)?.profileImg ?? "",
+                                                        }}
+                                                        style={styles.liveMarkerImage}
+                                                    />
+                                                ) : (
+                                                    <View style={styles.liveMarkerAvatar}>
+                                                        <Text style={styles.liveMarkerInitial}>
+                                                            {location.nickname.charAt(0)}
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                                <Text
+                                                    style={styles.liveMarkerLabel}
+                                                    numberOfLines={1}
+                                                >
+                                                    {location.nickname}
+                                                </Text>
+                                            </View>
+                                        </NaverMapMarkerOverlay>
                                     ))}
-                                </MapView>
+                                </NaverMapView>
                             </View>
 
                             <View style={styles.locationSummaryBox}>
-                                {liveLocations.map((location) => (
+                                {visibleLiveLocations.map((location) => (
                                     <View
                                         key={location.userId}
                                         style={styles.locationSummaryItem}
@@ -378,21 +561,22 @@ export default function TeamView() {
                                         <Text
                                             style={styles.locationSummaryName}
                                         >
-                                            📍 {location.nickname}
+                                            {location.nickname}
                                         </Text>
 
                                         <Text
                                             style={styles.locationSummaryPlace}
                                         >
-                                            {location.placeName || "장소명 없음"}
+                                            현재 위치: {" "}
+                                            {getDisplayLocationName(location)}
                                         </Text>
 
                                         <Text
                                             style={styles.locationSummaryTime}
                                         >
-                                            최근 공유:{" "}
+                                            최근 공유: {" "}
                                             {new Date(
-                                                location.timestamp
+                                                location.timestamp,
                                             ).toLocaleString("ko-KR")}
                                         </Text>
                                     </View>
@@ -403,7 +587,6 @@ export default function TeamView() {
                 </View>
             )}
 
-            {/* 팀 탈퇴하기 */}
             <TouchableOpacity
                 style={styles.leaveButton}
                 onPress={handleLeaveTeam}
@@ -474,7 +657,9 @@ const styles = StyleSheet.create({
         marginBottom: 14,
     },
     teamImageText: {
-        fontSize: 34,
+        fontSize: 24,
+        fontWeight: "800",
+        color: "#1A3A6B",
     },
     teamName: {
         fontSize: 22,
@@ -501,6 +686,29 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: "700",
         color: "#2DC59F",
+    },
+    codeActionRow: {
+        flexDirection: "row",
+        gap: 10,
+        marginBottom: 12,
+        width: "100%",
+    },
+    codeActionButton: {
+        flex: 1,
+        height: 42,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: "#D7E0ED",
+        backgroundColor: "#FFFFFF",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+    },
+    codeActionText: {
+        color: "#1A3A6B",
+        fontSize: 13,
+        fontWeight: "700",
     },
     infoRow: {
         flexDirection: "row",
@@ -541,8 +749,9 @@ const styles = StyleSheet.create({
         color: "#888888",
     },
     menuArrow: {
-        fontSize: 14,
+        fontSize: 13,
         color: "#888888",
+        fontWeight: "600",
     },
     memberListBox: {
         padding: 16,
@@ -641,15 +850,79 @@ const styles = StyleSheet.create({
         marginTop: -4,
         marginBottom: 12,
     },
+    locationGuideBox: {
+        flexDirection: "row",
+        alignItems: "center",
+        padding: 12,
+        borderRadius: 14,
+        backgroundColor: "#EEF4FF",
+        marginBottom: 12,
+    },
+    locationGuideTextBox: {
+        flex: 1,
+        marginLeft: 10,
+    },
+    locationGuideTitle: {
+        fontSize: 13,
+        fontWeight: "700",
+        color: "#1A3A6B",
+    },
+    locationGuideDescription: {
+        marginTop: 3,
+        fontSize: 12,
+        color: "#5D6F89",
+        lineHeight: 16,
+    },
     mapContainer: {
         height: 240,
         borderRadius: 16,
         overflow: "hidden",
-        backgroundColor: "#E5ECFC",
+        backgroundColor: "#101820",
     },
     map: {
         width: "100%",
         height: "100%",
+    },
+    liveMarker: {
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    liveMarkerAvatar: {
+        width: 46,
+        height: 46,
+        borderRadius: 23,
+        borderWidth: 3,
+        borderColor: "#FFFFFF",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#FFE06E",
+    },
+    liveMarkerImage: {
+        width: 46,
+        height: 46,
+        borderRadius: 23,
+        borderWidth: 3,
+        borderColor: "#FFFFFF",
+        backgroundColor: "#E5ECFC",
+    },
+    liveMarkerInitial: {
+        color: "#111111",
+        fontSize: 16,
+        fontWeight: "800",
+    },
+    liveMarkerLabel: {
+        maxWidth: 70,
+        marginTop: 2,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 8,
+        overflow: "hidden",
+        borderWidth: 1,
+        borderColor: "#FFFFFF",
+        backgroundColor: "#FFE06E",
+        color: "#1A3A6B",
+        fontSize: 10,
+        fontWeight: "700",
     },
     locationSummaryBox: {
         marginTop: 12,

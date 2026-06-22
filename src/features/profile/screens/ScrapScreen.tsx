@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    BackHandler,
     FlatList,
     Keyboard,
     StyleSheet,
@@ -37,6 +38,18 @@ export default function ScrapScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [isFetchingMore, setIsFetchingMore] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
+
+    useEffect(() => {
+        const subscription = BackHandler.addEventListener(
+            "hardwareBackPress",
+            () => {
+                router.replace("/profile" as any);
+                return true;
+            },
+        );
+
+        return () => subscription.remove();
+    }, [router]);
 
     // 스크랩 목록 검색
     const filteredScraps = useMemo(() => {
@@ -223,7 +236,7 @@ export default function ScrapScreen() {
                             <TouchableOpacity
                                 style={styles.backButton}
                                 activeOpacity={0.8}
-                                onPress={() => router.back()}
+                                onPress={() => router.replace("/profile" as any)}
                             >
                                 <Ionicons
                                     name="chevron-back"
