@@ -13,6 +13,7 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import AddFriendModal from "../../social/components/AddFriendModal";
 import { PendingFriend } from "../types/profile.types";
 
 type FriendManageModalProps = {
@@ -36,6 +37,7 @@ export default function FriendManageModal ({
     const [keyword, setKeyword] = useState("");
     const [requests, setRequests] = useState<PendingFriend[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [isAddFriendOpen, setIsAddFriendOpen] = useState(false);
     const [processingFriendId, setProcessingFriendId] = useState<number | null>(null);
 
     // 받은 친구 요청 목록 조회회
@@ -138,6 +140,7 @@ export default function FriendManageModal ({
     };
 
     return(
+        <>
         <Modal
             visible={visible}
             transparent
@@ -150,13 +153,24 @@ export default function FriendManageModal ({
                     <View style={styles.header}>
                         <Text style={styles.title}>친구 관리</Text>
 
-                        <TouchableOpacity
-                            activeOpacity={0.8}
-                            onPress={onClose}
-                            style={styles.closeButton}
-                        >
-                            <Ionicons name="close" size={22} color="#333333" />
-                        </TouchableOpacity>
+                        <View style={styles.headerActions}>
+                            <TouchableOpacity
+                                activeOpacity={0.8}
+                                onPress={() => setIsAddFriendOpen(true)}
+                                style={styles.addButton}
+                            >
+                                <Ionicons name="person-add" size={16} color="#FFFFFF" />
+                                <Text style={styles.addButtonText}>친구 추가</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                activeOpacity={0.8}
+                                onPress={onClose}
+                                style={styles.closeButton}
+                            >
+                                <Ionicons name="close" size={22} color="#333333" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     {/*검색 영역*/}
@@ -292,6 +306,13 @@ export default function FriendManageModal ({
                 </View>
             </View>
         </Modal>
+
+        <AddFriendModal
+            visible={isAddFriendOpen}
+            onClose={() => setIsAddFriendOpen(false)}
+            onFriendRequestSuccess={fetchPendingFriends}
+        />
+        </>
     )
 }
 
@@ -332,6 +353,25 @@ const styles = StyleSheet.create ({
         fontSize: 24,
         color: "#000000",
         fontWeight: "700"
+    },
+    headerActions: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    addButton: {
+        height: 32,
+        borderRadius: 16,
+        paddingHorizontal: 10,
+        backgroundColor: "#1A3A6B",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+    },
+    addButtonText: {
+        color: "#FFFFFF",
+        fontSize: 12,
+        fontWeight: "700",
     },
     closeButton: {
         width: 28,

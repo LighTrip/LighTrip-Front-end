@@ -12,6 +12,7 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
+    useWindowDimensions,
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -29,6 +30,10 @@ const TAB_BAR_HEIGHT = 90;
 
 export default function ProfileView() {
     const router = useRouter();
+    const { width } = useWindowDimensions();
+    const isCompact = width < 360;
+    const horizontalPadding = isCompact ? 16 : 20;
+    const profileImageSize = isCompact ? 56 : 64;
     const {
         isTeamMode,
         toggleTeamMode,
@@ -144,7 +149,12 @@ export default function ProfileView() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.fixedHeader}>
+            <View
+                style={[
+                    styles.fixedHeader,
+                    { paddingHorizontal: horizontalPadding },
+                ]}
+            >
                 <Text style={styles.headerTitle}>마이페이지</Text>
 
                 <View style={styles.profileCard}>
@@ -155,12 +165,28 @@ export default function ProfileView() {
                                     ? { uri: user.profileImage }
                                     : require("@/assets/images/default_profile.png")
                             }
-                            style={styles.profileImage}
+                            style={[
+                                styles.profileImage,
+                                {
+                                    width: profileImageSize,
+                                    height: profileImageSize,
+                                    borderRadius: profileImageSize / 2,
+                                },
+                            ]}
                         />
 
                         <View style={styles.profileInfo}>
                             <View style={styles.nameRow}>
-                                <Text style={styles.userName}>{user.name}</Text>
+                                <Text
+                                    style={[
+                                        styles.userName,
+                                        isCompact && styles.userNameCompact,
+                                    ]}
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                >
+                                    {user.name}
+                                </Text>
                             </View>
 
                             <View style={styles.locationSection}>
@@ -169,27 +195,63 @@ export default function ProfileView() {
                                     size={16}
                                     color="#FFFFFF"
                                 />
-                                <Text style={styles.userLocation}>
+                                <Text
+                                    style={styles.userLocation}
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                >
                                     {user.location}
                                 </Text>
                             </View>
 
-                            <Text style={styles.userStatus}>
-                                여권: {user.passportCount} | 장소:{" "}
-                                {user.districtCount} | 좋아요: {user.totallike}
-                            </Text>
+                            <View
+                                style={[
+                                    styles.userStatusRow,
+                                    isCompact && styles.userStatusRowCompact,
+                                ]}
+                            >
+                                <Text
+                                    style={styles.userStatusItem}
+                                    numberOfLines={1}
+                                >
+                                    여권: {user.passportCount}
+                                </Text>
+                                <Text style={styles.userStatusDivider}>|</Text>
+                                <Text
+                                    style={styles.userStatusItem}
+                                    numberOfLines={1}
+                                >
+                                    장소: {user.districtCount}
+                                </Text>
+                                <Text style={styles.userStatusDivider}>|</Text>
+                                <Text
+                                    style={styles.userStatusItem}
+                                    numberOfLines={1}
+                                >
+                                    좋아요: {user.totallike}
+                                </Text>
+                            </View>
                         </View>
                     </View>
 
                     <View style={styles.idNumberBox}>
-                        <Text style={styles.idNumberText}>{user.id}</Text>
+                        <Text
+                            style={styles.idNumberText}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                        >
+                            {user.id}
+                        </Text>
                     </View>
                 </View>
             </View>
 
             <ScrollView
                 style={styles.scrollArea}
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={[
+                    styles.scrollContent,
+                    { paddingHorizontal: horizontalPadding },
+                ]}
                 showsVerticalScrollIndicator={false}
                 contentInsetAdjustmentBehavior="never"
             >
@@ -204,10 +266,18 @@ export default function ProfileView() {
 
                 <TouchableOpacity style={styles.bannerCard} activeOpacity={0.8}>
                     <View style={styles.bannerTextBox}>
-                        <Text style={styles.bannerTitle}>
+                        <Text
+                            style={styles.bannerTitle}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                        >
                             실물 여권 제작 신청
                         </Text>
-                        <Text style={styles.bannerSubtitle}>
+                        <Text
+                            style={styles.bannerSubtitle}
+                            numberOfLines={2}
+                            ellipsizeMode="tail"
+                        >
                             나만의 탐험 기록을 실물 책으로
                         </Text>
                     </View>
@@ -229,11 +299,19 @@ export default function ProfileView() {
                                     />
                                 </View>
 
-                                <View>
-                                    <Text style={styles.menuTitle}>
+                                <View style={styles.menuTextBox}>
+                                    <Text
+                                        style={styles.menuTitle}
+                                        numberOfLines={1}
+                                        ellipsizeMode="tail"
+                                    >
                                         팀 모드로 전환
                                     </Text>
-                                    <Text style={styles.menuDescription}>
+                                    <Text
+                                        style={styles.menuDescription}
+                                        numberOfLines={2}
+                                        ellipsizeMode="tail"
+                                    >
                                         현재 접속 모드:{" "}
                                         {isTeamMode ? "팀" : "개인"}
                                     </Text>
@@ -275,10 +353,18 @@ export default function ProfileView() {
                                     </View>
 
                                     <View style={styles.locationShareTextBox}>
-                                        <Text style={styles.menuTitle}>
+                                        <Text
+                                            style={styles.menuTitle}
+                                            numberOfLines={1}
+                                            ellipsizeMode="tail"
+                                        >
                                             위치 공유
                                         </Text>
-                                        <Text style={styles.menuDescription}>
+                                        <Text
+                                            style={styles.menuDescription}
+                                            numberOfLines={2}
+                                            ellipsizeMode="tail"
+                                        >
                                             팀원들에게 내 현재 위치를 공유합니다.
                                         </Text>
                                     </View>
@@ -329,13 +415,19 @@ export default function ProfileView() {
                                         />
                                     </View>
 
-                                    <View>
-                                        <Text style={styles.menuTitle}>
+                                    <View style={styles.menuTextBox}>
+                                        <Text
+                                            style={styles.menuTitle}
+                                            numberOfLines={1}
+                                            ellipsizeMode="tail"
+                                        >
                                             {item.title}
                                         </Text>
                                         {item.description && (
                                             <Text
                                                 style={styles.menuDescription}
+                                                numberOfLines={2}
+                                                ellipsizeMode="tail"
                                             >
                                                 {item.description}
                                             </Text>
@@ -378,8 +470,12 @@ export default function ProfileView() {
                                         />
                                     </View>
 
-                                    <View>
-                                        <Text style={styles.menuTitle}>
+                                    <View style={styles.menuTextBox}>
+                                        <Text
+                                            style={styles.menuTitle}
+                                            numberOfLines={1}
+                                            ellipsizeMode="tail"
+                                        >
                                             {item.title}
                                         </Text>
                                     </View>
@@ -438,12 +534,15 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "flex-start",
+        position: "relative",
     },
     profileLeft: {
         flexDirection: "row",
         alignItems: "center",
+        flex: 1,
         flexShrink: 1,
         minWidth: 0,
+        paddingRight: 70,
     },
     profileInfo: {
         flex: 1,
@@ -459,29 +558,59 @@ const styles = StyleSheet.create({
     nameRow: {
         flexDirection: "row",
         alignItems: "center",
+        minWidth: 0,
     },
     userName: {
         color: "#FFFFFF",
         fontSize: 24,
         fontWeight: "700",
+        flexShrink: 1,
+    },
+    userNameCompact: {
+        fontSize: 21,
     },
     locationSection: {
         flexDirection: "row",
         alignItems: "center",
+        gap: 3,
+        marginTop: 6,
         marginBottom: 8,
+        minWidth: 0,
     },
     userLocation: {
         color: "#FFFFFF",
         fontSize: 14,
         fontWeight: "500",
+        flex: 1,
+        minWidth: 0,
     },
-    userStatus: {
-        color: "#FFFFFF",
-        fontSize: 14,
+    userStatusRow: {
+        flexDirection: "row",
+        flexWrap: "nowrap",
+        alignItems: "center",
+        columnGap: 5,
         marginLeft: 3,
+        paddingRight: 4,
+        minWidth: 0,
+    },
+    userStatusRowCompact: {
+        columnGap: 3,
+    },
+    userStatusItem: {
+        color: "#FFFFFF",
+        fontSize: 13,
+        flexShrink: 0,
+    },
+    userStatusDivider: {
+        color: "#FFFFFF",
+        fontSize: 13,
+        opacity: 0.7,
     },
     idNumberBox: {
-        marginLeft: 8,
+        position: "absolute",
+        top: 16,
+        right: 16,
+        maxWidth: 64,
         alignItems: "flex-end",
         flexShrink: 0,
     },
@@ -520,9 +649,12 @@ const styles = StyleSheet.create({
     },
     bannerTextBox: {
         flex: 1,
+        minWidth: 0,
         marginRight: 8,
     },
-    bannerIcon: {},
+    bannerIcon: {
+        flexShrink: 0,
+    },
     bannerTitle: {
         color: "#000000",
         fontSize: 16,
@@ -536,6 +668,7 @@ const styles = StyleSheet.create({
     },
     locationShareTextBox: {
         flex: 1,
+        minWidth: 0,
         marginRight: 12,
     },
     toggleDisabled: {
@@ -550,6 +683,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         padding: 2,
         justifyContent: "center",
+        flexShrink: 0,
     },
     teamToggleOn: {
         backgroundColor: "#FFE06E",
@@ -592,6 +726,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
+        gap: 10,
     },
     menuItemBorder: {
         borderBottomWidth: 1,
@@ -601,7 +736,12 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         flex: 1,
+        minWidth: 0,
         marginRight: 12,
+    },
+    menuTextBox: {
+        flex: 1,
+        minWidth: 0,
     },
     iconBox: {
         width: 40,
@@ -611,6 +751,7 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         marginRight: 12,
+        flexShrink: 0,
     },
     menuTitle: {
         color: "#000000",
