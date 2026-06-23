@@ -4,8 +4,13 @@ import {
     uploadProfileImage,
     withdrawMember
 } from "@/src/api/profileApi";
+import { REGIONS, matchDistrictFromAddress } from "@/src/constant/regions";
+import { CenterPin } from "@/src/features/map/components/CenterPin";
+import { naverReverseGeocode } from "@/src/features/map/utils/mapUtils";
 import { Ionicons } from "@expo/vector-icons";
+import { NaverMapView } from "@mj-studio/react-native-naver-map";
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import * as Securestore from "expo-secure-store";
 import { useEffect, useState } from "react";
@@ -15,6 +20,7 @@ import {
     BackHandler,
     Image,
     KeyboardAvoidingView,
+    Modal,
     Platform,
     ScrollView,
     StyleSheet,
@@ -24,6 +30,95 @@ import {
     View
 } from "react-native";
 import { UpdateProfileRequest } from "../types/profile.types";
+
+const DEFAULT_LOCATION_CAMERA = {
+    latitude: 37.5665,
+    longitude: 126.978,
+    zoom: 12,
+};
+const LOCATION_MAX_LENGTH = 20;
+const SUPPORTED_DISTRICTS = Object.values(REGIONS).flat();
+
+type ActivityLocationParts = {
+    city: string;
+    district: string;
+};
+
+const normalizeLocationInput = (value: string) =>
+    value.trim().replace(/\s+/g, " ");
+
+const hasOnlyLocationCharacters = (value: string) =>
+    /^[가-힣a-zA-Z0-9\s]+$/.test(value);
+
+const getCityDisplayName = (city: string) =>
+    city
+        .replace("특별자치시", "시")
+        .replace("특별시", "시")
+        .replace("광역시", "시");
+
+const getDistrictDisplayName = (city: string, district: string) => {
+    const cityWithoutSuffix = city.replace(/시$/, "");
+
+    if (district.startsWith(`${cityWithoutSuffix} `)) {
+        return district.slice(cityWithoutSuffix.length + 1);
+    }
+
+    return district;
+};
+
+const formatActivityLocation = ({ city, district }: ActivityLocationParts) => {
+    const cityDisplayName = getCityDisplayName(city);
+    const districtDisplayName = getDistrictDisplayName(cityDisplayName, district);
+
+    return `${cityDisplayName} ${districtDisplayName}`;
+};
+
+const findActivityLocationParts = (
+    value: string,
+): ActivityLocationParts | undefined => {
+    const matchedDistrict = matchDistrictFromAddress(value);
+
+    for (const [city, districts] of Object.entries(REGIONS)) {
+        const district =
+            districts.find((item) => item === value) ??
+            districts.find((item) => item === matchedDistrict);
+
+        if (district) {
+            return { city, district };
+        }
+    }
+
+    return undefined;
+};
+
+const resolveActivityLocation = (value: string) => {
+    const normalized = normalizeLocationInput(value);
+
+    if (!normalized) {
+        return { error: "활동 지역을 입력해 주세요." };
+    }
+
+    if (normalized.length > LOCATION_MAX_LENGTH) {
+        return { error: `활동 지역은 ${LOCATION_MAX_LENGTH}자 이내로 입력해 주세요.` };
+    }
+
+    if (!hasOnlyLocationCharacters(normalized)) {
+        return { error: "활동 지역에는 한글, 영문, 숫자, 공백만 사용할 수 있어요." };
+    }
+
+    const exactDistrict = SUPPORTED_DISTRICTS.find(
+        (district) => district === normalized,
+    );
+    const locationParts = findActivityLocationParts(
+        exactDistrict ?? normalized,
+    );
+
+    if (!locationParts) {
+        return { error: "지원하는 시/군/구 단위의 활동 지역을 입력해 주세요." };
+    }
+
+    return { value: formatActivityLocation(locationParts) };
+};
 
 export default function ProfileEditView() {
     const router = useRouter();
@@ -39,12 +134,18 @@ export default function ProfileEditView() {
     const [nickname, setNickname] = useState("");
     const [location, setLocation] = useState("");
     const[bio, setBio] = useState("");
+    const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
+    const [locationPickerCenter, setLocationPickerCenter] = useState({
+        latitude: DEFAULT_LOCATION_CAMERA.latitude,
+        longitude: DEFAULT_LOCATION_CAMERA.longitude,
+    });
+    const [isResolvingLocation, setIsResolvingLocation] = useState(false);
 
     useEffect(() => {
         const subscription = BackHandler.addEventListener(
             "hardwareBackPress",
             () => {
-                router.replace("/profile" as any);
+                Alert.alert("저장이 필요해요", "프로필을 저장해야 마이페이지로 돌아갈 수 있어요.");
                 return true;
             },
         );
@@ -131,9 +232,82 @@ export default function ProfileEditView() {
     }
 
     // 3. 프로필 수정 API 연결
+    const handleOpenLocationPicker = async () => {
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+
+            if (status !== "granted") {
+                return;
+            }
+
+            const currentLocation = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced,
+            });
+
+            setLocationPickerCenter({
+                latitude: currentLocation.coords.latitude,
+                longitude: currentLocation.coords.longitude,
+            });
+        } catch (error) {
+            console.log("활동 지역 현재 위치 조회 실패:", error);
+        } finally {
+            setIsLocationPickerOpen(true);
+        }
+    };
+
+    const handleLocationCameraChanged = (event: any) => {
+        const latitude = event?.latitude ?? event?.region?.latitude;
+        const longitude = event?.longitude ?? event?.region?.longitude;
+
+        if (typeof latitude === "number" && typeof longitude === "number") {
+            setLocationPickerCenter({ latitude, longitude });
+        }
+    };
+
+    const handleConfirmLocationPicker = async () => {
+        setIsResolvingLocation(true);
+
+        try {
+            const address = await naverReverseGeocode(
+                locationPickerCenter.latitude,
+                locationPickerCenter.longitude,
+            );
+            const locationParts = address
+                ? findActivityLocationParts(address)
+                : undefined;
+
+            if (!locationParts) {
+                Alert.alert(
+                    "활동 지역 선택 실패",
+                    "선택한 위치에서 지원하는 구/군/시 정보를 찾지 못했어요.",
+                );
+                return;
+            }
+
+            setLocation(formatActivityLocation(locationParts));
+            setIsLocationPickerOpen(false);
+        } catch (error) {
+            console.log("활동 지역 역지오코딩 실패:", error);
+            Alert.alert(
+                "활동 지역 선택 실패",
+                "선택한 위치의 주소를 불러오지 못했어요.",
+            );
+        } finally {
+            setIsResolvingLocation(false);
+        }
+    };
+
     const  handleSaveProfile  = async () => {
         if(nickname.trim().length === 0) {
             console.log("닉네임을 입력해 주세요.");
+            Alert.alert("닉네임 확인", "닉네임을 입력해 주세요.");
+            return;
+        }
+
+        const resolvedLocation = resolveActivityLocation(location);
+
+        if (resolvedLocation.error || !resolvedLocation.value) {
+            Alert.alert("활동 지역 확인", resolvedLocation.error);
             return;
         }
 
@@ -143,7 +317,7 @@ export default function ProfileEditView() {
             const requestBody: UpdateProfileRequest = {
                 nickname: nickname.trim(),
                 profileImg: profileImg,
-                location: location.trim(),
+                location: resolvedLocation.value,
                 bio: bio.trim(),
             }
 
@@ -237,7 +411,7 @@ export default function ProfileEditView() {
                 <View style={styles.header}>
                     <TouchableOpacity
                         activeOpacity={0.8}
-                        onPress={() => router.replace("/profile" as any)}
+                        onPress={handleSaveProfile}
                         style={styles.backButton}
                     >
                         <Ionicons name="chevron-back" size={24} color="#000000" />
@@ -322,20 +496,26 @@ export default function ProfileEditView() {
                         <TextInput
                             style={styles.locationInput}
                             value={location}
-                            onChangeText={setLocation}
+                            onChangeText={(text) => {
+                                if (text.length <= LOCATION_MAX_LENGTH) {
+                                    setLocation(text);
+                                }
+                            }}
                             placeholder="예: 서울시 용산구"
                             placeholderTextColor="#A0A0A0"
+                            maxLength={LOCATION_MAX_LENGTH}
                         />
 
                         <TouchableOpacity
                             activeOpacity={0.8}
-                            onPress={() => {
-                                console.log("지역 선택")
-                            }}
+                            onPress={handleOpenLocationPicker}
                         >
                             <Ionicons name="map-outline" size={24} color="#A0A0A0" />
                         </TouchableOpacity>
                     </View>
+                    <Text style={styles.locationHelpText}>
+                        시/군/구 단위로 입력해 주세요. 예: 서울시 용산구, 용산구
+                    </Text>
                 </View>
 
                 {/*한 줄 소개*/}
@@ -387,6 +567,60 @@ export default function ProfileEditView() {
                     )}
                 </TouchableOpacity>
             </ScrollView>
+
+            <Modal
+                visible={isLocationPickerOpen}
+                animationType="slide"
+                onRequestClose={() => setIsLocationPickerOpen(false)}
+            >
+                <View style={styles.locationPickerContainer}>
+                    <NaverMapView
+                        style={styles.locationPickerMap}
+                        initialCamera={{
+                            latitude: locationPickerCenter.latitude,
+                            longitude: locationPickerCenter.longitude,
+                            zoom: DEFAULT_LOCATION_CAMERA.zoom,
+                        }}
+                        isShowZoomControls={false}
+                        onCameraChanged={handleLocationCameraChanged}
+                    />
+                    <CenterPin />
+
+                    <View style={styles.locationPickerHeader}>
+                        <TouchableOpacity
+                            activeOpacity={0.8}
+                            style={styles.locationPickerIconButton}
+                            onPress={() => setIsLocationPickerOpen(false)}
+                        >
+                            <Ionicons name="close" size={24} color="#111827" />
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.locationPickerFooter}>
+                        <Text style={styles.locationPickerTitle}>
+                            활동할 지역에 핀을 맞춰 주세요
+                        </Text>
+                        <TouchableOpacity
+                            activeOpacity={0.85}
+                            style={[
+                                styles.locationPickerConfirmButton,
+                                isResolvingLocation &&
+                                    styles.locationPickerConfirmButtonDisabled,
+                            ]}
+                            onPress={handleConfirmLocationPicker}
+                            disabled={isResolvingLocation}
+                        >
+                            {isResolvingLocation ? (
+                                <ActivityIndicator size="small" color="#FFFFFF" />
+                            ) : (
+                                <Text style={styles.locationPickerConfirmText}>
+                                    이 위치로 선택
+                                </Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </KeyboardAvoidingView>
     );
 }
@@ -568,6 +802,82 @@ const styles= StyleSheet.create({
         paddingVertical: 0,
         marginLeft: -3,
         marginTop: 3,
+    },
+    locationHelpText: {
+        color: "#8A8A8A",
+        fontSize: 11,
+        marginTop: 8,
+        lineHeight: 15,
+    },
+    locationPickerContainer: {
+        flex: 1,
+        backgroundColor: "#000000",
+    },
+    locationPickerMap: {
+        flex: 1,
+    },
+    locationPickerHeader: {
+        position: "absolute",
+        top: 48,
+        left: 18,
+        right: 18,
+        flexDirection: "row",
+        justifyContent: "flex-end",
+    },
+    locationPickerIconButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: "#FFFFFF",
+        justifyContent: "center",
+        alignItems: "center",
+        shadowColor: "#000000",
+        shadowOffset: {
+            width: 0,
+            height: 3,
+        },
+        shadowOpacity: 0.18,
+        shadowRadius: 6,
+        elevation: 5,
+    },
+    locationPickerFooter: {
+        position: "absolute",
+        left: 18,
+        right: 18,
+        bottom: 34,
+        backgroundColor: "#FFFFFF",
+        borderRadius: 18,
+        padding: 16,
+        shadowColor: "#000000",
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
+        shadowOpacity: 0.18,
+        shadowRadius: 10,
+        elevation: 6,
+    },
+    locationPickerTitle: {
+        color: "#111827",
+        fontSize: 15,
+        fontWeight: "700",
+        marginBottom: 12,
+        textAlign: "center",
+    },
+    locationPickerConfirmButton: {
+        height: 50,
+        borderRadius: 14,
+        backgroundColor: "#1A3A6B",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    locationPickerConfirmButtonDisabled: {
+        backgroundColor: "#A7B3C4",
+    },
+    locationPickerConfirmText: {
+        color: "#FFFFFF",
+        fontSize: 15,
+        fontWeight: "700",
     },
     bioInput: {
         height: 80,

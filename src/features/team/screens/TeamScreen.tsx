@@ -38,6 +38,7 @@ export default function TeamView() {
         clearTeamMode,
         currentUserId,
         isLocationSharing,
+        isTeamMode,
         isTeamLocationSocketConnected,
         teamLiveLocations,
         setTeamLiveLocations,
@@ -180,7 +181,7 @@ export default function TeamView() {
     };
 
     const handlePressLiveLocations = async () => {
-        if (!team) return;
+        if (!team || !isTeamMode) return;
 
         if (isLocationOpen) {
             setIsLocationOpen(false);
@@ -228,7 +229,7 @@ export default function TeamView() {
     }, []);
 
     useEffect(() => {
-        if (!isLocationOpen || !team) return;
+        if (!isTeamMode || !isLocationOpen || !team) return;
 
         const intervalId = setInterval(async () => {
             try {
@@ -241,7 +242,15 @@ export default function TeamView() {
         }, LIVE_LOCATION_POLL_INTERVAL_MS);
 
         return () => clearInterval(intervalId);
-    }, [isLocationOpen, team, setTeamLiveLocations]);
+    }, [isTeamMode, isLocationOpen, team, setTeamLiveLocations]);
+
+    useEffect(() => {
+        if (isTeamMode) return;
+
+        setIsLocationOpen(false);
+        setLiveLocations([]);
+        setLocationNames({});
+    }, [isTeamMode]);
 
     useEffect(() => {
         if (!isLocationOpen) return;

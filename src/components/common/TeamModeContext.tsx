@@ -109,7 +109,7 @@ export function TeamModeProvider({ children }: { children: ReactNode }) {
     }, []);
 
     useEffect(() => {
-        if (!teamId) return;
+        if (!isTeamMode || !teamId) return;
 
         let isMounted = true;
         let client: Client | null = null;
@@ -197,7 +197,7 @@ export function TeamModeProvider({ children }: { children: ReactNode }) {
             stompClientRef.current = null;
             client?.deactivate();
         };
-    }, [teamId]);
+    }, [isTeamMode, teamId]);
 
     useEffect(() => {
         if (!teamId || (nickname && currentUserId !== null)) return;
@@ -433,6 +433,34 @@ export function TeamModeProvider({ children }: { children: ReactNode }) {
         }
 
         const nextTeamMode = !isTeamMode;
+
+        if (!nextTeamMode) {
+            if (isLocationSharingRef.current) {
+                await setLocationSharing(false);
+            } else {
+                const id =
+                    teamId ??
+                    (await SecureStore.getItemAsync("teamId").catch(
+                        () => null,
+                    ));
+
+                if (id) {
+                    await updateLiveLocationSharing(Number(id), false).catch(
+                        () => {},
+                    );
+                }
+
+                isLocationSharingRef.current = false;
+                setIsLocationSharing(false);
+                await SecureStore.setItemAsync(
+                    LIVE_LOCATION_SHARING_KEY,
+                    "false",
+                );
+            }
+
+            setTeamLiveLocations([]);
+        }
+
         setIsTeamMode(nextTeamMode);
         await SecureStore.setItemAsync(
             TEAM_MODE_ENABLED_KEY,
