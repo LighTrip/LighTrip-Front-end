@@ -7,7 +7,6 @@ import * as SecureStore from 'expo-secure-store'
 import React, { useEffect, useState } from 'react'
 import {
     Alert,
-    Dimensions,
     Image,
     KeyboardAvoidingView,
     Platform,
@@ -18,6 +17,7 @@ import {
     View,
 } from 'react-native'
 import { Shadow } from 'react-native-shadow-2'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { generateAIDraft } from '@/src/api/passport/ai.api'
 import { getPresignedUrl, uploadToS3 } from '@/src/api/passport/image.api'
@@ -28,9 +28,9 @@ import PassportDetail from '../../passport/screens/PassportDetail'
 import EditPlaceScreen from './EditPlaceScreen'
 
 import { editStyles, addStyles as styles } from '../components/placeStyles'
+import { scaleW, scaleH, scaleFont } from '@/src/utils/scale'
 
-const { width, height: screenHeight } = Dimensions.get('window')
-export const CARD_WIDTH = width * 0.91
+export const CARD_WIDTH = scaleW(366)
 
 const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY
 const AI_USAGE_KEY = 'ai_draft_usage'
@@ -71,6 +71,9 @@ type Props = {
 
 const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAddress }: Props) => {
     const router = useRouter()
+    const { bottom } = useSafeAreaInsets()
+    // 탭바 높이 = bar(68) + paddingBottom(16) + 여백(12) — SafeAreaView가 bottom 인셋 이미 처리
+    const TAB_BAR_HEIGHT = 68 + 16 + 8
 
     const [showEdit, setShowEdit] = useState(false)
     const [photos, setPhotos] = useState<string[]>([])
@@ -88,15 +91,14 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
     const [completedPlace, setCompletedPlace] = useState<any | null>(null)
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
     const [isPremium, setIsPremium] = useState(false)
+    const [photoAreaHeight, setPhotoAreaHeight] = useState(0)
 
     useEffect(() => {
         if (initialLatitude && initialLongitude) {
             setLatitude(initialLatitude)
             setLongitude(initialLongitude)
         }
-        if (initialAddress) {
-            setLocationAddress(initialAddress)
-        }
+        if (initialAddress) setLocationAddress(initialAddress)
         getMyPremium().then(res => {
             if (res.data?.data?.premium) setIsPremium(true)
         }).catch(() => {})
@@ -143,9 +145,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
             const data = await response.json()
             if (data.documents && data.documents.length > 0) {
                 const doc = data.documents[0]
-                const roadAddress = doc.road_address?.address_name
-                const jibunAddress = doc.address?.address_name
-                setLocationName(roadAddress ?? jibunAddress ?? null)
+                setLocationName(doc.road_address?.address_name ?? doc.address?.address_name ?? null)
             }
         } catch (err) {
             console.error('카카오 장소 검색 실패:', err)
@@ -154,52 +154,30 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
 
     const extractFromExif = async (exif: any) => {
         try {
-            console.log('[EXIF] raw keys:', Object.keys(exif ?? {}))
-
             if (exif?.DateTimeOriginal) {
                 const raw = exif.DateTimeOriginal as string
                 const [datePart, timePart] = raw.split(' ')
                 const [year, month, day] = datePart.split(':')
                 const parsed = new Date(`${year}-${month}-${day}T${timePart}`)
-                if (!isNaN(parsed.getTime())) {
-                    setVisitDate(parsed)
-                    console.log('[EXIF] 날짜:', parsed.toISOString())
-                } else {
-                    console.warn('[EXIF] 날짜 파싱 실패:', raw)
-                }
-            } else {
-                console.warn('[EXIF] DateTimeOriginal 없음')
+                if (!isNaN(parsed.getTime())) setVisitDate(parsed)
             }
-
             if (exif?.GPSLatitude && exif?.GPSLongitude) {
-                const toDegrees = (val: number | number[]) => {
-                    if (Array.isArray(val)) return val[0] + val[1] / 60 + val[2] / 3600
-                    return val
-                }
+                const toDegrees = (val: number | number[]) =>
+                    Array.isArray(val) ? val[0] + val[1] / 60 + val[2] / 3600 : val
                 let lat = toDegrees(exif.GPSLatitude)
                 let lng = toDegrees(exif.GPSLongitude)
                 if (exif.GPSLatitudeRef === 'S') lat = -lat
                 if (exif.GPSLongitudeRef === 'W') lng = -lng
-                console.log(`[EXIF] GPS: lat=${lat}, lng=${lng} (raw: ${exif.GPSLatitude}, ${exif.GPSLongitude})`)
-
                 setLatitude(lat)
                 setLongitude(lng)
-
                 const [place] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng })
                 if (place) {
-                    console.log('[EXIF] reverseGeocode:', JSON.stringify(place))
-                    const fullAddress = [place.city, place.district, place.street]
-                        .filter(Boolean)
-                        .join(' ')
-                    setLocationAddress(fullAddress)
+                    setLocationAddress([place.city, place.district, place.street].filter(Boolean).join(' '))
                     const geoAddress = [place.region, place.city, place.district].filter(Boolean).join(' ')
                     const matched = matchDistrictFromAddress(geoAddress)
-                    console.log(`[EXIF] geoAddress="${geoAddress}" → matched="${matched ?? '없음'}"`)
                     if (matched) setLocationRegion(matched)
                 }
                 await fetchPlaceNameFromCoords(lat, lng)
-            } else {
-                console.warn('[EXIF] GPS 정보 없음')
             }
         } catch (err) {
             console.error('EXIF 추출 실패:', err)
@@ -208,10 +186,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
 
     const openAlbum = async () => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
-        if (!permission.granted) {
-            alert('앨범 접근 권한이 필요해요')
-            return
-        }
+        if (!permission.granted) { alert('앨범 접근 권한이 필요해요'); return }
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
             allowsEditing: false,
@@ -229,23 +204,14 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                 })
             )
             setPhotos(persistentUris)
-            const firstAsset = result.assets[0]
-            if (firstAsset.exif) await extractFromExif(firstAsset.exif)
+            if (result.assets[0].exif) await extractFromExif(result.assets[0].exif)
         }
     }
 
     const openCamera = async () => {
         const permission = await ImagePicker.requestCameraPermissionsAsync()
-        if (!permission.granted) {
-            alert('카메라 권한이 필요해요')
-            return
-        }
-        const result = await ImagePicker.launchCameraAsync({
-            allowsEditing: false,
-            aspect: [4, 3],
-            quality: 1,
-            exif: true,
-        })
+        if (!permission.granted) { alert('카메라 권한이 필요해요'); return }
+        const result = await ImagePicker.launchCameraAsync({ allowsEditing: false, aspect: [4, 3], quality: 1, exif: true })
         if (!result.canceled) {
             const asset = result.assets[0]
             const dest = `${FileSystem.documentDirectory}photo_${Date.now()}_0.jpg`
@@ -256,12 +222,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
     }
 
     if (completedPlace) {
-        return (
-            <PassportDetail
-                item={completedPlace}
-                onBack={() => setCompletedPlace(null)}
-            />
-        )
+        return <PassportDetail item={completedPlace} onBack={() => setCompletedPlace(null)} />
     }
 
     if (showEdit) {
@@ -270,20 +231,10 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                 onBack={() => setShowEdit(false)}
                 aiDraft={aiDraft}
                 onComplete={() => {
-                    Alert.alert(
-                        '등록 완료',
-                        '새 여권이 등록되었습니다! 🎉',
-                        [{
-                            text: '확인',
-                            onPress: () => {
-                                if (onClose) {
-                                    onClose()
-                                } else {
-                                    router.replace('/(tabs)/passport')
-                                }
-                            },
-                        }]
-                    )
+                    Alert.alert('등록 완료', '새 여권이 등록되었습니다! 🎉', [{
+                        text: '확인',
+                        onPress: () => onClose ? onClose() : router.replace('/(tabs)/passport'),
+                    }])
                 }}
                 photos={photos}
                 description={description}
@@ -298,143 +249,147 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
     }
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#F8FAFD' }}>
-        <KeyboardAvoidingView
-            style={{flex: 1, backgroundColor: '#F8FAFD'}}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        <SafeAreaView
+            style={{ flex: 1, backgroundColor: '#F8FAFD' }}
+            edges={['top', 'left', 'right', 'bottom']}
         >
-            <ScrollView
-                style={{ flex: 1, width: '100%', backgroundColor: "#F8FAFD" }}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
+            <KeyboardAvoidingView
+                style={{ flex: 1, backgroundColor: '#F8FAFD' }}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             >
-            <View style={{ marginTop: 10, alignSelf: 'center' }}>
-            <Shadow
-                distance={6}
-                startColor={'#00000012'}
-                offset={[0, 2]}
-                style={{ width: CARD_WIDTH, marginBottom: 5, borderRadius: 16 }}
-            >
-                <View style={[styles.photoContainer, { height: screenHeight * 0.52 }]}>
-                    <NoiseOverlay />
-                    <View style={[styles.photoTextbox, { flexDirection: 'row', alignItems: 'center' }]}>
-                        <TouchableOpacity
-                            onPress={() => onClose ? onClose() : router.back()}
-                            style={{ padding: 4, marginRight: 10, top: 7 }}
-                        >
-                            <Ionicons name="chevron-back" size={20} color="#333" />
-                        </TouchableOpacity>
-                        <Text style={styles.photoText}>장소의 사진을 등록해 주세요!</Text>
-                    </View>
-
-                    {photos.length > 1 ? (
-                        <View style={styles.albumButton}>
-                            <ScrollView
-                                horizontal
-                                style={{ flex: 1 }}
-                                contentContainerStyle={{ flexDirection: 'row' }}
-                                showsHorizontalScrollIndicator={false}
-                                pagingEnabled
-                                onScroll={(e) => {
-                                    const index = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH)
-                                    setCurrentPhotoIndex(index)
-                                }}
-                                scrollEventThrottle={16}
-                            >
-                                {photos.map((uri, index) => (
-                                    <Image
-                                        key={index}
-                                        source={{ uri }}
-                                        style={{ width: CARD_WIDTH * 0.91, height: '100%' }}
-                                        resizeMode="cover"
-                                    />
-                                ))}
-                            </ScrollView>
-                            <View style={styles.photoIndicatorRowAdd}>
-                                {photos.map((_, index) => (
-                                    <View
-                                        key={index}
-                                        style={index === currentPhotoIndex
-                                            ? editStyles.photoIndicatorDotActive
-                                            : editStyles.photoIndicatorDot
-                                        }
-                                    />
-                                ))}
+                {/* 사진 박스 */}
+                <View
+                    style={{ flex: 1, alignSelf: 'center', width: CARD_WIDTH }}
+                    onLayout={(e) => setPhotoAreaHeight(Math.round(e.nativeEvent.layout.height))}
+                >
+                    {photoAreaHeight > 0 && (
+                    <Shadow
+                        distance={6}
+                        startColor={'#00000012'}
+                        offset={[0, 2]}
+                        style={{ width: CARD_WIDTH, height: photoAreaHeight, borderRadius: scaleW(16) }}
+                    >
+                        <View style={[styles.photoContainer, { height: photoAreaHeight, marginBottom: 0 }]}>
+                            <NoiseOverlay />
+                            <View style={[styles.photoTextbox, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}>
+                                <TouchableOpacity
+                                    onPress={() => onClose ? onClose() : router.back()}
+                                    style={{ position: 'absolute', left: 0, padding: scaleW(4), top: scaleW(18) }}
+                                >
+                                    <Ionicons name="chevron-back" size={scaleW(20)} color="#333" />
+                                </TouchableOpacity>
+                                <Text style={[styles.photoText, { marginLeft: 0 }]}>장소의 사진을 등록해 주세요!</Text>
                             </View>
+
+                            {photos.length > 1 ? (
+                                <View style={[styles.albumButton, { flex: 1 }]}>
+                                    <ScrollView
+                                        horizontal
+                                        style={{ flex: 1 }}
+                                        contentContainerStyle={{ flexDirection: 'row' }}
+                                        showsHorizontalScrollIndicator={false}
+                                        pagingEnabled
+                                        onScroll={(e) => {
+                                            const index = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH)
+                                            setCurrentPhotoIndex(index)
+                                        }}
+                                        scrollEventThrottle={16}
+                                    >
+                                        {photos.map((uri, index) => (
+                                            <Image
+                                                key={index}
+                                                source={{ uri }}
+                                                style={{ width: CARD_WIDTH * 0.91, height: '100%' }}
+                                                resizeMode="cover"
+                                            />
+                                        ))}
+                                    </ScrollView>
+                                    <View style={styles.photoIndicatorRowAdd}>
+                                        {photos.map((_, index) => (
+                                            <View
+                                                key={index}
+                                                style={index === currentPhotoIndex
+                                                    ? editStyles.photoIndicatorDotActive
+                                                    : editStyles.photoIndicatorDot}
+                                            />
+                                        ))}
+                                    </View>
+                                    <TouchableOpacity
+                                        style={{
+                                            position: 'absolute',
+                                            top: scaleW(8), right: scaleW(8),
+                                            backgroundColor: 'rgba(0,0,0,0.4)',
+                                            borderRadius: scaleW(12),
+                                            paddingHorizontal: scaleW(10),
+                                            paddingVertical: scaleW(4),
+                                        }}
+                                        onPress={openAlbum}
+                                    >
+                                        <Text style={{ color: '#fff', fontSize: scaleFont(12) }}>재선택</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            ) : photos.length === 1 ? (
+                                <TouchableOpacity style={[styles.albumButton, { flex: 1 }]} onPress={openAlbum}>
+                                    <Image source={{ uri: photos[0] }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                                </TouchableOpacity>
+                            ) : (
+                                <TouchableOpacity style={[styles.albumButtonEmpty, { flex: 1 }]} onPress={openAlbum}>
+                                    <Text style={{ color: '#aaa', fontSize: scaleFont(14) }}>앨범에서 선택하기</Text>
+                                </TouchableOpacity>
+                            )}
+
                             <TouchableOpacity
-                                style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}
-                                onPress={openAlbum}
+                                style={[styles.cameraButton, { height: scaleH(35) }]}
+                                onPress={openCamera}
                             >
-                                <Text style={{ color: '#fff', fontSize: 12 }}>재선택</Text>
+                                <Text style={[styles.clickText, { fontSize: scaleFont(12) }]}>카메라로 촬영</Text>
                             </TouchableOpacity>
                         </View>
-                    ) : photos.length === 1 ? (
-                        <TouchableOpacity
-                            style={styles.albumButton}
-                            onPress={openAlbum}
-                        >
-                            <Image
-                                source={{ uri: photos[0] }}
-                                style={{ width: '100%', height: '100%' }}
-                                resizeMode="cover"
-                            />
-                        </TouchableOpacity>
-                    ) : (
-                        <TouchableOpacity
-                            style={styles.albumButtonEmpty}
-                            onPress={openAlbum}
-                        >
-                            <Text style={{ color: '#aaa' }}>앨범에서 선택하기</Text>
-                        </TouchableOpacity>
+                    </Shadow>
                     )}
-
-                    <TouchableOpacity
-                        style={styles.cameraButton}
-                        onPress={openCamera}
-                    >
-                        <Text style={[styles.clickText, { fontSize: 12 }]}>카메라로 촬영</Text>
-                    </TouchableOpacity>
                 </View>
-            </Shadow>
-            </View>
 
-            <Shadow
-                distance={6}
-                startColor={'#00000012'}
-                offset={[0, 2]}
-                style={{ width: CARD_WIDTH, borderRadius: 16 }}
-            >
-                <View style={[styles.infoContainer, { height: screenHeight * 0.2 }]}>
-                    <NoiseOverlay />
-                    <View style={styles.infoTextbox}>
-                        <Text style={styles.infotitleText}>어떤 곳인지 간단히 설명해 주세요.</Text>
+                {/* 설명 박스 */}
+                <Shadow
+                    distance={6}
+                    startColor={'#00000012'}
+                    offset={[17, 20]}
+                    style={{ width: CARD_WIDTH, alignSelf: 'center', marginTop: scaleH(22), borderRadius: scaleW(16) }}
+                >
+                    <View style={[styles.infoContainer, { height: scaleH(180) }]}>
+                        <NoiseOverlay />
+                        <View style={styles.infoTextbox}>
+                            <Text style={styles.infotitleText}>어떤 곳인지 간단히 설명해 주세요.</Text>
+                        </View>
+                        <View style={[styles.infoTypeBox, { height: scaleH(109) }]}>
+                            <TextInput
+                                style={[styles.infoTypeText, { lineHeight: scaleW(17) }]}
+                                placeholder="카페에 가서 커피를 마셨다!"
+                                placeholderTextColor="#666666"
+                                value={description}
+                                onChangeText={setDescription}
+                                multiline
+                            />
+                        </View>
                     </View>
-                    <View style={styles.infoTypeBox}>
-                        <TextInput
-                            style={styles.infoTypeText}
-                            placeholder="카페에 가서 커피를 마셨다!"
-                            placeholderTextColor="#666666"
-                            value={description}
-                            onChangeText={setDescription}
-                            multiline
-                        />
-                    </View>
-                </View>
-            </Shadow>
+                </Shadow>
 
-            <TouchableOpacity
-                style={styles.clickContainer}
-                onPress={handleCreateWithAI}
-                disabled={isGenerating}
-            >
-                <Text style={styles.clickText}>
-                    {isGenerating ? 'AI 작성 중...' : '기록 생성하기 with AI'}
-                </Text>
-            </TouchableOpacity>
-            </ScrollView>
-        </KeyboardAvoidingView>
-    </View>
+                {/* 남은 공간 차지 → 버튼을 아래로 밀어냄 */}
+                {/* <View style={{ flex: 1 }} /> */}
+
+                {/* 버튼 */}
+                <TouchableOpacity
+                    style={[styles.clickContainer, { marginBottom: TAB_BAR_HEIGHT }]}
+                    onPress={handleCreateWithAI}
+                    disabled={isGenerating}
+                >
+                    <Text style={styles.clickText}>
+                        {isGenerating ? 'AI 작성 중...' : '기록 생성하기 with AI'}
+                    </Text>
+                </TouchableOpacity>
+
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     )
 }
 

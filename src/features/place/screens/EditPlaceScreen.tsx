@@ -15,7 +15,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Shadow } from 'react-native-shadow-2'
 
 import Dropdown from '@/src/components/common/Dropdown'
@@ -23,6 +23,7 @@ import RegionDropdown from '@/src/components/common/RegionDropdown'
 import NoiseOverlay from '@/src/components/common/NoiseOverlay'
 import { DISTRICT_CATEGORY_MAP, matchDistrictFromAddress } from '@/src/constant/regions'
 import { editStyles as styles } from '../components/placeStyles'
+import { scaleW, scaleH } from '@/src/utils/scale'
 
 // API
 import { getPresignedUrl, uploadToS3 } from '@/src/api/passport/image.api'
@@ -88,9 +89,9 @@ const EditPlaceScreen = ({
 }: Props) => {
 
     const insets = useSafeAreaInsets()
-    const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 49 : 56
-    const containerPaddingTop = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 65
-    const logContainerHeight = screenHeight - containerPaddingTop - TAB_BAR_HEIGHT - insets.bottom - 20
+    // 커스텀 탭바 높이 = bar(68) + paddingBottom(16) + 여백(12) — SafeAreaView가 bottom 인셋 이미 처리
+    const TAB_BAR_HEIGHT = 68 + 16 + 8
+    const [cardHeight, setCardHeight] = useState(0)
 
     const [date, setDate] = useState(visitDate ?? new Date())
     const [showDatePicker, setShowDatePicker] = useState(false)
@@ -233,19 +234,26 @@ const EditPlaceScreen = ({
 
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#F8FAFD' }}>
+        <SafeAreaView
+            style={{ flex: 1, backgroundColor: '#F8FAFD' }}
+            edges={['top', 'left', 'right', 'bottom']}
+        >
         <KeyboardAvoidingView
             style={{flex: 1, backgroundColor: "#F8FAFD"}}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-                <View style={{ marginTop: 16, alignSelf: 'center' }}>
+                <View
+                    style={{ flex: 1, alignSelf: 'center', width: CARD_WIDTH }}
+                    onLayout={(e) => setCardHeight(Math.round(e.nativeEvent.layout.height))}
+                >
+            {cardHeight > 0 && (
             <Shadow
                 distance={6}
                 startColor={'#00000012'}
-                offset={[0, 20]}
-                style={{ width: CARD_WIDTH, borderRadius: 16 }}
+                offset={[0, 2]}
+                style={{ width: CARD_WIDTH, height: cardHeight, borderRadius: 16 }}
             >
-                <View style={styles.logContainer}>
+                <View style={[styles.logContainer, { height: cardHeight, marginTop: 0, marginBottom: 0 }]}>
                     <NoiseOverlay />
                     <View style={{
                         position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -268,7 +276,7 @@ const EditPlaceScreen = ({
                         <View style={{ width: 20 }} />
                     </View>
 
-                    <View style={styles.photoBox}>
+                    <View style={[styles.photoBox, { height: scaleH(135) }]}>
                         {photos.length > 1 ? (
                             <ScrollView
                                 horizontal
@@ -359,7 +367,7 @@ const EditPlaceScreen = ({
                     <View style={styles.contentSection}>
                         <View style={styles.contentLabelRow}>
                             <Text style={styles.contentLabel}>내용</Text>
-                            <Text style={{ fontSize: 14, color: '#aaa' }}>{content.length}/80</Text>
+                            <Text style={{ fontSize: 13, color: '#aaa' }}>{content.length}/80</Text>
                         </View>
                         <TextInput
                             style={styles.contentInput}
@@ -374,7 +382,7 @@ const EditPlaceScreen = ({
                     </View>
 
                     {/* 뮤직카드 */}
-                    <TouchableOpacity style={styles.musicCard} onPress={() => setMusicModalOpen(true)}>
+                    <TouchableOpacity style={[styles.musicCard, { marginTop: 'auto', marginBottom: scaleH(60) }]} onPress={() => setMusicModalOpen(true)}>
                         {music ? (
                             <>
                                 <Image source={{ uri: music.artwork }} style={styles.albumArt} />
@@ -447,16 +455,17 @@ const EditPlaceScreen = ({
                     </View>
                 </View>
             </Shadow>
+            )}
             </View>
 
             <TouchableOpacity
-                style={styles.clickContainer}
+                style={[styles.clickContainer, { marginTop: scaleH(16), marginBottom: TAB_BAR_HEIGHT }]}
                 onPress={handleSubmit}
             >
                 <Text style={styles.clickText}>등록하기</Text>
             </TouchableOpacity>
         </KeyboardAvoidingView>
-        </View>
+        </SafeAreaView>
     )
 }
 

@@ -205,7 +205,6 @@ function TabIcon({
 function TabsLayoutContent() {
   const router = useRouter();
   const { isTeamMode } = useTeamMode();
-
   return (
     <Tabs
       tabBar={(props) => <CustomTabBar {...props} />}
