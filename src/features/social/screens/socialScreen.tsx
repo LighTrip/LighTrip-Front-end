@@ -209,9 +209,9 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        marginBottom: 20,
+        marginBottom: 10,
         paddingHorizontal: 20,
-        paddingTop: 22,
+        paddingTop: 10,
     },
     title: {
         color: "#000000",
