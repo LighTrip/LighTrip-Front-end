@@ -370,6 +370,38 @@ const mapLightToClusterItem = (light: FriendLight): FriendLightClusterItem => ({
     theme: "",
 });
 
+const distanceFromCenter = (
+    light: FriendLight,
+    centerLat: number,
+    centerLng: number,
+) => {
+    const dlat = light.latitude - centerLat;
+    const dlng = light.longitude - centerLng;
+
+    return dlat * dlat + dlng * dlng;
+};
+
+const mapLightsToClusterItems = (
+    friendLights: FriendLight[],
+    centerLat: number,
+    centerLng: number,
+    expectedCount: number,
+) => {
+    const singleLights = friendLights.filter((light) => !light.isCluster);
+    const sortedLights = [...singleLights].sort(
+        (a, b) =>
+            distanceFromCenter(a, centerLat, centerLng) -
+            distanceFromCenter(b, centerLat, centerLng)
+    );
+
+    const selectedLights =
+        expectedCount > 0 && sortedLights.length > expectedCount
+            ? sortedLights.slice(0, expectedCount)
+            : sortedLights;
+
+    return selectedLights.map(mapLightToClusterItem);
+};
+
 const formatDate = (dateText?: string) => {
     if (!dateText) return "";
 
@@ -638,24 +670,113 @@ export default function MapPreview({ userId, refreshVersion }: MapPreviewProps) 
     }, [showLightInfo]);
 
     const fetchFriendClusterItems = useCallback(
-        async (bbox: BBox) => {
+        async (
+            centerLat: number,
+            centerLng: number,
+            expectedCount: number,
+        ) => {
             try {
                 setClusterLoading(true);
                 setClusterError(null);
                 setSelectedLight(null);
 
-                const friendLights = await getFriendLights(
-                    userId,
-                    bbox.minLat,
-                    bbox.maxLat,
-                    bbox.minLng,
-                    bbox.maxLng,
-                );
+                const viewLatSpan = currentBBox ? currentBBox.maxLat - currentBBox.minLat : 0.1;
+                const viewLngSpan = currentBBox ? currentBBox.maxLng - currentBBox.minLng : 0.1;
+                const divisors = [40, 24, 16, 10, 8, 6, 4, 2, 1];
+                const collectedLights = new Map<number, FriendLight>();
+                const nestedClusters: FriendLight[] = [];
+
+                const collectLights = (items: FriendLight[]) => {
+                    items.forEach((item) => {
+                        if (item.isCluster) {
+                            nestedClusters.push(item);
+                            return;
+                        }
+
+                        collectedLights.set(item.passportId, item);
+                    });
+                };
+
+                const fetchAroundCenter = async (
+                    lat: number,
+                    lng: number,
+                    divisor: number,
+                ) => {
+                    const halfLat = viewLatSpan / divisor / 2;
+                    const halfLng = viewLngSpan / divisor / 2;
+
+                    const data = await getFriendLights(
+                        userId,
+                        lat - halfLat,
+                        lat + halfLat,
+                        lng - halfLng,
+                        lng + halfLng,
+                    );
+
+                    collectLights(data);
+                };
+
+                for (const divisor of divisors) {
+                    await fetchAroundCenter(centerLat, centerLng, divisor);
+
+                    if (
+                        expectedCount > 0 &&
+                        collectedLights.size >= expectedCount
+                    ) {
+                        break;
+                    }
+                }
+
+                if (
+                    expectedCount > 0 &&
+                    collectedLights.size < expectedCount &&
+                    nestedClusters.length > 0
+                ) {
+                    const sortedNestedClusters = [...nestedClusters].sort(
+                        (a, b) =>
+                            distanceFromCenter(
+                                a,
+                                centerLat,
+                                centerLng,
+                            ) -
+                            distanceFromCenter(
+                                b,
+                                centerLat,
+                                centerLng,
+                            )
+                    );
+
+                    for (const cluster of sortedNestedClusters) {
+                        const clusterLat =
+                            cluster.centerLatitude ?? cluster.latitude;
+                        const clusterLng =
+                            cluster.centerLongitude ?? cluster.longitude;
+
+                        for (const divisor of divisors) {
+                            await fetchAroundCenter(
+                                clusterLat,
+                                clusterLng,
+                                divisor,
+                            );
+
+                            if (collectedLights.size >= expectedCount) {
+                                break;
+                            }
+                        }
+
+                        if (collectedLights.size >= expectedCount) {
+                            break;
+                        }
+                    }
+                }
 
                 setClusterItems(
-                    friendLights
-                        .filter((light) => !light.isCluster)
-                        .map(mapLightToClusterItem)
+                    mapLightsToClusterItems(
+                        [...collectedLights.values()],
+                        centerLat,
+                        centerLng,
+                        expectedCount
+                    )
                 );
             } catch (err: any) {
                 console.log("친구 지도 클러스터 상세 조회 실패:", err);
@@ -665,25 +786,18 @@ export default function MapPreview({ userId, refreshVersion }: MapPreviewProps) 
                 setClusterLoading(false);
             }
         },
-        [userId],
+        [currentBBox, userId],
     );
 
     const handleServerClusterTap = useCallback(
         (light: FriendLight) => {
             const lat = light.centerLatitude ?? light.latitude;
             const lng = light.centerLongitude ?? light.longitude;
-            const viewLatSpan = currentBBox ? currentBBox.maxLat - currentBBox.minLat : 0.1;
-            const viewLngSpan = currentBBox ? currentBBox.maxLng - currentBBox.minLng : 0.1;
-            const divisor = 10;
+            const expectedCount = light.count ?? 0;
 
-            fetchFriendClusterItems({
-                minLat: lat - viewLatSpan / divisor / 2,
-                maxLat: lat + viewLatSpan / divisor / 2,
-                minLng: lng - viewLngSpan / divisor / 2,
-                maxLng: lng + viewLngSpan / divisor / 2,
-            });
+            fetchFriendClusterItems(lat, lng, expectedCount);
         },
-        [currentBBox, fetchFriendClusterItems],
+        [fetchFriendClusterItems],
     );
 
     const handleFrontClusterTap = useCallback(
