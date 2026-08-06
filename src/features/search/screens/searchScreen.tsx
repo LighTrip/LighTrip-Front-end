@@ -1,6 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+    Animated,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AllSearchContent from "../components/AllSearchContent";
 import RankingContent from "../components/RankingContent";
@@ -17,6 +23,24 @@ export default function SearchView() {
     const [rankingMode, setRankingMode] = useState<RankingMode>("total");
     const [isRankingDropdownOpen, setIsRankingDropdownOpen] = useState(false);
 
+    const contentOpacity = useRef(new Animated.Value(1)).current;
+    const isFirstRender = useRef(true);
+
+    useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
+
+        contentOpacity.setValue(0);
+
+        Animated.timing(contentOpacity, {
+            toValue: 1,
+            duration: 220,
+            useNativeDriver: true,
+        }).start();
+    }, [selectedTab, contentOpacity]);
+
     const rankingTitle = 
         rankingMode === "total" ? "이번 주 랭킹" : "구별 랭킹";
 
@@ -28,6 +52,9 @@ export default function SearchView() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
+                <Animated.View
+                    style={[styles.titleArea, { opacity: contentOpacity }]}
+                >
                 {selectedTab === 'all' ? (
                     <Text style={styles.title}>둘러보기</Text>
                 ) : (
@@ -89,7 +116,8 @@ export default function SearchView() {
                         )}
                     </View>
                 )}
-                
+                </Animated.View>
+
                 <SearchToggle
                     selectedTab={selectedTab}
                     onChangeTab={(tab) => {
@@ -99,14 +127,18 @@ export default function SearchView() {
                 />
             </View>
 
-            {selectedTab === "all" ? (
-                <AllSearchContent 
-                    requestedFriendCodes ={requestedFriendCodes}
-                    setRequestedFriendCodes={setRequestedFriendCodes}
-                />
-            ) : (
-                <RankingContent rankingMode={rankingMode} />
-            )}
+            <Animated.View
+                style={[styles.contentArea, { opacity: contentOpacity }]}
+            >
+                {selectedTab === "all" ? (
+                    <AllSearchContent
+                        requestedFriendCodes ={requestedFriendCodes}
+                        setRequestedFriendCodes={setRequestedFriendCodes}
+                    />
+                ) : (
+                    <RankingContent rankingMode={rankingMode} />
+                )}
+            </Animated.View>
         </SafeAreaView>
     );
 }
@@ -126,6 +158,13 @@ const styles = StyleSheet.create({
         paddingTop: 12,
         zIndex: 100,
         elevation: 100,
+    },
+    contentArea: {
+        flex: 1,
+    },
+    titleArea: {
+        zIndex: 200,
+        elevation: 200,
     },
     rankingTitleWrapper: {
         position: "relative",

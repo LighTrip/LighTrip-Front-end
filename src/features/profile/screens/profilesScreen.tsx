@@ -1,6 +1,7 @@
 import { getMyProfile, logout } from "@/src/api/profileApi";
 import { useTeamMode } from "@/src/components/common/TeamModeContext";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Securestore from "expo-secure-store";
 import { useCallback, useState } from "react";
@@ -16,7 +17,6 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import LogoIcon from "../../../../assets/icons/logo-white.svg";
 import FriendManageModal from "../components/FriendManageModal";
 import TeamManageModal from "../components/TeamManageModal";
 import {
@@ -244,6 +244,12 @@ export default function ProfileView() {
                         </Text>
                     </View>
                 </View>
+
+                <LinearGradient
+                    colors={["#F8FAFD", "rgba(248, 250, 253, 0)"]}
+                    style={styles.headerFade}
+                    pointerEvents="none"
+                />
             </View>
 
             <ScrollView
@@ -255,38 +261,6 @@ export default function ProfileView() {
                 showsVerticalScrollIndicator={false}
                 contentInsetAdjustmentBehavior="never"
             >
-                <View style={styles.premiumSection}>
-                    <MaterialCommunityIcons
-                        name="crown-outline"
-                        size={16}
-                        color="#B38E06"
-                    />
-                    <Text style={styles.premium}>프리미엄</Text>
-                </View>
-
-                <TouchableOpacity style={styles.bannerCard} activeOpacity={0.8}>
-                    <View style={styles.bannerTextBox}>
-                        <Text
-                            style={styles.bannerTitle}
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                        >
-                            실물 여권 제작 신청
-                        </Text>
-                        <Text
-                            style={styles.bannerSubtitle}
-                            numberOfLines={2}
-                            ellipsizeMode="tail"
-                        >
-                            나만의 탐험 기록을 실물 책으로
-                        </Text>
-                    </View>
-
-                    <View style={styles.bannerIcon}>
-                        <LogoIcon width={30} height={30} />
-                    </View>
-                </TouchableOpacity>
-
                 <View style={styles.sectionSet}>
                     <View style={styles.menuBox}>
                         <View style={[styles.menuItem, styles.menuItemBorder]}>
@@ -508,6 +482,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingTop: 11,
         backgroundColor: "#F8FAFD",
+        zIndex: 1,
+    },
+    headerFade: {
+        position: "absolute",
+        bottom: -24,
+        left: 0,
+        right: 0,
+        height: 24,
     },
     scrollArea: {
         flex: 1,
@@ -515,6 +497,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingHorizontal: 20,
+        paddingTop: 10,
         paddingBottom: 20,
     },
     sectionAccount: {
@@ -625,46 +608,6 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: "#F8FAFD",
-    },
-    premiumSection: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 5,
-        marginBottom: 5,
-    },
-    premium: {
-        color: "#B38E06",
-        fontSize: 14,
-        fontWeight: "800",
-    },
-    bannerCard: {
-        backgroundColor: "#FFE06E",
-        borderRadius: 15,
-        paddingHorizontal: 16,
-        paddingVertical: 16,
-        marginBottom: 21,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-    },
-    bannerTextBox: {
-        flex: 1,
-        minWidth: 0,
-        marginRight: 8,
-    },
-    bannerIcon: {
-        flexShrink: 0,
-    },
-    bannerTitle: {
-        color: "#000000",
-        fontSize: 16,
-        fontWeight: "800",
-        marginBottom: 4,
-    },
-    bannerSubtitle: {
-        color: "#000000",
-        fontSize: 12,
-        fontWeight: "500",
     },
     locationShareTextBox: {
         flex: 1,
