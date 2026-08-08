@@ -12,7 +12,7 @@ import {
 } from "@react-navigation/bottom-tabs";
 import { Tabs, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 import Animated, {
   SharedValue,
   useAnimatedStyle,
@@ -100,7 +100,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const pillH = 46;
 
   return (
-    <View style={[styles.wrapper, { paddingBottom: Math.max(bottom, 12) + 4 }]}>
+    <View style={[styles.wrapper, { paddingBottom: Platform.OS === 'ios' ? bottom - 12 : bottom + 12 }]}>
       <View
         style={styles.bar}
         onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
@@ -214,7 +214,6 @@ function TabIcon({
 function TabsLayoutContent() {
   const router = useRouter();
   const { isTeamMode } = useTeamMode();
-
   return (
     <Tabs
       tabBar={(props) => <CustomTabBar {...props} />}
@@ -260,18 +259,18 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 16,
     backgroundColor: "transparent",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 9 },
   },
   bar: {
     flexDirection: "row",
-    height: 68,
+    height: 58,
     backgroundColor: "#FFFFFF",
     borderRadius: 999,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
+    elevation: 5,
     overflow: "hidden",
   },
   pill: {

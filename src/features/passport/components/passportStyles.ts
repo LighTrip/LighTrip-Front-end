@@ -5,6 +5,7 @@ export const COVER_WIDTH = (width - 20 * 2 - 1) / 2
 export const COVER_HEIGHT = COVER_WIDTH * (4 / 3)
 export const LIST_CARD_WIDTH = width - 40
 export const LIST_STAMP_SIZE = Math.round(LIST_CARD_WIDTH * 0.23)
+export const LIST_STAMP_ICON_SIZE = Math.round(LIST_CARD_WIDTH * 0.17)
 
 export const passportStyles = StyleSheet.create({
     searchRow: {
@@ -54,15 +55,16 @@ export const passportStyles = StyleSheet.create({
     listCard: {
         flexDirection: 'column',
         width: LIST_CARD_WIDTH,
+        minHeight: LIST_STAMP_SIZE,
+        justifyContent: 'center',
         backgroundColor: '#FFFFFF',
         borderRadius: 18,
         marginTop: 8,
         marginBottom: 10,
-        overflow: 'hidden',
         shadowColor: '#4C4C4C',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.16,
-        shadowRadius: 10,
+        shadowOpacity: 0.17,
+        shadowRadius: 5,
         elevation: 5,
     },
 
@@ -87,7 +89,7 @@ export const passportStyles = StyleSheet.create({
         left: LIST_STAMP_SIZE,
         gap: 5,
         flexDirection: 'column',
-     },
+    },
 
     metaRow: {
         flexDirection: 'row',

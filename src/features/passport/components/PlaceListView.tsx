@@ -6,7 +6,7 @@ import {
     Image,
 } from 'react-native';
 import React from 'react'
-import { passportStyles as styles, LIST_STAMP_SIZE } from './passportStyles';
+import { passportStyles as styles, LIST_STAMP_SIZE, LIST_STAMP_ICON_SIZE } from './passportStyles';
 import { MyPassport, getPassportDetail } from '@/src/api/passport/passport.api'
 
 const STAMP_MAP: Record<string, any> = {
@@ -40,8 +40,8 @@ const PlaceListView = ({ data, onSelectPlace }: Props) => {
     }
 
     return (
-        <View style={{ flex: 1, marginTop: 5, paddingBottom: 100 }}>
-            
+        <View style={{ flex: 1, marginTop: 5, paddingBottom: 66 }}>
+
             <FlatList
                 data={data}
                 keyExtractor={(item) => item.passportId.toString()}
@@ -55,7 +55,7 @@ const PlaceListView = ({ data, onSelectPlace }: Props) => {
                     <TouchableOpacity style={styles.listCard} onPress={() => handleSelect(item)}>
                         <Image 
                             source={STAMP_MAP[item.category] ?? STAMP_MAP['ETC']} 
-                            style={{ width: LIST_STAMP_SIZE, height: LIST_STAMP_SIZE }}
+                            style={{ width: LIST_STAMP_ICON_SIZE, height: LIST_STAMP_ICON_SIZE, marginLeft: 12 }}
                             resizeMode="contain"
                         />
                         <View style={styles.textArea}>

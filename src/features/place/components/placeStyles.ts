@@ -1,21 +1,22 @@
-import { Dimensions, Platform, StatusBar, StyleSheet } from "react-native"
+import { Platform, StyleSheet } from "react-native"
+import { scaleW, scaleFont, scaleH } from '@/src/utils/scale'
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window')
+// height 관련 값은 useScaleH Hook으로 컴포넌트에서 인라인 적용
 
 const sharedContainer = {
     flex: 1,
     backgroundColor: '#F8FAFD',
     justifyContent: 'flex-start' as const,
     alignItems: 'center' as const,
-    paddingTop: StatusBar.currentHeight || 65,
 }
 
 const sharedClickContainer = {
     width: '92%' as const,
     alignSelf: 'center' as const,
-    marginTop: -2,
-    height: 45,
-    borderRadius: 16,
+    marginTop: scaleW(0),
+    marginBottom: scaleW(0),
+    height: scaleW(45),
+    borderRadius: scaleW(16),
     backgroundColor: '#1A3A6B',
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
@@ -24,6 +25,7 @@ const sharedClickContainer = {
 const sharedClickText = {
     color: '#FFFFFF',
     fontWeight: 'bold' as const,
+    fontSize: scaleFont(14),
 }
 
 export const editStyles = StyleSheet.create({
@@ -31,14 +33,14 @@ export const editStyles = StyleSheet.create({
 
     logContainer: {
         position: 'relative',
-        height: screenHeight - 178,
-        borderRadius: 16,
+        borderRadius: scaleW(16),
         backgroundColor: '#F8FAFD',
         justifyContent: 'flex-start',
         alignItems: 'center',
         overflow: 'hidden',
-        marginBottom: 10,
-        marginTop: 20,
+        marginBottom: scaleW(10),
+        marginTop: scaleW(20),
+        // height: 인라인으로 scaleH(696) 적용
     },
 
     header: {
@@ -46,32 +48,32 @@ export const editStyles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         width: '100%',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        top: 5,
+        paddingHorizontal: scaleW(16),
+        paddingVertical: scaleW(8),
+        top: scaleW(5),
     },
 
     backButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
+        gap: scaleW(4),
     },
 
     headerTitle: {
-        fontSize: 14,
+        fontSize: scaleFont(14),
         fontWeight: '600',
         color: '#222',
     },
 
     photoBox: {
         position: 'relative',
-        width: screenWidth * 0.83,
-        height: screenHeight * 0.155,
-        borderRadius: 12,
+        width: scaleW(334),
+        borderRadius: scaleW(12),
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 10,
-        overflow: 'hidden'
+        marginTop: scaleW(10),
+        overflow: 'hidden',
+        // height: 인라인으로 scaleH(135) 적용
     },
 
     photoIndicatorRow: {
@@ -79,28 +81,27 @@ export const editStyles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        gap: 6,
-        marginTop: 147,
+        gap: scaleW(6),
     },
 
     photoIndicatorDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
+        width: scaleW(6),
+        height: scaleW(6),
+        borderRadius: scaleW(3),
         backgroundColor: '#9c9c9c80',
     },
 
     photoIndicatorDotActive: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
+        width: scaleW(6),
+        height: scaleW(6),
+        borderRadius: scaleW(3),
         backgroundColor: '#ffffff',
     },
 
     infoSection: {
         width: '90%',
-        paddingHorizontal: 16,
-        marginTop: 8,
+        paddingHorizontal: scaleW(16),
+        marginTop: scaleW(8),
     },
 
     infoRowWrapper: { width: '100%' },
@@ -108,12 +109,12 @@ export const editStyles = StyleSheet.create({
     infoRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 10,
-        gap: 10,
+        paddingVertical: scaleW(10),
+        gap: scaleW(10),
     },
 
     infoText: {
-        fontSize: 12,
+        fontSize: scaleFont(12),
         color: '#222',
         fontWeight: '600',
         flex: 1,
@@ -127,9 +128,9 @@ export const editStyles = StyleSheet.create({
     dropdownRow: {
         flexDirection: 'row',
         width: '100%',
-        paddingHorizontal: 16,
-        gap: 8,
-        marginTop: 16,
+        paddingHorizontal: scaleW(16),
+        gap: scaleW(8),
+        marginTop: scaleW(16),
     },
 
     modalBackdrop: {
@@ -140,11 +141,10 @@ export const editStyles = StyleSheet.create({
     },
 
     modalBox: {
-        width: 200,
-        maxHeight: 320,
+        width: scaleW(200),
         backgroundColor: '#fff',
-        borderRadius: 16,
-        paddingVertical: 8,
+        borderRadius: scaleW(16),
+        paddingVertical: scaleW(8),
         elevation: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
@@ -156,8 +156,8 @@ export const editStyles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingHorizontal: scaleW(16),
+        paddingVertical: scaleW(12),
     },
 
     modalItemSelected: {
@@ -165,7 +165,7 @@ export const editStyles = StyleSheet.create({
     },
 
     modalItemText: {
-        fontSize: 10,
+        fontSize: scaleFont(10),
         color: '#333',
     },
 
@@ -176,23 +176,19 @@ export const editStyles = StyleSheet.create({
 
     contentSection: {
         width: '100%',
-        minHeight: 130,
-        maxHeight: 130,
-        paddingHorizontal: 16,
-        marginTop: 10,
-        gap: 8,
+        paddingHorizontal: scaleW(16),
+        marginTop: scaleW(10),
+        gap: scaleW(8),
     },
 
     contentLabelRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        top: 5,
-        bottom: 5,
     },
 
     contentLabel: {
-        fontSize: 11,
+        fontSize: scaleFont(12),
         color: '#555',
         fontWeight: '500',
     },
@@ -200,63 +196,61 @@ export const editStyles = StyleSheet.create({
     generatingRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        gap: scaleW(6),
     },
 
     generatingText: {
-        fontSize: 11,
+        fontSize: scaleFont(13),
         color: '#1A3A6B',
     },
 
     contentInput: {
-        fontSize: 11,
+        fontSize: scaleFont(13),
         color: '#222',
-        lineHeight: 24,
         borderBottomWidth: 1,
         borderBottomColor: '#C0C0C0',
-        paddingVertical: 4,
-        minHeight: 40,
+        paddingVertical: scaleW(4),
+        // lineHeight, minHeight: 인라인으로 scaleH 적용
     },
 
     musicCard: {
         flexDirection: 'row',
         alignItems: 'center',
         width: '91%',
-        height: 70,
-        borderRadius: 16,
+        borderRadius: scaleW(16),
         borderWidth: 1,
         borderColor: '#E0E0E0',
         backgroundColor: '#FFFFFF',
-        padding: 12,
-        paddingRight: 20, 
-        marginTop: 4,
-        marginBottom: 10,
-        gap: 12,
-        bottom: 20,
+        padding: scaleW(12),
+        paddingRight: scaleW(20),
+        marginTop: scaleW(4),
+        marginBottom: scaleW(10),
+        gap: scaleW(12),
+        // height: 인라인으로 scaleH(70) 적용
     },
 
     albumArt: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
+        width: scaleW(50),
+        height: scaleW(50),
+        borderRadius: scaleW(25),
         backgroundColor: '#ddd',
     },
 
-    musicInfo: { 
-        gap: 4,
+    musicInfo: {
+        gap: scaleW(4),
         flex: 1,
         maxWidth: '80%',
         overflow: 'hidden',
     },
 
     musicTitle: {
-        fontSize: 12,
+        fontSize: scaleFont(14),
         fontWeight: 'bold',
         color: '#222',
     },
 
     musicArtist: {
-        fontSize: 10,
+        fontSize: scaleFont(12),
         color: '#888',
     },
 
@@ -267,56 +261,56 @@ export const editStyles = StyleSheet.create({
         right: 0,
         height: '70%',
         backgroundColor: '#fff',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        padding: 16,
+        borderTopLeftRadius: scaleW(20),
+        borderTopRightRadius: scaleW(20),
+        padding: scaleW(16),
     },
 
     musicSearchBox: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#F0F0F0',
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        gap: 8,
+        borderRadius: scaleW(12),
+        paddingHorizontal: scaleW(12),
+        paddingVertical: scaleW(10),
+        gap: scaleW(8),
     },
 
     musicSearchInput: {
         flex: 1,
-        fontSize: 11,
+        fontSize: scaleFont(11),
         color: '#222',
     },
 
     musicResultItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 10,
-        gap: 12,
+        paddingVertical: scaleW(10),
+        gap: scaleW(12),
         borderBottomWidth: 1,
         borderBottomColor: '#F0F0F0',
     },
 
     musicResultArt: {
-        width: 10,
-        height: 10,
-        borderRadius: 8,
+        width: scaleW(10),
+        height: scaleW(10),
+        borderRadius: scaleW(8),
         backgroundColor: '#ddd',
     },
 
     musicResultInfo: {
         flex: 1,
-        gap: 4,
+        gap: scaleW(4),
     },
 
     musicResultTitle: {
-        fontSize: 14,
+        fontSize: scaleFont(14),
         fontWeight: '600',
         color: '#222',
     },
 
     musicResultArtist: {
-        fontSize: 12,
+        fontSize: scaleFont(12),
         color: '#888',
     },
 
@@ -327,45 +321,44 @@ export const editStyles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'flex-end',
         width: '100%',
-        paddingVertical: 12,
-        gap: 12,
-        marginRight: 10,
+        paddingVertical: scaleW(12),
+        gap: scaleW(12),
+        marginRight: scaleW(10),
     },
 
     publicTitle: {
-        fontSize: 10,
+        fontSize: scaleFont(12),
         fontWeight: '600',
         textAlign: 'right',
         color: '#222',
     },
 
     publicSub: {
-        fontSize: 8,
+        fontSize: scaleFont(10),
         color: '#888',
     },
 
     clickContainer: sharedClickContainer,
-
     clickText: sharedClickText,
 
     visibilityButton: {
         backgroundColor: '#1A3A6B',
-        borderRadius: 10,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
+        borderRadius: scaleW(10),
+        paddingHorizontal: scaleW(16),
+        paddingVertical: scaleW(8),
     },
 
     visibilityButtonText: {
         color: '#ffffff',
-        fontSize: 10,
+        fontSize: scaleFont(12),
         fontWeight: '600',
     },
+
     scrollContent: {
         flexGrow: 1,
         alignItems: 'center',
         backgroundColor: '#F8FAFD',
-        paddingTop: StatusBar.currentHeight || 65,
-        paddingBottom: 100,
+        paddingBottom: scaleW(30),
     },
 })
 
@@ -374,62 +367,57 @@ export const addStyles = StyleSheet.create({
     container: sharedContainer,
 
     photoContainer: {
-        height: screenHeight * 0.53,
-        borderRadius: 16,
+        borderRadius: scaleW(16),
         backgroundColor: '#F8FAFD',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: scaleW(20),
         overflow: 'hidden',
     },
 
     photoTextbox: {
         width: '91%',
-        height: 50,
-        borderRadius: 16,
+        height: scaleW(50),
+        borderRadius: scaleW(16),
     },
 
     photoText: {
-        fontSize: 14,
+        fontSize: scaleFont(15),
         fontWeight: 'bold',
-        marginTop: 14,
-        marginLeft: 30,
+        marginTop: scaleW(14),
+        marginLeft: scaleW(30),
     },
 
     albumButton: {
-        width: screenWidth * 0.82,
-        height: screenHeight * 0.38,
-        marginTop: 8,
-        borderRadius: 16,
-        marginBottom: 15,
+        width: scaleW(330),
+        marginTop: scaleW(8),
+        borderRadius: scaleW(16),
+        marginBottom: scaleW(15),
         overflow: 'hidden',
     },
 
     albumButtonEmpty: {
-        width: screenWidth * 0.82,
-        height: screenHeight * 0.38,
-        borderRadius: 16,
+        width: scaleW(330),
+        borderRadius: scaleW(16),
         backgroundColor: '#FFFFFF',
-        marginTop: 8,
-        marginBottom: 15,
+        marginTop: scaleW(8),
+        marginBottom: scaleW(15),
         overflow: 'hidden',
         alignItems: 'center',
         justifyContent: 'center',
     },
 
     photoAddButton: {
-        width: 80,
-        height: 315,
+        width: scaleW(80),
         backgroundColor: '#F0F0F0',
-        borderRadius: 16,
+        borderRadius: scaleW(16),
         justifyContent: 'center',
         alignItems: 'center',
     },
 
     photoScrollItem: {
-        width: screenWidth * 0.82,
-        height: screenHeight * 0.37,
-        borderRadius: 16,
+        width: scaleW(330),
+        borderRadius: scaleW(16),
     },
 
     photoIndicatorRowAdd: {
@@ -437,74 +425,70 @@ export const addStyles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        gap: 6,
+        gap: scaleW(6),
         left: 0,
         right: 0,
-        bottom: 10,
+        bottom: scaleW(10),
     },
 
     cameraButton: {
-        width: screenWidth * 0.57,
-        height: screenHeight * 0.04,
+        width: scaleW(229),
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#1A3A6B',
-        borderRadius: 20,
-        marginBottom: 25,
+        borderRadius: scaleW(20),
+        marginBottom: scaleW(20),
     },
 
     infoContainer: {
-        height: screenHeight * 0.2,
-        borderRadius: 16,
+        borderRadius: scaleW(16),
         backgroundColor: '#F8FAFD',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: scaleW(20),
         overflow: 'hidden',
+        height: scaleH(200)
     },
 
     infoTextbox: {
         width: '91%',
-        height: 30,
-        marginBottom: 10,
+        height: scaleW(30),
+        marginBottom: scaleW(10),
     },
 
     infotitleText: {
-        fontSize: 14,
+        fontSize: scaleFont(14),
         fontWeight: 'bold',
-        marginLeft: 5,
-        marginTop: 5,
+        marginLeft: scaleW(5),
+        marginTop: scaleW(5),
     },
 
     infoTypeBox: {
-        width: screenWidth * 0.82,
-        height: screenHeight * 0.125,
-        borderRadius: 16,
+        width: scaleW(330),
+        borderRadius: scaleW(16),
         backgroundColor: '#FFFFFF',
         justifyContent: 'center',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        marginBottom: 5,
+        paddingHorizontal: scaleW(10),
+        paddingVertical: scaleW(5),
+        marginBottom: scaleW(5),
     },
 
     infoTypeText: {
         width: '100%',
         textAlign: 'center',
-        fontSize: 12,
+        fontSize: scaleFont(12),
         color: '#A0A0A0',
-        paddingHorizontal: 10,
-        paddingTop: Platform.OS === 'ios' ? 5 : 10,
-        lineHeight: 17,
+        paddingHorizontal: scaleW(10),
+        paddingTop: Platform.OS === 'ios' ? scaleW(5) : scaleW(10),
     },
 
     scrollContent: {
         flexGrow: 1,
         alignItems: 'center',
         backgroundColor: '#F8FAFD',
-        paddingTop: StatusBar.currentHeight || 65,
-        paddingBottom: 0,
+        paddingBottom: scaleW(30),
     },
-    clickContainer: sharedClickContainer,
 
+    clickContainer: sharedClickContainer,
     clickText: sharedClickText,
 })
