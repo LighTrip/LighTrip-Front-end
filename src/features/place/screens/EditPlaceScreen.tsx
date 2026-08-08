@@ -6,6 +6,7 @@ import React, { useEffect, useState } from 'react'
 import {
     Dimensions,
     Image,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -13,6 +14,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
+    TouchableWithoutFeedback,
     View,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -28,7 +30,6 @@ import { scaleW, scaleH } from '@/src/utils/scale'
 // API
 import { getPresignedUrl, uploadToS3 } from '@/src/api/passport/image.api'
 import { CATEGORY_MAP, changeCoverImage, createPassport, getMyPassportDistricts, textColor, Visibility } from '@/src/api/passport/passport.api'
-import { getMyPremium } from '@/src/api/payment/payment.api'
 import { useTeamMode } from '@/src/components/common/TeamModeContext'
 import { predictCoverTextColor } from '@/src/features/passport/cover_ai/coverColorHelper'
 
@@ -89,8 +90,7 @@ const EditPlaceScreen = ({
 }: Props) => {
 
     const insets = useSafeAreaInsets()
-    // 커스텀 탭바 높이 = bar(68) + paddingBottom(16) + 여백(12) — SafeAreaView가 bottom 인셋 이미 처리
-    const TAB_BAR_HEIGHT = 68 + 16 + 8
+    const TAB_BAR_HEIGHT = 64
     const [cardHeight, setCardHeight] = useState(0)
 
     const [date, setDate] = useState(visitDate ?? new Date())
@@ -133,7 +133,6 @@ const EditPlaceScreen = ({
     const [musicModalOpen, setMusicModalOpen] = useState(false)
 
     const { isTeamMode, teamId } = useTeamMode()
-    const [isPremium, setIsPremium] = useState(false)
     const [themeColor, setThemeColor] = useState('#F8FAFD')
 
     const THEME_COLORS = ['#F8FAFD', '#FFF0F5', '#FFF4EE', '#FFFBEE', '#EEFFF5']
@@ -146,9 +145,6 @@ const EditPlaceScreen = ({
             )
             if (matched) setPlaceType(matched)
         }
-        getMyPremium().then(res => {
-            if (res.data?.data?.premium) setIsPremium(true)
-        }).catch(() => {})
     }, [])
 
 
@@ -197,7 +193,7 @@ const EditPlaceScreen = ({
                 district: region !== '선택' ? region : undefined,
                 musicTitle: music?.title,
                 musicArtist: music?.artist,
-                theme: isPremium ? hexToRgb(themeColor) : undefined,
+                theme: hexToRgb(themeColor),
                 teamId: isTeamMode && teamId ? Number(teamId) : undefined,
                 aiCategory: aiDraft?.category,
             })
@@ -242,6 +238,8 @@ const EditPlaceScreen = ({
             style={{flex: 1, backgroundColor: "#F8FAFD"}}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={{ flex: 1 }}>
                 <View
                     style={{ flex: 1, alignSelf: 'center', width: CARD_WIDTH }}
                     onLayout={(e) => setCardHeight(Math.round(e.nativeEvent.layout.height))}
@@ -418,8 +416,8 @@ const EditPlaceScreen = ({
                     />
                     
 
-                    <View style={[styles.publicRow, isPremium && { justifyContent: 'space-between', paddingHorizontal: 16 }]}>
-                        {isPremium && (
+                    <View style={[styles.publicRow, { justifyContent: 'space-between', paddingHorizontal: 16 }]}>
+                        {(
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, left: 10 }}>
                                 {THEME_COLORS.map((color) => (
                                     <TouchableOpacity
@@ -464,6 +462,8 @@ const EditPlaceScreen = ({
             >
                 <Text style={styles.clickText}>등록하기</Text>
             </TouchableOpacity>
+            </View>
+        </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
         </SafeAreaView>
     )

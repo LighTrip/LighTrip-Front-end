@@ -11,7 +11,6 @@ import {
     KeyboardAvoidingView,
     Modal,
     Platform,
-    StatusBar,
     StyleSheet,
     Text,
     TextInput,
@@ -20,8 +19,12 @@ import {
     ScrollView,
 } from 'react-native'
 
+import { SafeAreaView } from 'react-native-safe-area-context'
+
 import NoiseOverlay from '@/src/components/common/NoiseOverlay'
+import { useTeamMode } from '@/src/components/common/TeamModeContext'
 import DatePickerModal from '@/src/components/passport/DatePickerModal'
+import { getPresignedUrl, uploadToS3 } from '@/src/api/passport/image.api'
 
 import {
     deletePassport,
@@ -39,7 +42,7 @@ import {
 } from '@/src/api/passport/passport.api'
 import { DISTRICT_CATEGORY_MAP } from '@/src/constant/regions'
 import { predictCoverTextColor } from '../cover_ai/coverColorHelper'
-import { getMyPremium } from '@/src/api/payment/payment.api'
+import { scaleW, scaleH, scaleFont } from '@/src/utils/scale'
 
 type Props = {
     item: any
@@ -63,14 +66,14 @@ const STAMP_MAP: Record<string, any> = {
 }
 
 const TAPE_COLOR_MAP: Record<string, string> = {
-    '☕ 카페': '#682709',
-    '🍽️ 식당': '#b53426',
-    '🍶 술집': '#5b2188',
-    '🏞️ 공원': '#4b8215',
-    '🎬 문화': '#ff6f00',
-    '🏋️ 운동': '#173282',
-    '🛍️ 쇼핑': '#ff01b7',
-    '📦 기타': '#A8A8A8',
+    '☕ 카페': '#A9714A',
+    '🍽️ 식당': '#D65C6B',
+    '🍶 술집': '#8E5FA6',
+    '🏞️ 공원': '#5FA05A',
+    '🎬 문화': '#F0785A',
+    '🏋️ 운동': '#4472A8',
+    '🛍️ 쇼핑': '#E8558F',
+    '📦 기타': '#7C8798',
 }
 
 const CATEGORY_TO_KOREAN: Record<string, string> = {
@@ -93,7 +96,6 @@ const VISIBILITY_LABEL: Record<Visibility, string> = {
     PRIVATE: '비공개',
 }
 
-const { width, height: screenHeight } = Dimensions.get('window')
 
 const THEME_COLORS = ['#F8FAFD', '#FFF0F5', '#FFF4EE', '#FFFBEE', '#EEFFF5']
 
@@ -138,11 +140,12 @@ const MusicBox = ({ music, onPress, styles }: { music: MusicDisplayItem; onPress
 }
 
 const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = true, sourceLabel }: Props) => {
+    const { isTeamMode, teamId } = useTeamMode()
     const [isEditing, setIsEditing] = useState(false)
     const [editReview, setEditReview] = useState(item.content ?? '')
     const [editCategory, setEditCategory] = useState(CATEGORY_TO_KOREAN[item.category] ?? '선택')
     const [editDate, setEditDate] = useState(new Date(item.visitedAt))
-    const [editImageUri, setEditImageUri] = useState<string | null>(null)
+    const [editImageUris, setEditImageUris] = useState<string[]>(item.imageUrls ?? [])
     const [editMusic, setEditMusic] = useState<{ title: string; artist: string; artwork: string } | null>(null)
     const [musicArtwork, setMusicArtwork] = useState<string | null>(null)
     const [isCover, setIsCover] = useState(false)
@@ -157,7 +160,6 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
     const [editAddress, setEditAddress] = useState(item.address ?? '')
     const [editLat, setEditLat] = useState<number>(item.latitude ?? 0)
     const [editLng, setEditLng] = useState<number>(item.longitude ?? 0)
-    const [isPremium, setIsPremium] = useState(false)
     const [themeColor, setThemeColor] = useState(
         item.theme ? rgbToHex(item.theme) : '#F8FAFD'
     )
@@ -181,12 +183,6 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                 .catch(() => {})
         }
     }, [item.musicTitle, item.musicArtist])
-
-    useEffect(() => {
-        getMyPremium().then(res => {
-            if (res.data?.data?.premium) setIsPremium(true)
-        }).catch(() => {})
-    }, [])
 
     const handleDelete = async () => {
         Alert.alert(
@@ -216,12 +212,14 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
+            allowsMultipleSelection: true,
+            selectionLimit: 5,
             allowsEditing: false,
             quality: 1,
         })
 
         if (!result.canceled) {
-            setEditImageUri(result.assets[0].uri)
+            setEditImageUris(result.assets.map(a => a.uri))
         }
     }
 
@@ -237,7 +235,13 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                 category: CATEGORY_MAP[editCategory] as PassportCategory,
                 musicTitle: editMusic?.title ?? item.musicTitle,
                 musicArtist: editMusic?.artist ?? item.musicArtist,
-                imageUrls: item.imageUrls ?? [],
+                imageUrls: await Promise.all(editImageUris.map(async (uri) => {
+                    if (uri.startsWith('https://')) return uri
+                    const mimeType = uri.endsWith('.png') ? 'image/png' : uri.endsWith('.webp') ? 'image/webp' : 'image/jpeg'
+                    const presignedRes = await getPresignedUrl(mimeType)
+                    await uploadToS3(presignedRes.data.presignedUrl, uri)
+                    return presignedRes.data.imageUrl
+                })),
                 district: editDistrict,
                 districtCategory: matchedDistrict?.districtCategory ?? DISTRICT_CATEGORY_MAP[editDistrict] ?? editDistrictCategory,
                 spaceName: editSpaceName,
@@ -245,7 +249,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                 address: editAddress,
                 latitude: editLat,
                 longitude: editLng,
-                theme: isPremium ? hexToRgb(themeColor) : undefined,
+                theme: hexToRgb(themeColor),
             }
 
             if (isNewDistrict) {
@@ -282,7 +286,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
             let coverId = item._coverId ?? item.coverId ?? null
 
             if (coverId == null) {
-                const districtsRes = await getMyPassportDistricts()
+                const districtsRes = await getMyPassportDistricts(isTeamMode && teamId ? teamId : undefined)
                 const allDistricts: any[] = districtsRes.data?.data ?? []
                 const match = allDistricts.find(
                     (d: any) => d.districtCategory === editDistrictCategory || d.displayName === editDistrict
@@ -321,6 +325,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
     }
 
     return (
+        <SafeAreaView style={styles.safeArea} edges={[ 'top', 'left', 'right', 'bottom']}>
         <KeyboardAvoidingView
             style={[styles.container, styles.scrollContent]}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -361,17 +366,18 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                         resizeMode="contain"
                     />
 
-                    <View>
+                    <View style={styles.topRow}>
+                    <View style={styles.imageColumn}>
                         <View style={styles.imageBackground} />
-                        {item.imageUrls && item.imageUrls.length > 1 ? (
+                        {editImageUris.length > 1 ? (
                             <View
                                 style={{
-                                    width: width * 0.41,
-                                    height: 240,
-                                    marginBottom: 10,
-                                    marginTop: 10,
-                                    top: 5,
-                                    borderRadius: 4,
+                                    width: scaleW(165),
+                                    height: scaleW(240),
+                                    marginBottom: scaleW(10),
+                                    marginTop: scaleW(10),
+                                    top: scaleW(5),
+                                    borderRadius: scaleW(4),
                                     overflow: 'hidden',
                                 }}
                             >
@@ -381,11 +387,11 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                                     showsHorizontalScrollIndicator={false}
                                     decelerationRate="fast"
                                 >
-                                    {item.imageUrls.map((uri: string, idx: number) => (
+                                    {editImageUris.map((uri: string, idx: number) => (
                                         <Image
                                             key={idx}
-                                            source={{ uri: idx === 0 ? (editImageUri ?? uri) : uri }}
-                                            style={{ width: width * 0.41, height: 240 }}
+                                            source={{ uri }}
+                                            style={{ width: scaleW(165), height: scaleW(240) }}
                                             resizeMode="cover"
                                         />
                                     ))}
@@ -403,7 +409,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                         ) : isEditing ? (
                             <TouchableOpacity onPress={openImagePicker}>
                                 <Image
-                                    source={{ uri: editImageUri ?? item.imageUrls?.[0] ?? item.image?.uri }}
+                                    source={{ uri: editImageUris[0] ?? item.image?.uri }}
                                     style={styles.placeImage}
                                     resizeMode="cover"
                                 />
@@ -413,7 +419,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                             </TouchableOpacity>
                         ) : (
                             <Image
-                                source={{ uri: item.imageUrls?.[0] ?? item.image?.uri }}
+                                source={{ uri: editImageUris[0] ?? item.image?.uri }}
                                 style={styles.placeImage}
                                 resizeMode="cover"
                             />
@@ -491,16 +497,16 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                             onClose={() => setShowDatePicker(false)}
                         />
 
-                        {isEditing && isPremium && (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, top: 15, right: -90 }}>
+                        {isEditing && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scaleW(6), marginTop: scaleW(10) }}>
                                 {THEME_COLORS.map((color) => (
                                     <TouchableOpacity
                                         key={color}
                                         onPress={() => setThemeColor(color)}
                                         style={{
-                                            width: 15,
-                                            height: 15,
-                                            borderRadius: 10,
+                                            width: scaleW(15),
+                                            height: scaleW(15),
+                                            borderRadius: scaleW(10),
                                             backgroundColor: color,
                                             borderWidth: themeColor === color ? 2 : 1,
                                             borderColor: themeColor === color ? '#1A3A6B' : '#ccc',
@@ -509,6 +515,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                                 ))}
                             </View>
                         )}
+                    </View>
                     </View>
                 </View>
 
@@ -632,16 +639,23 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                 onClose={() => setPlaceSearchOpen(false)}
             />
         </KeyboardAvoidingView>
+        </SafeAreaView>
     )
 }
 
 export default PassportDetail
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#F8FAFD',
+    },
+
     container: {
         width: Dimensions.get('window').width,
         flex: 1,
         backgroundColor: '#F8FAFD',
+        paddingBottom: 100,
     },
 
     noiseOverlay: {
@@ -651,94 +665,108 @@ const styles = StyleSheet.create({
     },
 
     scrollContent: {
-        padding: 16,
-        gap: 16,
-        paddingBottom: 40,
-        paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 50,
+        padding: scaleW(16),
+        gap: scaleW(16),
+        paddingBottom: Platform.OS === 'ios' ? scaleW(110) : scaleW(90),
+        paddingTop: 0,
     },
 
     headerCard: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 20,
-        marginTop: -20,
+        borderRadius: scaleW(16),
+        padding: scaleW(20),
+        marginTop: Platform.OS === 'ios' ? scaleW(-50) : scaleW(-20),
         alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 3, height: 4 },
-        shadowOpacity: 0.3,
+        shadowOpacity: 0.15,
         shadowRadius: 4,
-        elevation: 2,
+        elevation: 3,
     },
 
     districtTitle: {
-        fontSize: 22,
+        fontSize: scaleFont(22),
         fontWeight: 'bold',
         color: '#000',
-        marginBottom: 6,
+        marginBottom: scaleW(6),
     },
 
     visitText: {
-        fontSize: 14,
+        fontSize: scaleFont(14),
         color: '#888',
     },
 
     passportCard: {
-        height: screenHeight * 0.67,
+        width: '100%',
+        flex: 1,
+        maxHeight: Platform.OS === 'ios' ? scaleW(610) : undefined,
         backgroundColor: '#FFFFFF',
-        borderRadius: 16,
+        borderRadius: scaleW(16),
         shadowColor: '#000',
-        shadowOffset: { width: 3, height: 4 },
-        shadowOpacity: 0.3,
+        shadowOffset: { width: 3, height: 3 },
+        shadowOpacity: 0.15,
         shadowRadius: 4,
         elevation: 2,
-        paddingBottom: 20,
+        // paddingBottom: scaleH(20),
     },
 
     topHalf: {
-        padding: 20,
-        paddingTop: 30,
-        minHeight: 280,
+        padding: scaleW(20),
+        paddingTop: scaleW(30),
+        height: scaleW(280),
         justifyContent: 'flex-start',
     },
 
+    topRow: {
+        flex: 1,
+        flexDirection: 'row',
+        gap: scaleW(36),
+    },
+
+    imageColumn: {
+        width: scaleW(175),
+        justifyContent: 'center',
+    },
+
     bottomHalf: {
-        padding: 20,
-        paddingTop: 36,
+        padding: scaleW(20),
+        paddingTop: scaleW(20),
         flex: 1,
         flexDirection: 'column',
-        gap: 24,
+        gap: scaleW(16),
+        justifyContent: 'space-between',
     },
 
     closeButton: {
         position: 'absolute',
-        top: 12,
-        right: 16,
+        top: scaleW(12),
+        right: scaleW(16),
         zIndex: 10,
     },
 
     closeText: {
-        fontSize: 18,
+        fontSize: scaleFont(18),
         color: '#1A3A6B',
         fontWeight: 'bold',
     },
 
     tape: {
         position: 'absolute',
-        top: 20,
-        left: width * 0.29,
-        width: 110,
-        height: 80,
+        top: scaleW(20),
+        left: scaleW(117),
+        width: scaleW(120),
+        height: scaleW(80),
         zIndex: 5,
     },
 
     imageBackground: {
         position: 'absolute',
-        width: width * 0.48,
-        height: screenHeight * 0.25,
-        left: -8,
-        top: 5,
+        width: scaleW(193),
+        height: scaleW(240),
+        left: scaleW(-8),
+        top: scaleW(5),
         backgroundColor: '#FFFFFF',
-        borderRadius: 4,
+        borderRadius: scaleW(4),
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
@@ -747,89 +775,86 @@ const styles = StyleSheet.create({
     },
 
     placeImage: {
-        width: width * 0.435,
-        height: screenHeight * 0.225,
-        borderRadius: 4,
-        marginBottom: 10,
-        marginTop: 10,
-        top: 5,
+        width: scaleW(175),
+        height: scaleW(220),
+        borderRadius: scaleW(4),
+        marginBottom: scaleW(10),
+        marginTop: scaleW(20),
+        top: scaleW(5),
         overflow: 'hidden',
     },
 
     editImageBadge: {
         position: 'absolute',
-        bottom: 10,
-        left: 5,
+        bottom: scaleW(10),
+        left: scaleW(5),
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#ffffff80',
-        borderRadius: 12,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        gap: 4,
+        borderRadius: scaleW(12),
+        paddingHorizontal: scaleW(8),
+        paddingVertical: scaleW(4),
+        gap: scaleW(4),
     },
 
     coverBadge: {
         position: 'absolute',
-        bottom: 194,
-        left: -10,
+        bottom: scaleW(233),
+        left: scaleW(-5),
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#000000',
-        borderRadius: 12,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        gap: 4,
+        borderRadius: scaleW(12),
+        paddingHorizontal: scaleW(8),
+        paddingVertical: scaleW(4),
+        gap: scaleW(4),
     },
 
     coverBadgeText: {
-        fontSize: 8,
+        fontSize: scaleFont(8),
         color: '#ffffff',
         fontWeight: '600',
     },
 
     stampImage: {
         position: 'absolute',
-        top: 10,
-        right: 10,
-        width: screenHeight * 0.16,
-        height: screenHeight * 0.16,
+        top: scaleW(10),
+        right: scaleW(10),
+        width: scaleW(110),
+        height: scaleW(110),
     },
 
     infoArea: {
-        position: 'absolute',
-        bottom: 70,
-        left: 120,
-        right: 16,
+        flex: 1,
+        justifyContent: 'flex-end',
     },
 
     infoRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-        paddingLeft: 90,
+        gap: scaleW(6),
     },
 
     infoEditButton: {
         flex: 1,
-        borderRadius: 10,
+        borderRadius: scaleW(10),
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
+        gap: scaleW(4),
     },
 
     infoText: {
         flex: 1,
-        fontSize: 12,
+        fontSize: scaleFont(12),
         color: '#333',
         textAlign: 'left',
-        lineHeight: 24,
+        lineHeight: scaleW(24),
         fontFamily: 'Griun_Gellyroll',
     },
 
     icon: {
-        width: 12,
-        height: 12,
+        width: scaleW(12),
+        height: scaleW(12),
     },
 
     dividerRow: {
@@ -845,65 +870,64 @@ const styles = StyleSheet.create({
 
     reviewBox: {
         width: '100%',
-        height: 140,
-        borderRadius: 12,
-        padding: 5,
+        height: scaleW(110),
+        borderRadius: scaleW(12),
+        top: scaleW(40),
         alignItems: 'center',
         justifyContent: 'center',
-        bottom: 40,
     },
 
     reviewText: {
-        fontSize: 13,
+        fontSize: scaleFont(13),
         color: '#333',
         textAlign: 'center',
-        lineHeight: 20,
+        lineHeight: scaleW(20),
         width: '95%',
         fontFamily: 'Griun_Gellyroll',
     },
 
     editReviewInput: {
-        width: '102%',
-        height: screenHeight * 0.15,
-        borderRadius: 16,
-        paddingHorizontal: 20,
-        fontSize: 13,
-        lineHeight: 20,
-        alignContent: 'center',
-        justifyContent: 'center',
+        width: '100%',
+        height: '100%',
+        borderRadius: scaleW(16),
+        paddingTop: scaleW(10),
+        paddingHorizontal: scaleW(20),
+        fontSize: scaleFont(13),
+        lineHeight: scaleW(20),
+        textAlignVertical: 'center',
         backgroundColor: '#ffffff',
         fontFamily: 'Griun_Gellyroll',
     },
 
     musicBox: {
-        bottom: 70,
         flexDirection: 'row',
-        height: screenHeight * 0.09,
+        height: scaleW(79),
         width: '100%',
-        borderRadius: 16,
+        top: scaleW(25),
+        borderRadius: scaleW(16),
         alignItems: 'center',
-        gap: 12,
+        gap: scaleW(12),
         backgroundColor: '#ffffff',
     },
 
     musicImage: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        marginLeft: 20,
+        width: scaleW(50),
+        height: scaleW(50),
+        borderRadius: scaleW(25),
+        marginLeft: scaleW(20),
     },
 
     musicTitle: {
-        fontSize: 15,
+        fontSize: scaleFont(15),
         fontWeight: 'bold',
         color: '#000',
-        marginLeft: 10,
+        marginLeft: scaleW(10),
     },
 
     artist: {
-        fontSize: 13,
+        fontSize: scaleFont(13),
         color: '#888',
-        marginLeft: 10,
+        marginLeft: scaleW(10),
     },
 
     editBox: {
@@ -911,15 +935,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 1,
-        bottom: 86,
+        top: scaleW(10),
     },
 
     editText: {
-        width: 110,
-        height: 20,
+        width: scaleW(110),
+        height: scaleW(20),
         textAlign: 'center',
         textAlignVertical: 'center',
-        fontSize: 10,
+        fontSize: scaleFont(10),
         color: '#757575',
         fontFamily: 'Moneygraphy',
     },
@@ -932,11 +956,11 @@ const styles = StyleSheet.create({
     },
 
     modalBox: {
-        width: 220,
-        maxHeight: 350,
+        width: scaleW(220),
+        maxHeight: scaleW(350),
         backgroundColor: '#fff',
-        borderRadius: 16,
-        paddingVertical: 8,
+        borderRadius: scaleW(16),
+        paddingVertical: scaleW(8),
         elevation: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
@@ -948,8 +972,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingHorizontal: scaleW(16),
+        paddingVertical: scaleW(12),
     },
 
     modalItemSelected: {
@@ -957,7 +981,7 @@ const styles = StyleSheet.create({
     },
 
     modalItemText: {
-        fontSize: 14,
+        fontSize: scaleFont(14),
         color: '#333',
     },
 
@@ -973,20 +997,20 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'flex-end',
         width: '100%',
-        paddingVertical: 12,
-        gap: 12,
-        marginRight: 15,
+        paddingVertical: scaleW(12),
+        gap: scaleW(12),
+        marginRight: scaleW(15),
     },
 
     publicTitle: {
-        fontSize: 14,
+        fontSize: scaleFont(14),
         fontWeight: '600',
         textAlign: 'right',
         color: '#222',
     },
 
     publicSub: {
-        fontSize: 12,
+        fontSize: scaleFont(12),
         color: '#888',
     },
 })

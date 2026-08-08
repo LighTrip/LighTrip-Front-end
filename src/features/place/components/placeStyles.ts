@@ -1,5 +1,5 @@
 import { Platform, StyleSheet } from "react-native"
-import { scaleW, scaleFont } from '@/src/utils/scale'
+import { scaleW, scaleFont, scaleH } from '@/src/utils/scale'
 
 // height 관련 값은 useScaleH Hook으로 컴포넌트에서 인라인 적용
 
@@ -437,7 +437,7 @@ export const addStyles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: '#1A3A6B',
         borderRadius: scaleW(20),
-        marginBottom: scaleW(25),
+        marginBottom: scaleW(20),
     },
 
     infoContainer: {
@@ -447,6 +447,7 @@ export const addStyles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: scaleW(20),
         overflow: 'hidden',
+        height: scaleH(200)
     },
 
     infoTextbox: {

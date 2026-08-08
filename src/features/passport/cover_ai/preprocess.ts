@@ -115,8 +115,16 @@ export async function preprocessToROI(
 ): Promise<string> {
   const { resizeW, resizeH, cropX, cropY } = coverResizeAndCrop(srcW, srcH, 150, 200);
 
+  // 원격 URL이면 로컬로 다운로드 후 처리
+  let localUri = uri;
+  if (uri.startsWith('http://') || uri.startsWith('https://')) {
+    const dest = `${FileSystem.cacheDirectory}cover_preprocess_${Date.now()}.jpg`;
+    await FileSystem.downloadAsync(uri, dest);
+    localUri = dest;
+  }
+
   const result = await ImageManipulator.manipulateAsync(
-    uri,
+    localUri,
     [
       { resize: { width: resizeW, height: resizeH } },
       { crop: { originX: cropX, originY: cropY, width: 150, height: 200 } },

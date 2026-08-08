@@ -3,17 +3,18 @@ import * as FileSystem from 'expo-file-system/legacy'
 import * as ImagePicker from 'expo-image-picker'
 import * as Location from 'expo-location'
 import { useRouter } from 'expo-router'
-import * as SecureStore from 'expo-secure-store'
 import React, { useEffect, useState } from 'react'
 import {
     Alert,
     Image,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
     Text,
     TextInput,
     TouchableOpacity,
+    TouchableWithoutFeedback,
     View,
 } from 'react-native'
 import { Shadow } from 'react-native-shadow-2'
@@ -21,7 +22,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { generateAIDraft } from '@/src/api/passport/ai.api'
 import { getPresignedUrl, uploadToS3 } from '@/src/api/passport/image.api'
-import { getMyPremium } from '@/src/api/payment/payment.api'
 import NoiseOverlay from '@/src/components/common/NoiseOverlay'
 import { matchDistrictFromAddress } from '@/src/constant/regions'
 import PassportDetail from '../../passport/screens/PassportDetail'
@@ -33,34 +33,6 @@ import { scaleW, scaleH, scaleFont } from '@/src/utils/scale'
 export const CARD_WIDTH = scaleW(366)
 
 const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY
-const AI_USAGE_KEY = 'ai_draft_usage'
-
-const getWeekKey = () => {
-    const now = new Date()
-    const year = now.getFullYear()
-    const jan1 = new Date(year, 0, 1)
-    const week = Math.ceil(((now.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7)
-    return `${year}-W${week}`
-}
-
-const checkAiLimit = async (): Promise<boolean> => {
-    const weekKey = getWeekKey()
-    const stored = await SecureStore.getItemAsync(AI_USAGE_KEY)
-    if (!stored) return true
-    const { week, count } = JSON.parse(stored)
-    return week !== weekKey || count < 5
-}
-
-const incrementAiUsage = async () => {
-    const weekKey = getWeekKey()
-    const stored = await SecureStore.getItemAsync(AI_USAGE_KEY)
-    let count = 0
-    if (stored) {
-        const parsed = JSON.parse(stored)
-        count = parsed.week === weekKey ? parsed.count : 0
-    }
-    await SecureStore.setItemAsync(AI_USAGE_KEY, JSON.stringify({ week: weekKey, count: count + 1 }))
-}
 
 type Props = {
     onClose?: () => void
@@ -72,8 +44,7 @@ type Props = {
 const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAddress }: Props) => {
     const router = useRouter()
     const { bottom } = useSafeAreaInsets()
-    // 탭바 높이 = bar(68) + paddingBottom(16) + 여백(12) — SafeAreaView가 bottom 인셋 이미 처리
-    const TAB_BAR_HEIGHT = 68 + 16 + 8
+    const TAB_BAR_HEIGHT = 64
 
     const [showEdit, setShowEdit] = useState(false)
     const [photos, setPhotos] = useState<string[]>([])
@@ -90,7 +61,6 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
 
     const [completedPlace, setCompletedPlace] = useState<any | null>(null)
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
-    const [isPremium, setIsPremium] = useState(false)
     const [photoAreaHeight, setPhotoAreaHeight] = useState(0)
 
     useEffect(() => {
@@ -99,17 +69,10 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
             setLongitude(initialLongitude)
         }
         if (initialAddress) setLocationAddress(initialAddress)
-        getMyPremium().then(res => {
-            if (res.data?.data?.premium) setIsPremium(true)
-        }).catch(() => {})
     }, [])
 
     const handleCreateWithAI = async () => {
         if (photos.length === 0) return alert('사진을 먼저 선택해주세요')
-        if (!isPremium) {
-            const allowed = await checkAiLimit()
-            if (!allowed) return alert('이번 주 AI 초안 생성 횟수(5회)를 모두 사용했어요.\n구독하면 무제한으로 사용할 수 있어요!')
-        }
         const fileInfo = await FileSystem.getInfoAsync(photos[0])
         if (!fileInfo.exists) {
             setPhotos([])
@@ -126,7 +89,6 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
             await uploadToS3(presignedUrl, uri)
             const data = await generateAIDraft(imageUrl, description)
             setAiDraft(data)
-            if (!isPremium) await incrementAiUsage()
         } catch (err: any) {
             console.error('[AI] 오류:', err?.message, err?.response?.status, JSON.stringify(err?.response?.data))
             alert('AI 초안 생성 중 오류가 발생했어요')
@@ -138,14 +100,28 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
 
     const fetchPlaceNameFromCoords = async (lat: number, lng: number) => {
         try {
-            const response = await fetch(
+            // 주소 조회
+            const addrRes = await fetch(
                 `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`,
                 { headers: { Authorization: `KakaoAK ${KAKAO_REST_API_KEY}` } }
             )
-            const data = await response.json()
-            if (data.documents && data.documents.length > 0) {
-                const doc = data.documents[0]
-                setLocationName(doc.road_address?.address_name ?? doc.address?.address_name ?? null)
+            const addrData = await addrRes.json()
+            const doc = addrData.documents?.[0]
+            const roadAddress = doc?.road_address?.address_name ?? doc?.address?.address_name
+
+            if (roadAddress) {
+                // 도로명 주소로 해당 위치 주변 가게 검색
+                const placeRes = await fetch(
+                    `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(roadAddress)}&x=${lng}&y=${lat}&radius=100&sort=distance`,
+                    { headers: { Authorization: `KakaoAK ${KAKAO_REST_API_KEY}` } }
+                )
+                const placeData = await placeRes.json()
+                if (placeData.documents?.length > 0) {
+                    setLocationName(placeData.documents[0].place_name)
+                    return
+                }
+                // 가게를 못 찾으면 주소로 대체
+                setLocationName(roadAddress)
             }
         } catch (err) {
             console.error('카카오 장소 검색 실패:', err)
@@ -257,6 +233,8 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                 style={{ flex: 1, backgroundColor: '#F8FAFD' }}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={{ flex: 1 }}>
                 {/* 사진 박스 */}
                 <View
                     style={{ flex: 1, alignSelf: 'center', width: CARD_WIDTH }}
@@ -356,7 +334,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                     offset={[17, 20]}
                     style={{ width: CARD_WIDTH, alignSelf: 'center', marginTop: scaleH(22), borderRadius: scaleW(16) }}
                 >
-                    <View style={[styles.infoContainer, { height: scaleH(180) }]}>
+                    <View style={styles.infoContainer}>
                         <NoiseOverlay />
                         <View style={styles.infoTextbox}>
                             <Text style={styles.infotitleText}>어떤 곳인지 간단히 설명해 주세요.</Text>
@@ -388,6 +366,8 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                     </Text>
                 </TouchableOpacity>
 
+            </View>
+            </TouchableWithoutFeedback>
             </KeyboardAvoidingView>
         </SafeAreaView>
     )
