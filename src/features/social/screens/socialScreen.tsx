@@ -1,6 +1,7 @@
 import { deleteFriend, getFriends } from "@/src/api/socialApi";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useMemo, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AddFriendModal from "../components/AddFriendModal";
@@ -12,6 +13,7 @@ import { Friend } from "../types/social.types";
 export default function SocialView() {
     const [keyword, setKeyword] = useState("");
     const [friends, setFriends] = useState<Friend[]>([]);
+    const [detailRefreshVersion, setDetailRefreshVersion] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState("");
 
@@ -25,7 +27,7 @@ export default function SocialView() {
     const [isDeleteFriend, setIsDeleteFriend] = useState(false);
 
     // 친구 목록 불러오기
-    const fetchFriends = async () => {
+    const fetchFriends = useCallback(async () => {
 
         try {
             setIsLoading(true);
@@ -33,13 +35,21 @@ export default function SocialView() {
 
             const friendList = await getFriends();
             setFriends(friendList);
+            setSelectedFriend((currentFriend) => {
+                if (!currentFriend) return null;
+
+                return friendList.find(
+                    (friend) => friend.friendId === currentFriend.friendId
+                ) ?? null;
+            });
+            setDetailRefreshVersion((version) => version + 1);
         }catch(error) {
             console.log("친구 목록 조회 에러:", error)
             setErrorMessage("친구 목록을 불러오지 못했습니다.");
         }finally {
             setIsLoading(false);
         }
-    }
+    }, []);
 
     // 친구 삭제 호출
     const handleDeleteFriend = async () => {
@@ -69,9 +79,11 @@ export default function SocialView() {
         }
     }
 
-    useEffect(() => {
-        fetchFriends();
-    }, [])
+    useFocusEffect(
+        useCallback(() => {
+            fetchFriends();
+        }, [fetchFriends])
+    );
 
     const filteredFriends = useMemo(() => {
         const trimmedKeyword = keyword.trim();
@@ -174,6 +186,7 @@ export default function SocialView() {
             <FriendDetailModal
                 visible={selectedFriend !== null}
                 friend={selectedFriend}
+                refreshVersion={detailRefreshVersion}
                 onClose={()=>setSelectedFriend(null)}
             />
 
@@ -196,9 +209,9 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        marginBottom: 20,
+        marginBottom: 10,
         paddingHorizontal: 20,
-        paddingTop: 22,
+        paddingTop: 10,
     },
     title: {
         color: "#000000",

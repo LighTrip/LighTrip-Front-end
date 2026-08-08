@@ -6,6 +6,7 @@ import {
     Platform,
     Modal,
     Alert,
+    BackHandler,
     Linking,
     Animated as RNAnimated,
 } from "react-native";
@@ -38,6 +39,18 @@ export default function SubscribePage() {
     const expandAnim = useRef(new RNAnimated.Value(0)).current
 
     const animatedRef = useAnimatedRef<Animated.ScrollView>()
+
+    useEffect(() => {
+        const subscription = BackHandler.addEventListener(
+            "hardwareBackPress",
+            () => {
+                router.replace("/profile" as any)
+                return true
+            },
+        )
+
+        return () => subscription.remove()
+    }, [router])
 
     useEffect(() => {
         const fetchPremium = async () => {
@@ -116,7 +129,7 @@ export default function SubscribePage() {
     return (
         <View style={styles.container}>
             <View style={styles.topBox}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+                <TouchableOpacity onPress={() => router.replace("/profile" as any)} style={styles.closeButton}>
                     <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
                 </TouchableOpacity>
                 <Text style={styles.topText}>나의 구독</Text>

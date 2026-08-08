@@ -12,6 +12,7 @@ import { FriendMapDistrict } from "../types/social.types";
 
 type PassportPreviewProps = {
     userId: number;
+    refreshVersion: number;
     onLatestDistrictChange?: (district: string | null) => void;
 }
 
@@ -20,6 +21,7 @@ const defaultPassportImage = require("../../../../assets/images/default_profile.
 export default function PassportPreview(
     {
         userId,
+        refreshVersion,
         onLatestDistrictChange,
     }: PassportPreviewProps) {
 
@@ -52,7 +54,7 @@ export default function PassportPreview(
 
     useEffect(() => {
         fetchFriendMapDistricts();
-    }, [userId]);
+    }, [userId, refreshVersion]);
 
     if (loading) {
         return (

@@ -123,6 +123,13 @@ export type TeamResponseData = {
     createdAt: string;
 };
 
+export type TeamApiResponse = {
+    success?: boolean;
+    code?: string;
+    message?: string;
+    data?: TeamResponseData;
+} & Partial<TeamResponseData>;
+
 // 위치 공유 온오프 요청
 export type UpdateLiveLocationSharingRequest = {
     sharing: boolean;

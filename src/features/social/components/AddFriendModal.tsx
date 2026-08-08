@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+﻿import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -22,6 +22,46 @@ import { PublicUserProfile, RecommendedFriend } from "../types/social.types";
 import AddFriendCard from "./AddFriendCard";
 import PublicUserProfileModal from "./PublicUserProfileModal";
 
+const getRecommendedFriendKey = (item: RecommendedFriend, index: number) => {
+    if (item.friendId !== null && item.friendId !== undefined) {
+        return `friend-${item.friendId}`;
+    }
+
+    if (item.userId !== null && item.userId !== undefined) {
+        return `user-${item.userId}`;
+    }
+
+    if (item.friendCode) {
+        return `code-${item.friendCode}`;
+    }
+
+    return `recommended-${index}`;
+};
+
+const getRecommendedFriendRequestKey = (item: RecommendedFriend) => {
+    if (item.userId !== null && item.userId !== undefined) {
+        return `user-${item.userId}`;
+    }
+
+    if (item.friendCode) {
+        return `code-${item.friendCode}`;
+    }
+
+    return null;
+};
+
+const applyRequestedStatus = (
+    friends: RecommendedFriend[],
+    requestedFriendKeys: Set<string>,
+) =>
+    friends.map((friend) => {
+        const requestKey = getRecommendedFriendRequestKey(friend);
+
+        return requestKey && requestedFriendKeys.has(requestKey)
+            ? { ...friend, status: "PENDING" }
+            : friend;
+    });
+
 type AddFriendModalProps = {
     visible: boolean,
     onClose: () => void;
@@ -32,21 +72,51 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
 
     const [keyword, setKeyword] = useState("");
     const [friends, setFriends] = useState<RecommendedFriend[]>([]);
+    const [recommendedFriends, setRecommendedFriends] = useState<RecommendedFriend[]>([]);
+    const [requestedFriendKeys, setRequestedFriendKeys] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
     const [selectedUser, setSelectedUser] = useState<PublicUserProfile | null>(null);
     const [profileLoading, setProfileLoading] = useState(false);
 
-    // 1. 추천 친구 목록 받아오기 
-    const fetchRecommendedFriends = async () => {
+    const filterRecommendedFriendsByNickname = (
+        text: string,
+        sourceFriends = recommendedFriends,
+    ) => {
+        const trimmedText = text.trim().toLowerCase();
+
+        if (trimmedText.length === 0) {
+            return applyRequestedStatus(sourceFriends, requestedFriendKeys);
+        }
+
+        return applyRequestedStatus(
+            sourceFriends.filter((friend) =>
+                friend.nickname
+                    ?.toLowerCase()
+                    .includes(trimmedText)
+            ),
+            requestedFriendKeys,
+        );
+    };
+
+    // 1. 추천 친구 목록 받아오기
+    const fetchRecommendedFriends = async (
+        nextRequestedFriendKeys = requestedFriendKeys,
+    ) => {
 
         try {
             setLoading(true);
             setErrorMessage("");
 
-            const recommendedFriends = await getRecommendedFriends();
-            setFriends(recommendedFriends);
+            const nextRecommendedFriends = await getRecommendedFriends();
+            const friendsWithRequestedStatus = applyRequestedStatus(
+                nextRecommendedFriends,
+                nextRequestedFriendKeys,
+            );
+
+            setRecommendedFriends(friendsWithRequestedStatus);
+            setFriends(filterRecommendedFriendsByNickname(keyword, friendsWithRequestedStatus));
         }catch(error) {
             console.log("추천 친구 목록 조회 에러:", error);
             setErrorMessage("추천 친구 목록을 불러오지 못했습니다.");
@@ -62,12 +132,12 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
         fetchRecommendedFriends();
     }, [visible]);
 
-    // 2. 친구코드로 검색
+    // 2. 닉네임 또는 친구 코드로 검색
     const handleSearchFriends = async () => {
         const trimmedKeyword = keyword.trim();
 
         if(trimmedKeyword.length === 0) {
-            setErrorMessage("친구 코드를 입력해주세요.");
+            setErrorMessage("닉네임 또는 친구 코드를 입력해주세요.");
             fetchRecommendedFriends();
             return;
         }
@@ -76,10 +146,21 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
             setLoading(true);
             setErrorMessage("");
 
+            const nicknameMatches = recommendedFriends.filter((friend) =>
+                friend.nickname
+                    ?.toLowerCase()
+                    .includes(trimmedKeyword.toLowerCase())
+            );
+
+            if (nicknameMatches.length > 0) {
+                setFriends(applyRequestedStatus(nicknameMatches, requestedFriendKeys));
+                return;
+            }
+
             const searchedFriend = await searchFriendByCode(trimmedKeyword);
-            setFriends([searchedFriend])
+            setFriends(applyRequestedStatus([searchedFriend], requestedFriendKeys))
         }catch (error) {
-            console.log("친구 코드 검색 에러:", error);
+            console.log("친구 검색 에러:", error);
             setFriends([]);
             setErrorMessage("검색 결과가 없습니다.");
         }finally {
@@ -87,14 +168,17 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
         }
     };
 
-    // 2-1. 검색창 비웠을 때 다시 추천 친구 목록 보이도록
+    // 2-1. 검색창을 비우면 추천 친구 목록으로 복원
     const handleChangeKeyword = (text: string) => {
         setKeyword(text);
+        setErrorMessage("");
 
         if(text.trim().length === 0) {
-            setErrorMessage("");
-            fetchRecommendedFriends();
+            setFriends(applyRequestedStatus(recommendedFriends, requestedFriendKeys));
+            return;
         }
+
+        setFriends(filterRecommendedFriendsByNickname(text));
     }
 
     // 3. 친구 추가
@@ -105,13 +189,39 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
 
             await requestFriend(friend.friendCode);
 
+            const requestKey = getRecommendedFriendRequestKey(friend);
+            const nextRequestedFriendKeys = new Set(requestedFriendKeys);
+
+            if (requestKey) {
+                nextRequestedFriendKeys.add(requestKey);
+                setRequestedFriendKeys(nextRequestedFriendKeys);
+            }
+
+            setFriends((currentFriends) =>
+                currentFriends.map((currentFriend) =>
+                    currentFriend.userId === friend.userId ||
+                    currentFriend.friendCode === friend.friendCode
+                        ? { ...currentFriend, status: "PENDING" }
+                        : currentFriend
+                )
+            );
+
+            setRecommendedFriends((currentFriends) =>
+                currentFriends.map((currentFriend) =>
+                    currentFriend.userId === friend.userId ||
+                    currentFriend.friendCode === friend.friendCode
+                        ? { ...currentFriend, status: "PENDING" }
+                        : currentFriend
+                )
+            );
+
             Alert.alert(
                 "친구 요청 완료!",
                 `${friend.nickname}님에게 친구 요청을 보냈습니다.`
             );
 
             // 친구 요청 성공 후 추천 친구 목록 다시 불러오기
-            fetchRecommendedFriends();
+            fetchRecommendedFriends(nextRequestedFriendKeys);
 
             onFriendRequestSuccess?.();
         } catch(error) {
@@ -138,7 +248,7 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
             console.log("공개 프로필 조회 에러:", error);
 
             if(error instanceof Error) {
-                Alert.alert("프로필 조회 실패:", error.message);
+                Alert.alert("프로필 조회 실패", error.message);
             } else {
                 Alert.alert("프로필 조회 실패", "알 수 없는 오류가 발생했습니다.")
             }
@@ -182,7 +292,7 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
                         <FlatList  
                             style={styles.list}
                             data={friends}
-                            keyExtractor={(item) => String(item.friendId)}
+                            keyExtractor={getRecommendedFriendKey}
                             renderItem={({item}) => (
                                 <AddFriendCard 
                                     friend={item} 
@@ -200,10 +310,12 @@ export default function AddFriendModal({visible, onClose, onFriendRequestSuccess
                     <View style={styles.searchBox}>
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="친구 코드 입력"
+                            placeholder="닉네임 또는 친구 코드 입력"
                             placeholderTextColor="#d9d9d9"
                             value={keyword}
                             onChangeText={handleChangeKeyword}
+                            onSubmitEditing={handleSearchFriends}
+                            returnKeyType="search"
                         />
 
                         <TouchableOpacity 

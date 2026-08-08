@@ -67,6 +67,15 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { isTeamMode } = useTeamMode();
 
   const TAB_ROUTES = getTabRoutes(isTeamMode);
+  const currentRouteName = state.routes[state.index]?.name;
+
+  if (
+    currentRouteName === "profile/privacy" ||
+    currentRouteName === "profile/terms"
+  ) {
+    return null;
+  }
+
   const visibleRoutes = state.routes.filter((r) =>
     TAB_ROUTES.some((t) => t.name === r.name),
   );
@@ -226,12 +235,14 @@ function TabsLayoutContent() {
           },
         }}
       />
-      <Tabs.Screen name="team" options={{ href: null }} />
+      <Tabs.Screen name="profile/profileEdit" options={{ href: null }} />
+      <Tabs.Screen name="profile/scrap" options={{ href: null }} />
+      <Tabs.Screen name="profile/privacy" options={{ href: null }} />
+      <Tabs.Screen name="profile/terms" options={{ href: null }} />
       <Tabs.Screen name="profile/subscribe" options={{ href: null }} />
     </Tabs>
   );
 }
-
 export default function TabLayout() {
   return (
     <TeamModeProvider>
@@ -277,3 +288,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 });
+

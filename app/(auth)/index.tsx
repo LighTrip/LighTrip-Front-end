@@ -21,9 +21,6 @@ export default function LoginScreen() {
   useEffect(() => {
     const subscription = Linking.addEventListener("url", handleDeepLink);
 
-    console.log("createURL test:", Linking.createURL("auth/callback"));
-    console.log("scheme:", Linking.createURL(""));
-
     Linking.getInitialURL().then((url) => {
       if (url) handleDeepLink({ url });
     });
