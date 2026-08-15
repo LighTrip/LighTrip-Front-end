@@ -51,10 +51,6 @@ export default function LoginScreen() {
     await Linking.openURL(KAKAO_AUTH_URL);
   };
 
-  const handleGuest = () => {
-    router.replace("/(tabs)");
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -70,14 +66,6 @@ export default function LoginScreen() {
           style={styles.kakaoButton}
         >
           <Text style={styles.kakaoButtonText}>카카오 로그인</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={handleGuest}
-          activeOpacity={0.7}
-          style={styles.guestButton}
-        >
-          <Text style={styles.guestButtonText}>로그인 없이 둘러보기</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -119,14 +107,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     letterSpacing: 0.5,
-  },
-  guestButton: {
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  guestButtonText: {
-    color: "#9CA3AF",
-    fontSize: 14,
   },
 });
