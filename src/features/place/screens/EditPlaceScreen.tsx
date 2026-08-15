@@ -6,17 +6,13 @@ import React, { useEffect, useState } from 'react'
 import {
     Dimensions,
     Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
     ScrollView,
-    StatusBar,
     Text,
     TextInput,
     TouchableOpacity,
-    TouchableWithoutFeedback,
     View,
 } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Shadow } from 'react-native-shadow-2'
 
@@ -168,6 +164,13 @@ const EditPlaceScreen = ({
 
         setIsGenerating(true)
         try {
+            const districtCategory = DISTRICT_CATEGORY_MAP[region] ?? region
+            const existingDistrictsRes = await getMyPassportDistricts(isTeamMode && teamId ? teamId : undefined)
+            const existingDistricts: any[] = existingDistrictsRes.data?.data ?? []
+            const isNewDistrict = !existingDistricts.some(
+                (d: any) => d.displayName === region || d.districtCategory === districtCategory
+            )
+
             const imageUrls = await Promise.all(
                 photos.map(async (uri) => {
                     const presignedRes = await getPresignedUrl('image/jpeg')
@@ -201,22 +204,21 @@ const EditPlaceScreen = ({
             const resData = res.data?.data ?? res.data
             const createdPassportId = resData?.passportId
 
-            try {
-                const districtCategory = DISTRICT_CATEGORY_MAP[region] ?? region
-                const districtsRes = await getMyPassportDistricts(isTeamMode && teamId ? teamId : undefined)
-                const districts: any[] = districtsRes.data?.data ?? []
-                const targetDistrict = districts.find(
-                    (d: any) => d.displayName === region || d.districtCategory === districtCategory
-                )
-                if (targetDistrict?.coverId != null && imageUrls[0]) {
-                    await changeCoverImage(targetDistrict.coverId, imageUrls[0])
-                    const colorHex = await predictCoverTextColor(imageUrls[0], region)
-                    await textColor(targetDistrict.coverId, colorHex)
-                } else {
-                    console.error('[커버] targetDistrict:', JSON.stringify(targetDistrict), '/ imageUrls[0]:', imageUrls[0])
+            if (isNewDistrict) {
+                try {
+                    const districtsRes = await getMyPassportDistricts(isTeamMode && teamId ? teamId : undefined)
+                    const districts: any[] = districtsRes.data?.data ?? []
+                    const targetDistrict = districts.find(
+                        (d: any) => d.displayName === region || d.districtCategory === districtCategory
+                    )
+                    if (targetDistrict?.coverId != null && imageUrls[0]) {
+                        await changeCoverImage(targetDistrict.coverId, imageUrls[0])
+                        const colorHex = await predictCoverTextColor(imageUrls[0], region)
+                        await textColor(targetDistrict.coverId, colorHex)
+                    }
+                } catch (aiErr: any) {
+                    console.error('[커버 설정 실패]', aiErr?.response?.status, JSON.stringify(aiErr?.response?.data))
                 }
-            } catch (aiErr: any) {
-                console.error('[커버 설정 실패]', aiErr?.response?.status, JSON.stringify(aiErr?.response?.data))
             }
 
             onComplete({createdPassportId})
@@ -234,237 +236,238 @@ const EditPlaceScreen = ({
             style={{ flex: 1, backgroundColor: '#F8FAFD' }}
             edges={['top', 'left', 'right', 'bottom']}
         >
-        <KeyboardAvoidingView
-            style={{flex: 1, backgroundColor: "#F8FAFD"}}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        <KeyboardAwareScrollView
+            contentContainerStyle={{ flexGrow: 1 }}
+            keyboardShouldPersistTaps="handled"
+            enableOnAndroid
+            showsVerticalScrollIndicator={false}
         >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View style={{ flex: 1 }}>
                 <View
-                    style={{ flex: 1, alignSelf: 'center', width: CARD_WIDTH }}
+                    style={{ top: scaleH(5), height: scaleH(668), alignSelf: 'center', width: CARD_WIDTH }}
                     onLayout={(e) => setCardHeight(Math.round(e.nativeEvent.layout.height))}
                 >
-            {cardHeight > 0 && (
-            <Shadow
-                distance={6}
-                startColor={'#00000012'}
-                offset={[0, 2]}
-                style={{ width: CARD_WIDTH, height: cardHeight, borderRadius: 16 }}
-            >
-                <View style={[styles.logContainer, { height: cardHeight, marginTop: 0, marginBottom: 0 }]}>
-                    <NoiseOverlay />
-                    <View style={{
-                        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                        backgroundColor: themeColor,
-                        opacity: 0.45,
-                    }} />
+                    {cardHeight > 0 && (
+                    <Shadow
+                        distance={6}
+                        startColor={'#00000012'}
+                        offset={[0, 2]}
+                        style={{ width: CARD_WIDTH, height: cardHeight - scaleH(15), borderRadius: 16 }}
+                    >
+                        <View style={[styles.logContainer, { height: cardHeight - scaleH(15), marginTop: 0, marginBottom: 10 }]}>
+                            <NoiseOverlay />
+                            <View style={{
+                                position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                                backgroundColor: themeColor,
+                                opacity: 0.45,
+                            }} />
 
-                    <View style={styles.header}>
-                        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                            <Ionicons name="chevron-back" size={16} color="#333" />
-                        </TouchableOpacity>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Text style={styles.headerTitle}>기록 편집</Text>
-                            {isTeamMode && (
-                                <View style={{ backgroundColor: '#1A3A6B', borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2, left: 120 }}>
-                                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}>팀</Text>
+                            <View style={styles.header}>
+                                <TouchableOpacity onPress={onBack} style={styles.backButton}>
+                                    <Ionicons name="chevron-back" size={16} color="#333" />
+                                </TouchableOpacity>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <Text style={styles.headerTitle}>기록 편집</Text>
+                                    {isTeamMode && (
+                                        <View style={{ backgroundColor: '#1A3A6B', borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2, left: 120 }}>
+                                            <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}>팀</Text>
+                                        </View>
+                                    )}
                                 </View>
-                            )}
-                        </View>
-                        <View style={{ width: 20 }} />
-                    </View>
+                                <View style={{ width: 20 }} />
+                            </View>
 
-                    <View style={[styles.photoBox, { height: scaleH(135) }]}>
-                        {photos.length > 1 ? (
-                            <ScrollView
-                                horizontal
-                                style={{ flex: 1 }}
-                                contentContainerStyle={{ flexDirection: 'row' }}
-                                showsHorizontalScrollIndicator={false}
-                                pagingEnabled
-                                onScroll={(e) => {
-                                    const index = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH)
-                                    setCurrentPhotoIndex(index)
-                                }}
-                                scrollEventThrottle={16}
-                            >
-                                {photos.map((uri, index) => (
+                            <View style={[styles.photoBox, { height: scaleH(190) }]}>
+                                {photos.length > 1 ? (
+                                    <ScrollView
+                                        horizontal
+                                        style={{ flex: 1 }}
+                                        contentContainerStyle={{ flexDirection: 'row' }}
+                                        showsHorizontalScrollIndicator={false}
+                                        pagingEnabled
+                                        onScroll={(e) => {
+                                            const index = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH)
+                                            setCurrentPhotoIndex(index)
+                                        }}
+                                        scrollEventThrottle={16}
+                                    >
+                                        {photos.map((uri, index) => (
+                                            <Image
+                                                key={index}
+                                                source={{ uri }}
+                                                style={{ width: CARD_WIDTH * 0.91, height: '100%' }}
+                                                resizeMode="cover"
+                                            />
+                                        ))}
+                                    </ScrollView>
+                                ) : photos.length === 1 ? (
                                     <Image
-                                        key={index}
-                                        source={{ uri }}
-                                        style={{ width: CARD_WIDTH * 0.91, height: '100%' }}
+                                        source={{ uri: photos[0] }}
+                                        style={{ width: '100%', height: '100%' }}
                                         resizeMode="cover"
                                     />
-                                ))}
-                            </ScrollView>
-                        ) : photos.length === 1 ? (
-                            <Image
-                                source={{ uri: photos[0] }}
-                                style={{ width: '100%', height: '100%' }}
-                                resizeMode="cover"
-                            />
-                        ) : (
-                            <Text style={{ color: '#aaa' }}>사진 없음</Text>
-                        )}
-                    </View>
+                                ) : (
+                                    <Text style={{ color: '#aaa' }}>사진 없음</Text>
+                                )}
+                            </View>
 
-                    {photos.length > 1 && (
-                        <View style={styles.photoIndicatorRow}>
-                            {photos.map((_, index) => (
-                                <View
-                                    key={index}
-                                    style={index === currentPhotoIndex
-                                        ? styles.photoIndicatorDotActive
-                                        : styles.photoIndicatorDot
-                                    }
+                            {photos.length > 1 && (
+                                <View style={styles.photoIndicatorRow}>
+                                    {photos.map((_, index) => (
+                                        <View
+                                            key={index}
+                                            style={index === currentPhotoIndex
+                                                ? styles.photoIndicatorDotActive
+                                                : styles.photoIndicatorDot
+                                            }
+                                        />
+                                    ))}
+                                </View>
+                            )}
+
+                            <View style={styles.infoSection}>
+                                {/* 장소 이름 */}
+                                <InfoRow
+                                    iconName="location-outline"
+                                    text={locationName}
+                                    onPress={() => setPlaceSearchOpen(true)}
                                 />
-                            ))}
-                        </View>
-                    )}
 
-                    <View style={styles.infoSection}>
-                        {/* 장소 이름 */}
-                        <InfoRow
-                            iconName="location-outline"
-                            text={locationName}
-                            onPress={() => setPlaceSearchOpen(true)}
-                        />
+                                <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+                                    <View style={styles.infoRowWrapper}>
+                                        <View style={styles.infoRow}>
+                                            <Ionicons name="calendar-outline" size={17} color="#4A6FA5" />
+                                            <Text style={styles.infoText}>{formatDate(date)}</Text>
+                                        </View>
+                                        <View style={styles.divider} />
+                                    </View>
+                                </TouchableOpacity>
 
-                        <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-                            <View style={styles.infoRowWrapper}>
-                                <View style={styles.infoRow}>
-                                    <Ionicons name="calendar-outline" size={17} color="#4A6FA5" />
-                                    <Text style={styles.infoText}>{formatDate(date)}</Text>
+                                <DatePickerModal
+                                    visible={showDatePicker}
+                                    date={date}
+                                    onChange={(newDate) => setDate(newDate)}
+                                    onClose={() => setShowDatePicker(false)}
+                                />
+                            </View>
+
+                            <View style={styles.dropdownRow}>
+                                <Dropdown
+                                    label="장소 유형"
+                                    value={placeType}
+                                    options={PLACE_TYPES}
+                                    onSelect={setPlaceType}
+                                />
+                                <RegionDropdown
+                                    label="방문 지역"
+                                    value={region}
+                                    onSelect={setRegion}
+                                />
+                            </View>
+
+                            <View style={styles.contentSection}>
+                                <View style={styles.contentLabelRow}>
+                                    <Text style={styles.contentLabel}>내용</Text>
+                                    <Text style={{ fontSize: 13, color: '#aaa' }}>{content.length}/80</Text>
                                 </View>
-                                <View style={styles.divider} />
+                                <TextInput
+                                    style={styles.contentInput}
+                                    multiline
+                                    placeholder='내용을 입력하세요'
+                                    placeholderTextColor="#aaa"
+                                    value={content}
+                                    onChangeText={setContent}
+                                    editable={!isGenerating}
+                                    maxLength={80}
+                                />
                             </View>
-                        </TouchableOpacity>
 
-                        <DatePickerModal
-                            visible={showDatePicker}
-                            date={date}
-                            onChange={(newDate) => setDate(newDate)}
-                            onClose={() => setShowDatePicker(false)}
-                        />
-                    </View>
-
-                    <View style={styles.dropdownRow}>
-                        <Dropdown
-                            label="장소 유형"
-                            value={placeType}
-                            options={PLACE_TYPES}
-                            onSelect={setPlaceType}
-                        />
-                        <RegionDropdown
-                            label="방문 지역"
-                            value={region}
-                            onSelect={setRegion}
-                        />
-                    </View>
-
-                    <View style={styles.contentSection}>
-                        <View style={styles.contentLabelRow}>
-                            <Text style={styles.contentLabel}>내용</Text>
-                            <Text style={{ fontSize: 13, color: '#aaa' }}>{content.length}/80</Text>
-                        </View>
-                        <TextInput
-                            style={styles.contentInput}
-                            multiline
-                            placeholder='내용을 입력하세요'
-                            placeholderTextColor="#aaa"
-                            value={content}
-                            onChangeText={setContent}
-                            editable={!isGenerating}
-                            maxLength={80}
-                        />
-                    </View>
-
-                    {/* 뮤직카드 */}
-                    <TouchableOpacity style={[styles.musicCard, { marginTop: 'auto', marginBottom: scaleH(60) }]} onPress={() => setMusicModalOpen(true)}>
-                        {music ? (
-                            <>
-                                <Image source={{ uri: music.artwork }} style={styles.albumArt} />
-                                <View style={styles.musicInfo}>
-                                    <Text style={styles.musicTitle} numberOfLines={1}>{music.title}</Text>
-                                    <Text style={styles.musicArtist} numberOfLines={1}>{music.artist}</Text>
-                                </View>
-                            </>
-                        ) : (
-                            <View style={styles.musicInfo}>
-                                <Text style={styles.musicTitle}>음악 추가</Text>
-                                <Text style={styles.musicArtist}>탭해서 검색하세요</Text>
-                            </View>
-                        )}
-                    </TouchableOpacity>
-
-                    {/* 음악 검색 모달 */}
-                    <MusicSearch
-                        visible={musicModalOpen}
-                        onSelect={(item) => {
-                            setMusic(item)
-                            setMusicModalOpen(false)
-                        }}
-                        onClose={() => setMusicModalOpen(false)}
-                    />
-
-
-                    {/* 장소 검색 모달 */}
-                    <KakaoPlaceSearch
-                        visible={placeSearchOpen}
-                        onSelect={(item) => handlePlaceSelect(item)}
-                        onClose={() => setPlaceSearchOpen(false)}
-                    />
-                    
-
-                    <View style={[styles.publicRow, { justifyContent: 'space-between', paddingHorizontal: 16 }]}>
-                        {(
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, left: 10 }}>
-                                {THEME_COLORS.map((color) => (
-                                    <TouchableOpacity
-                                        key={color}
-                                        onPress={() => setThemeColor(color)}
-                                        style={{
-                                            width: 15,
-                                            height: 15,
-                                            borderRadius: 10,
-                                            backgroundColor: color,
-                                            borderWidth: themeColor === color ? 2 : 1,
-                                            borderColor: themeColor === color ? '#1A3A6B' : '#ccc',
-                                        }}
-                                    />
-                                ))}
-                            </View>
-                        )}
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                            <View>
-                                <Text style={styles.publicTitle}>여권 공개 여부</Text>
-                                <Text style={styles.publicSub}>{VISIBILITY_SUB[visibility]}</Text>
-                            </View>
-                            <TouchableOpacity
-                                style={styles.visibilityButton}
-                                onPress={() => {
-                                    const idx = VISIBILITY_CYCLE.indexOf(visibility)
-                                    setVisibility(VISIBILITY_CYCLE[(idx + 1) % 3])
-                                }}
-                            >
-                                <Text style={styles.visibilityButtonText}>{VISIBILITY_LABEL[visibility]}</Text>
+                            {/* 뮤직카드 */}
+                            <TouchableOpacity style={[styles.musicCard, { marginTop: 'auto', marginBottom: scaleH(60) }]} onPress={() => setMusicModalOpen(true)}>
+                                {music ? (
+                                    <>
+                                        <Image source={{ uri: music.artwork }} style={styles.albumArt} />
+                                        <View style={styles.musicInfo}>
+                                            <Text style={styles.musicTitle} numberOfLines={1}>{music.title}</Text>
+                                            <Text style={styles.musicArtist} numberOfLines={1}>{music.artist}</Text>
+                                        </View>
+                                    </>
+                                ) : (
+                                    <View style={styles.musicInfo}>
+                                        <Text style={styles.musicTitle}>음악 추가</Text>
+                                        <Text style={styles.musicArtist}>탭해서 검색하세요</Text>
+                                    </View>
+                                )}
                             </TouchableOpacity>
+
+                            {/* 음악 검색 모달 */}
+                            <MusicSearch
+                                visible={musicModalOpen}
+                                onSelect={(item) => {
+                                    setMusic(item)
+                                    setMusicModalOpen(false)
+                                }}
+                                onClose={() => setMusicModalOpen(false)}
+                            />
+
+
+                            {/* 장소 검색 모달 */}
+                            <KakaoPlaceSearch
+                                visible={placeSearchOpen}
+                                onSelect={(item) => handlePlaceSelect(item)}
+                                onClose={() => setPlaceSearchOpen(false)}
+                            />
+                            
+
+                            <View style={[styles.publicRow, { justifyContent: 'space-between', paddingHorizontal: 16 }]}>
+                                {(
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, left: 10 }}>
+                                        {THEME_COLORS.map((color) => (
+                                            <TouchableOpacity
+                                                key={color}
+                                                onPress={() => setThemeColor(color)}
+                                                style={{
+                                                    width: 15,
+                                                    height: 15,
+                                                    borderRadius: 10,
+                                                    backgroundColor: color,
+                                                    borderWidth: themeColor === color ? 2 : 1,
+                                                    borderColor: themeColor === color ? '#1A3A6B' : '#ccc',
+                                                }}
+                                            />
+                                        ))}
+                                    </View>
+                                )}
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                    <View>
+                                        <Text style={styles.publicTitle}>여권 공개 여부</Text>
+                                        <Text style={styles.publicSub}>{VISIBILITY_SUB[visibility]}</Text>
+                                    </View>
+                                    <TouchableOpacity
+                                        style={styles.visibilityButton}
+                                        onPress={() => {
+                                            const idx = VISIBILITY_CYCLE.indexOf(visibility)
+                                            setVisibility(VISIBILITY_CYCLE[(idx + 1) % 3])
+                                        }}
+                                    >
+                                        <Text style={styles.visibilityButtonText}>{VISIBILITY_LABEL[visibility]}</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
                         </View>
-                    </View>
-                </View>
-            </Shadow>
-            )}
+                    </Shadow>
+                )}
             </View>
 
             <TouchableOpacity
-                style={[styles.clickContainer, { marginTop: scaleH(16), marginBottom: TAB_BAR_HEIGHT }]}
+                style={[styles.clickContainer, { top: scaleH(4), marginBottom: TAB_BAR_HEIGHT }, isGenerating && { opacity: 0.6 }]}
                 onPress={handleSubmit}
+                disabled={isGenerating}
             >
-                <Text style={styles.clickText}>등록하기</Text>
+                <Text style={styles.clickText}>{isGenerating ? '등록하는 중...' : '등록하기'}</Text>
             </TouchableOpacity>
             </View>
-        </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
         </SafeAreaView>
     )
 }

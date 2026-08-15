@@ -40,7 +40,6 @@ export const editStyles = StyleSheet.create({
         overflow: 'hidden',
         marginBottom: scaleW(10),
         marginTop: scaleW(20),
-        // height: 인라인으로 scaleH(696) 적용
     },
 
     header: {
@@ -77,6 +76,7 @@ export const editStyles = StyleSheet.create({
     },
 
     photoIndicatorRow: {
+        top: scaleW(220),
         position: 'absolute',
         flexDirection: 'row',
         justifyContent: 'center',
@@ -209,8 +209,8 @@ export const editStyles = StyleSheet.create({
         color: '#222',
         borderBottomWidth: 1,
         borderBottomColor: '#C0C0C0',
-        paddingVertical: scaleW(4),
-        // lineHeight, minHeight: 인라인으로 scaleH 적용
+        paddingBottom: scaleW(15),
+        lineHeight: scaleW(23),
     },
 
     musicCard: {
@@ -453,7 +453,7 @@ export const addStyles = StyleSheet.create({
     infoTextbox: {
         width: '91%',
         height: scaleW(30),
-        marginBottom: scaleW(10),
+        marginBottom: scaleW(15),
     },
 
     infotitleText: {
