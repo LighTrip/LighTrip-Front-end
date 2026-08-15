@@ -423,9 +423,12 @@ export function matchDistrictFromAddress(address: string): string | undefined {
   })
   if (!matchedCity) return undefined
 
-  return REGIONS[matchedCity].find(d => {
-    // "부산 중구" → raw = "중구", "수원 장안구" → raw = "장안구"
-    const raw = d.includes(' ') ? d.split(' ').slice(1).join(' ') : d
-    return address.includes(d) || address.includes(raw)
-  })
+  return REGIONS[matchedCity]
+    .slice()
+    .sort((a, b) => b.length - a.length)
+    .find(d => {
+      // "부산 중구" → raw = "중구", "수원 장안구" → raw = "장안구"
+      const raw = d.includes(' ') ? d.split(' ').slice(1).join(' ') : d
+      return address.includes(d) || address.includes(raw)
+    })
 }

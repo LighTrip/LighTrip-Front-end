@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons'
+import Svg, { Rect, Path, Circle } from 'react-native-svg'
 import * as FileSystem from 'expo-file-system/legacy'
 import * as ImagePicker from 'expo-image-picker'
 import * as Location from 'expo-location'
@@ -7,16 +8,13 @@ import React, { useEffect, useState } from 'react'
 import {
     Alert,
     Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
     ScrollView,
     Text,
     TextInput,
     TouchableOpacity,
-    TouchableWithoutFeedback,
     View,
 } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { Shadow } from 'react-native-shadow-2'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -62,6 +60,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
     const [completedPlace, setCompletedPlace] = useState<any | null>(null)
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
     const [photoAreaHeight, setPhotoAreaHeight] = useState(0)
+    const [descFocused, setDescFocused] = useState(false)
 
     useEffect(() => {
         if (initialLatitude && initialLongitude) {
@@ -229,15 +228,16 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
             style={{ flex: 1, backgroundColor: '#F8FAFD' }}
             edges={['top', 'left', 'right', 'bottom']}
         >
-            <KeyboardAvoidingView
-                style={{ flex: 1, backgroundColor: '#F8FAFD' }}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            <KeyboardAwareScrollView
+                contentContainerStyle={{ flexGrow: 1 }}
+                keyboardShouldPersistTaps="handled"
+                enableOnAndroid
+                showsVerticalScrollIndicator={false}
             >
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View style={{ flex: 1 }}>
                 {/* 사진 박스 */}
                 <View
-                    style={{ flex: 1, alignSelf: 'center', width: CARD_WIDTH }}
+                    style={{ top: scaleH(5), height: scaleH(430), alignSelf: 'center', width: CARD_WIDTH }}
                     onLayout={(e) => setPhotoAreaHeight(Math.round(e.nativeEvent.layout.height))}
                 >
                     {photoAreaHeight > 0 && (
@@ -311,8 +311,13 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                                     <Image source={{ uri: photos[0] }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                                 </TouchableOpacity>
                             ) : (
-                                <TouchableOpacity style={[styles.albumButtonEmpty, { flex: 1 }]} onPress={openAlbum}>
-                                    <Text style={{ color: '#aaa', fontSize: scaleFont(14) }}>앨범에서 선택하기</Text>
+                                <TouchableOpacity style={[styles.albumButtonEmpty, { flex: 1, gap: scaleW(8) }]} onPress={openAlbum}>
+                                    <Svg width={scaleW(50)} height={scaleW(50)} viewBox="0 0 24 24" fill="none">
+                                        <Rect x="2" y="2" width="20" height="20" rx="5" stroke="#aaa" strokeWidth="1" />
+                                        <Path d="M2.5 17.5L4.7592 15.8863C5.47521 15.3749 6.45603 15.456 7.07822 16.0782L8.15147 17.1515C8.6201 17.6201 9.3799 17.6201 9.84853 17.1515L14.8377 12.1623C15.496 11.504 16.5476 11.4563 17.2628 12.0523L22 16" stroke="#aaa" strokeWidth="1" strokeLinecap="round" />
+                                        <Circle cx="8" cy="8" r="2" stroke="#aaa" strokeWidth="1" />
+                                    </Svg>
+                                    <Text style={{ color: '#aaa', fontSize: scaleFont(15) }}>앨범에서 선택하기</Text>
                                 </TouchableOpacity>
                             )}
 
@@ -341,11 +346,13 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                         </View>
                         <View style={[styles.infoTypeBox, { height: scaleH(109) }]}>
                             <TextInput
-                                style={[styles.infoTypeText, { lineHeight: scaleW(17) }]}
-                                placeholder="카페에 가서 커피를 마셨다!"
+                                style={[styles.infoTypeText, { lineHeight: scaleW(17), color: '#000' }]}
+                                placeholder={descFocused ? '' : '카페에 가서 커피를 마셨다!'}
                                 placeholderTextColor="#666666"
                                 value={description}
                                 onChangeText={setDescription}
+                                onFocus={() => setDescFocused(true)}
+                                onBlur={() => setDescFocused(true)}
                                 multiline
                             />
                         </View>
@@ -367,8 +374,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                 </TouchableOpacity>
 
             </View>
-            </TouchableWithoutFeedback>
-            </KeyboardAvoidingView>
+            </KeyboardAwareScrollView>
         </SafeAreaView>
     )
 }

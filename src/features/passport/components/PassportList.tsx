@@ -78,12 +78,16 @@ const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange, refres
 
     const sortedDistricts = [...districts].sort((a, b) => {
         if (coverSortOrder === '이름순') return a.displayName.localeCompare(b.displayName)
-        return 0
+        const latestId = (district: any) =>
+            passports
+                .filter(p => p.districtDisplayName === district.displayName || p.districtCategory === district.districtCategory)
+                .reduce((max, p) => Math.max(max, p.passportId), 0)
+        return latestId(b) - latestId(a)
     })
 
     const sortedPassports = [...passports].sort((a, b) => {
         if (listSortOrder === '이름순') return a.spaceName.localeCompare(b.spaceName, 'ko')
-        return 0
+        return b.passportId - a.passportId
     })
 
     const filteredPassports = sortedPassports.filter(p => {
@@ -136,6 +140,7 @@ const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange, refres
                 ...i,
                 _districtPassportCount: district.passportCount,
                 _coverId: district.coverId,
+                _districtThumbnailUrl: district.thumbnailUrl,
                 districtDisplayName: district.displayName,
                 district: district.displayName,
             }))
@@ -278,7 +283,7 @@ const styles = StyleSheet.create({
 
     passportCover: {
         width: COVER_WIDTH,
-        height: COVER_HEIGHT * 0.94,
+        height: COVER_HEIGHT * 0.99,
         borderTopRightRadius: 16,
         borderBottomRightRadius: 16,
         borderTopLeftRadius: 0,

@@ -8,7 +8,6 @@ import {
     Dimensions,
     FlatList,
     Image,
-    KeyboardAvoidingView,
     Modal,
     Platform,
     StyleSheet,
@@ -18,8 +17,10 @@ import {
     View,
     ScrollView,
 } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
+import Svg, { Path } from 'react-native-svg'
 
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import NoiseOverlay from '@/src/components/common/NoiseOverlay'
 import { useTeamMode } from '@/src/components/common/TeamModeContext'
@@ -141,6 +142,7 @@ const MusicBox = ({ music, onPress, styles }: { music: MusicDisplayItem; onPress
 
 const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = true, sourceLabel }: Props) => {
     const { isTeamMode, teamId } = useTeamMode()
+    const insets = useSafeAreaInsets()
     const [isEditing, setIsEditing] = useState(false)
     const [editReview, setEditReview] = useState(item.content ?? '')
     const [editCategory, setEditCategory] = useState(CATEGORY_TO_KOREAN[item.category] ?? '선택')
@@ -148,7 +150,9 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
     const [editImageUris, setEditImageUris] = useState<string[]>(item.imageUrls ?? [])
     const [editMusic, setEditMusic] = useState<{ title: string; artist: string; artwork: string } | null>(null)
     const [musicArtwork, setMusicArtwork] = useState<string | null>(null)
-    const [isCover, setIsCover] = useState(false)
+    const [isCover, setIsCover] = useState(
+        !!(item._districtThumbnailUrl && (item.imageUrls?.[0] ?? item.thumbnailUrl) === item._districtThumbnailUrl)
+    )
     const [visibility, setVisibility] = useState<Visibility>(item.visibility ?? 'PUBLIC')
     const [editSpaceName, setEditSpaceName] = useState(item.spaceName ?? '')
     const [placeSearchOpen, setPlaceSearchOpen] = useState(false)
@@ -325,320 +329,324 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
     }
 
     return (
-        <SafeAreaView style={styles.safeArea} edges={[ 'top', 'left', 'right', 'bottom']}>
-        <KeyboardAvoidingView
-            style={[styles.container, styles.scrollContent]}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-            {/* 상단 헤더 */}
-            <View style={styles.headerCard}>
-                <View style={{ borderRadius: 16, overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-                    <NoiseOverlay />
+        <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+            <KeyboardAwareScrollView
+                contentContainerStyle={[styles.container, styles.scrollContent, { paddingTop: Math.max(insets.top - scaleW(50), 0) }]}
+                keyboardShouldPersistTaps="handled"
+                enableOnAndroid
+                showsVerticalScrollIndicator={false}
+            >
+                {/* 상단 헤더 */}
+                <View style={styles.headerCard}>
+                    <View style={{ borderRadius: 16, overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                        <NoiseOverlay />
+                    </View>
+                    <Text style={styles.districtTitle}>{sourceLabel ?? editDistrict}</Text>
+                    {!sourceLabel && (
+                        <Text style={styles.visitText}>{editDistrict}를 {districtCount}번 탐험했어요 ♪</Text>
+                    )}
                 </View>
-                <Text style={styles.districtTitle}>{sourceLabel ?? editDistrict}</Text>
-                {!sourceLabel && (
-                    <Text style={styles.visitText}>{editDistrict}를 {districtCount}번 탐험했어요 ♪</Text>
-                )}
-            </View>
 
-            {/* 여권 카드 */}
-            <View style={styles.passportCard}>
-                <View style={{ borderRadius: 16, overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-                    <NoiseOverlay />
-                </View>
-                {themeColor !== '#F8FAFD' && (
-                    <View style={{
-                        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                        backgroundColor: themeColor,
-                        opacity: 0.45,
-                        borderRadius: 16,
-                    }} />
-                )}
+                {/* 여권 카드 */}
+                <View style={styles.passportCard}>
+                    <View style={{ borderRadius: 16, overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                        <NoiseOverlay />
+                    </View>
+                    {themeColor !== '#F8FAFD' && (
+                        <View style={{
+                            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                            backgroundColor: themeColor,
+                            opacity: 0.45,
+                            borderRadius: 16,
+                        }} />
+                    )}
 
-                {/* 윗부분 */}
-                <View style={styles.topHalf}>
-                    <TouchableOpacity onPress={onBack} style={styles.closeButton}>
-                        <Text style={styles.closeText}>✕</Text>
-                    </TouchableOpacity>
+                    {/* 윗부분 */}
+                    <View style={styles.topHalf}>
+                        <TouchableOpacity onPress={onBack} style={styles.closeButton}>
+                            <Text style={styles.closeText}>✕</Text>
+                        </TouchableOpacity>
 
-                    <Image source={require('../../../../assets/images/pinktape.png')} 
-                        style={[styles.tape, { tintColor: TAPE_COLOR_MAP[editCategory] ?? '#FFD9D9' }]}
-                        resizeMode="contain"
-                    />
+                        <View style={[styles.tape, { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 2 }]}>
+                            <Svg width={scaleW(120)} height={scaleW(80)} viewBox="0 0 90 69" fill="none">
+                                <Path
+                                    d="M15.0562 0L85.0885 42.785L71.4908 46.833L74.0323 60.3988L3.99995 17.6137L15.0562 0Z"
+                                    fill={TAPE_COLOR_MAP[editCategory] ?? '#FFD9D9'}
+                                />
+                            </Svg>
+                        </View>
 
-                    <View style={styles.topRow}>
-                    <View style={styles.imageColumn}>
-                        <View style={styles.imageBackground} />
-                        {editImageUris.length > 1 ? (
-                            <View
-                                style={{
-                                    width: scaleW(165),
-                                    height: scaleW(240),
-                                    marginBottom: scaleW(10),
-                                    marginTop: scaleW(10),
-                                    top: scaleW(5),
-                                    borderRadius: scaleW(4),
-                                    overflow: 'hidden',
-                                }}
-                            >
-                                <ScrollView
-                                    horizontal
-                                    pagingEnabled
-                                    showsHorizontalScrollIndicator={false}
-                                    decelerationRate="fast"
+                        <View style={styles.topRow}>
+                        <View style={styles.imageColumn}>
+                            <View style={styles.imageBackground} />
+                            {editImageUris.length > 1 ? (
+                                <View
+                                    style={{
+                                        width: scaleW(175),
+                                        height: scaleW(220),
+                                        marginBottom: scaleW(10),
+                                        marginTop: scaleW(20),
+                                        top: scaleW(5),
+                                        borderRadius: scaleW(4),
+                                        overflow: 'hidden',
+                                    }}
                                 >
-                                    {editImageUris.map((uri: string, idx: number) => (
-                                        <Image
-                                            key={idx}
-                                            source={{ uri }}
-                                            style={{ width: scaleW(165), height: scaleW(240) }}
-                                            resizeMode="cover"
-                                        />
-                                    ))}
-                                </ScrollView>
-
-                                {isEditing && (
-                                    <TouchableOpacity
-                                        style={[styles.editImageBadge, { position: 'absolute', bottom: 5, left: 5 }]}
-                                        onPress={openImagePicker}
+                                    <ScrollView
+                                        horizontal
+                                        pagingEnabled
+                                        showsHorizontalScrollIndicator={false}
+                                        decelerationRate="fast"
                                     >
+                                        {editImageUris.map((uri: string, idx: number) => (
+                                            <Image
+                                                key={idx}
+                                                source={{ uri }}
+                                                style={{ width: scaleW(175), height: scaleW(220) }}
+                                                resizeMode="cover"
+                                            />
+                                        ))}
+                                    </ScrollView>
+
+                                    {isEditing && (
+                                        <TouchableOpacity
+                                            style={[styles.editImageBadge, { position: 'absolute', bottom: 5, left: 5 }]}
+                                            onPress={openImagePicker}
+                                        >
+                                            <Ionicons name="camera-outline" size={14} color="#000000" />
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            ) : isEditing ? (
+                                <TouchableOpacity onPress={openImagePicker}>
+                                    <Image
+                                        source={{ uri: editImageUris[0] ?? item.image?.uri }}
+                                        style={styles.placeImage}
+                                        resizeMode="cover"
+                                    />
+                                    <View style={styles.editImageBadge}>
                                         <Ionicons name="camera-outline" size={14} color="#000000" />
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-                        ) : isEditing ? (
-                            <TouchableOpacity onPress={openImagePicker}>
+                                    </View>
+                                </TouchableOpacity>
+                            ) : (
                                 <Image
                                     source={{ uri: editImageUris[0] ?? item.image?.uri }}
                                     style={styles.placeImage}
                                     resizeMode="cover"
                                 />
-                                <View style={styles.editImageBadge}>
-                                    <Ionicons name="camera-outline" size={14} color="#000000" />
-                                </View>
-                            </TouchableOpacity>
-                        ) : (
-                            <Image
-                                source={{ uri: editImageUris[0] ?? item.image?.uri }}
-                                style={styles.placeImage}
-                                resizeMode="cover"
-                            />
-                        )}
-
-                        {isEditing && (
-                            <TouchableOpacity
-                                style={styles.coverBadge}
-                                onPress={handleSetCover}
-                            >
-                                <Ionicons
-                                    name={isCover ? 'bookmark' : 'bookmark-outline'}
-                                    size={10}
-                                    color="#ffffff"
-                                />
-                                <Text style={styles.coverBadgeText}>
-                                    {isCover ? '대표 사진' : '대표 사진으로 설정'}
-                                </Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-
-                    <Image
-                        source={STAMP_MAP[editCategory] ?? STAMP_MAP['📦 기타']}
-                        style={styles.stampImage}
-                        resizeMode="contain"
-                    />
-
-                    {/* 정보 */}
-                    <View style={styles.infoArea}>
-                        <View style={[styles.infoRow, { marginBottom: 2 }]}>
-                            {isEditing ? (
-                                <TouchableOpacity onPress={() => setCategoryOpen(true)} style={styles.infoEditButton}>
-                                    <Text style={styles.infoText}>{editCategory}</Text>
-                                </TouchableOpacity>
-                            ) : (
-                                <Text style={styles.infoText}>{editCategory}</Text>
                             )}
-                        </View>
 
-                        <View style={styles.infoRow}>
-                            <Image source={require('../../../../assets/icons/location.png')} 
-                                style={[styles.icon, { tintColor: TAPE_COLOR_MAP[editCategory] ?? '#FFD9D9' }]} 
-                                resizeMode="contain" 
-                            />
-                            {isEditing ? (
-                                <TouchableOpacity onPress={() => setPlaceSearchOpen(true)} style={styles.infoEditButton}>
-                                    <Text style={styles.infoText} numberOfLines={1} ellipsizeMode="tail">
-                                        {editSpaceName}
+                            {isEditing && (
+                                <TouchableOpacity
+                                    style={styles.coverBadge}
+                                    onPress={handleSetCover}
+                                >
+                                    <Ionicons
+                                        name={isCover ? 'bookmark' : 'bookmark-outline'}
+                                        size={10}
+                                        color="#ffffff"
+                                    />
+                                    <Text style={styles.coverBadgeText}>
+                                        {isCover ? '대표 사진' : '대표 사진으로 설정'}
                                     </Text>
                                 </TouchableOpacity>
-                            ) : (
-                                <Text style={styles.infoText} numberOfLines={1} ellipsizeMode="tail">{editSpaceName}</Text>
                             )}
                         </View>
 
-                        <View style={styles.infoRow}>
-                            <Image source={require('../../../../assets/icons/calendar.png')} 
-                                style={[styles.icon, { tintColor: TAPE_COLOR_MAP[editCategory] ?? '#FFD9D9' }]} 
-                                resizeMode="contain" 
-                            />
-                            {isEditing ? (
-                                <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.infoEditButton}>
-                                    <Text style={styles.infoText}>{formatDate(editDate)}</Text>
-                                </TouchableOpacity>
-                            ) : (
-                                <Text style={styles.infoText}>{formatDate(editDate)}</Text>
-                            )}
-                        </View>
-
-                        <DatePickerModal
-                            visible={showDatePicker}
-                            date={editDate}
-                            onChange={(newDate) => setEditDate(newDate)}
-                            onClose={() => setShowDatePicker(false)}
+                        <Image
+                            source={STAMP_MAP[editCategory] ?? STAMP_MAP['📦 기타']}
+                            style={styles.stampImage}
+                            resizeMode="contain"
                         />
 
-                        {isEditing && (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scaleW(6), marginTop: scaleW(10) }}>
-                                {THEME_COLORS.map((color) => (
-                                    <TouchableOpacity
-                                        key={color}
-                                        onPress={() => setThemeColor(color)}
-                                        style={{
-                                            width: scaleW(15),
-                                            height: scaleW(15),
-                                            borderRadius: scaleW(10),
-                                            backgroundColor: color,
-                                            borderWidth: themeColor === color ? 2 : 1,
-                                            borderColor: themeColor === color ? '#1A3A6B' : '#ccc',
-                                        }}
-                                    />
-                                ))}
+                        {/* 정보 */}
+                        <View style={styles.infoArea}>
+                            <View style={[styles.infoRow, { marginBottom: 2 }]}>
+                                {isEditing ? (
+                                    <TouchableOpacity onPress={() => setCategoryOpen(true)} style={styles.infoEditButton}>
+                                        <Text style={styles.infoText}>{editCategory}</Text>
+                                    </TouchableOpacity>
+                                ) : (
+                                    <Text style={styles.infoText}>{editCategory}</Text>
+                                )}
                             </View>
-                        )}
-                    </View>
-                    </View>
-                </View>
 
-                {/* 구분선 */}
-                <View style={[styles.dividerRow, { position: 'absolute', top: '50%', left: 0, right: 0 }]}>
-                    <View style={styles.dividerLine} />
-                </View>
+                            <View style={styles.infoRow}>
+                                <Svg width={scaleW(14)} height={scaleW(14)} viewBox="0 0 21 21" fill="none">
+                                    <Path d="M10.5 10.0625C9.91984 10.0625 9.36344 9.83203 8.9532 9.4218C8.54297 9.01156 8.3125 8.45516 8.3125 7.875C8.3125 7.29484 8.54297 6.73844 8.9532 6.3282C9.36344 5.91797 9.91984 5.6875 10.5 5.6875C11.0802 5.6875 11.6366 5.91797 12.0468 6.3282C12.457 6.73844 12.6875 7.29484 12.6875 7.875C12.6875 8.16227 12.6309 8.44672 12.521 8.71212C12.4111 8.97752 12.2499 9.21867 12.0468 9.4218C11.8437 9.62492 11.6025 9.78605 11.3371 9.89599C11.0717 10.0059 10.7873 10.0625 10.5 10.0625ZM10.5 1.75C8.87555 1.75 7.31763 2.39531 6.16897 3.54397C5.02031 4.69263 4.375 6.25055 4.375 7.875C4.375 12.4688 10.5 19.25 10.5 19.25C10.5 19.25 16.625 12.4688 16.625 7.875C16.625 6.25055 15.9797 4.69263 14.831 3.54397C13.6824 2.39531 12.1245 1.75 10.5 1.75Z" fill={TAPE_COLOR_MAP[editCategory] ?? '#FFD9D9'} />
+                                </Svg>
+                                {isEditing ? (
+                                    <TouchableOpacity onPress={() => setPlaceSearchOpen(true)} style={styles.infoEditButton}>
+                                        <Text style={styles.infoText} numberOfLines={1} ellipsizeMode="tail">
+                                            {editSpaceName}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ) : (
+                                    <Text style={styles.infoText} numberOfLines={1} ellipsizeMode="tail">{editSpaceName}</Text>
+                                )}
+                            </View>
 
-                {/* 아랫부분 */}
-                <View style={styles.bottomHalf}>
-                    {/* 리뷰 */}
-                    <View style={styles.reviewBox}>
-                        {isEditing ? (
-                            <TextInput
-                                style={styles.editReviewInput}
-                                multiline
-                                value={editReview}
-                                onChangeText={setEditReview}
-                                placeholderTextColor="#aaa"
+                            <View style={styles.infoRow}>
+                                <Svg width={scaleW(13)} height={scaleW(13)} viewBox="0 0 16 16" fill="none">
+                                    <Path d="M1.3335 12.6668C1.3335 13.8002 2.20016 14.6668 3.3335 14.6668H12.6668C13.8002 14.6668 14.6668 13.8002 14.6668 12.6668V7.3335H1.3335V12.6668ZM12.6668 2.66683H11.3335V2.00016C11.3335 1.60016 11.0668 1.3335 10.6668 1.3335C10.2668 1.3335 10.0002 1.60016 10.0002 2.00016V2.66683H6.00016V2.00016C6.00016 1.60016 5.7335 1.3335 5.3335 1.3335C4.9335 1.3335 4.66683 1.60016 4.66683 2.00016V2.66683H3.3335C2.20016 2.66683 1.3335 3.5335 1.3335 4.66683V6.00016H14.6668V4.66683C14.6668 3.5335 13.8002 2.66683 12.6668 2.66683Z" fill={TAPE_COLOR_MAP[editCategory] ?? '#FFD9D9'} />
+                                </Svg>
+                                {isEditing ? (
+                                    <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.infoEditButton}>
+                                        <Text style={styles.infoText}>{formatDate(editDate)}</Text>
+                                    </TouchableOpacity>
+                                ) : (
+                                    <Text style={styles.infoText}>{formatDate(editDate)}</Text>
+                                )}
+                            </View>
+
+                            <DatePickerModal
+                                visible={showDatePicker}
+                                date={editDate}
+                                onChange={(newDate) => setEditDate(newDate)}
+                                onClose={() => setShowDatePicker(false)}
                             />
-                        ) : (
-                            <Text style={styles.reviewText}>{editReview}</Text>
-                        )}
+
+                            {isEditing && (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: scaleW(6), marginTop: scaleW(10) }}>
+                                    {THEME_COLORS.map((color) => (
+                                        <TouchableOpacity
+                                            key={color}
+                                            onPress={() => setThemeColor(color)}
+                                            style={{
+                                                width: scaleW(15),
+                                                height: scaleW(15),
+                                                borderRadius: scaleW(10),
+                                                backgroundColor: color,
+                                                borderWidth: themeColor === color ? 2 : 1,
+                                                borderColor: themeColor === color ? '#1A3A6B' : '#ccc',
+                                            }}
+                                        />
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                        </View>
                     </View>
 
-                    {/* 음악 */}
-                    <MusicBox
-                        music={displayMusic}
-                        onPress={isEditing ? () => setMusicModalOpen(true) : undefined}
-                        styles={styles}
-                    />
+                    {/* 구분선 */}
+                    <View style={[styles.dividerRow, { position: 'absolute', top: scaleH(300), left: 0, right: 0 }]}>
+                        <View style={styles.dividerLine} />
+                    </View>
 
-                    {/* edit / save 버튼 */}
-                    <View style={styles.editBox}>
-                        {isEditing ? (
-                            <>
-                                <TouchableOpacity onPress={handleDelete}>
-                                    <Text style={styles.editText}>삭제</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity onPress={handleSave}>
-                                    <Text style={styles.editText}>save my passport</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity onPress={() => {
-                                    const idx = VISIBILITY_CYCLE.indexOf(visibility)
-                                    setVisibility(VISIBILITY_CYCLE[(idx + 1) % 3])
-                                }}>
-                                    <Text style={styles.editText}>{VISIBILITY_LABEL[visibility]}</Text>
-                                </TouchableOpacity>
-                            </>
-                        ) : (
-                            <>
-                                <TouchableOpacity onPress={onPrev}>
-                                    <Text style={styles.editText}>{'< < < < < < < < < < <'}</Text>
-                                </TouchableOpacity>
-                                {editable && (
-                                    <TouchableOpacity onPress={() => setIsEditing(true)}>
-                                        <Text style={styles.editText}>edit my passport</Text>
+                    {/* 아랫부분 */}
+                    <View style={styles.bottomHalf}>
+                        {/* 리뷰 */}
+                        <View style={styles.reviewBox}>
+                            {isEditing ? (
+                                <TextInput
+                                    style={styles.editReviewInput}
+                                    multiline
+                                    value={editReview}
+                                    onChangeText={setEditReview}
+                                    placeholderTextColor="#aaa"
+                                />
+                            ) : (
+                                <Text style={styles.reviewText}>{editReview}</Text>
+                            )}
+                        </View>
+
+                        {/* 음악 */}
+                        <MusicBox
+                            music={displayMusic}
+                            onPress={isEditing ? () => setMusicModalOpen(true) : undefined}
+                            styles={styles}
+                        />
+
+                        {/* edit / save 버튼 */}
+                        <View style={styles.editBox}>
+                            {isEditing ? (
+                                <>
+                                    <TouchableOpacity onPress={handleDelete}>
+                                        <Text style={styles.editText}>삭제</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={handleSave}>
+                                        <Text style={styles.editText}>save my passport</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={() => {
+                                        const idx = VISIBILITY_CYCLE.indexOf(visibility)
+                                        setVisibility(VISIBILITY_CYCLE[(idx + 1) % 3])
+                                    }}>
+                                        <Text style={styles.editText}>{VISIBILITY_LABEL[visibility]}</Text>
+                                    </TouchableOpacity>
+                                </>
+                            ) : (
+                                <>
+                                    <TouchableOpacity onPress={onPrev}>
+                                        <Text style={styles.editText}>{'< < < < < < < < < < <'}</Text>
+                                    </TouchableOpacity>
+                                    {editable && (
+                                        <TouchableOpacity onPress={() => setIsEditing(true)}>
+                                            <Text style={styles.editText}>edit my passport</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                    <TouchableOpacity onPress={onNext}>
+                                        <Text style={styles.editText}>{'> > > > > > > > > > >'}</Text>
+                                    </TouchableOpacity>
+                                </>
+                            )}
+                        </View>
+                    </View>
+                </View>
+
+                {/* 카테고리 모달 */}
+                <Modal visible={categoryOpen} transparent animationType="fade" onRequestClose={() => setCategoryOpen(false)}>
+                    <TouchableOpacity style={styles.modalBackdrop} onPress={() => setCategoryOpen(false)} activeOpacity={1}>
+                        <View style={styles.modalBox}>
+                            <FlatList
+                                data={PLACE_TYPES}
+                                keyExtractor={(i) => i}
+                                renderItem={({ item: option }) => (
+                                    <TouchableOpacity
+                                        style={[styles.modalItem, option === editCategory && styles.modalItemSelected]}
+                                        onPress={() => { setEditCategory(option); setCategoryOpen(false) }}
+                                    >
+                                        <Text style={[styles.modalItemText, option === editCategory && styles.modalItemTextSelected]}>{option}</Text>
+                                        {option === editCategory && <Ionicons name="checkmark" size={16} color="#1A3A6B" />}
                                     </TouchableOpacity>
                                 )}
-                                <TouchableOpacity onPress={onNext}>
-                                    <Text style={styles.editText}>{'> > > > > > > > > > >'}</Text>
-                                </TouchableOpacity>
-                            </>
-                        )}
-                    </View>
-                </View>
-            </View>
+                            />
+                        </View>
+                    </TouchableOpacity>
+                </Modal>
 
-            {/* 카테고리 모달 */}
-            <Modal visible={categoryOpen} transparent animationType="fade" onRequestClose={() => setCategoryOpen(false)}>
-                <TouchableOpacity style={styles.modalBackdrop} onPress={() => setCategoryOpen(false)} activeOpacity={1}>
-                    <View style={styles.modalBox}>
-                        <FlatList
-                            data={PLACE_TYPES}
-                            keyExtractor={(i) => i}
-                            renderItem={({ item: option }) => (
-                                <TouchableOpacity
-                                    style={[styles.modalItem, option === editCategory && styles.modalItemSelected]}
-                                    onPress={() => { setEditCategory(option); setCategoryOpen(false) }}
-                                >
-                                    <Text style={[styles.modalItemText, option === editCategory && styles.modalItemTextSelected]}>{option}</Text>
-                                    {option === editCategory && <Ionicons name="checkmark" size={16} color="#1A3A6B" />}
-                                </TouchableOpacity>
-                            )}
-                        />
-                    </View>
-                </TouchableOpacity>
-            </Modal>
+                <MusicSearch
+                    visible={musicModalOpen}
+                    onSelect={(item) => {
+                        setEditMusic(item)
+                        setMusicModalOpen(false)
+                    }}
+                    onClose={() => setMusicModalOpen(false)}
+                />
 
-            <MusicSearch
-                visible={musicModalOpen}
-                onSelect={(item) => {
-                    setEditMusic(item)
-                    setMusicModalOpen(false)
-                }}
-                onClose={() => setMusicModalOpen(false)}
-            />
+                <KakaoPlaceSearch
+                    visible={placeSearchOpen}
+                    onSelect={(place) => {
+                        setEditSpaceName(place.place_name)
+                        const addressStr = place.address_name || place.road_address_name || ''
+                        setEditAddress(addressStr)
+                        setEditLat(parseFloat(place.y) || 0)
+                        setEditLng(parseFloat(place.x) || 0)
 
-            <KakaoPlaceSearch
-                visible={placeSearchOpen}
-                onSelect={(place) => {
-                    setEditSpaceName(place.place_name)
-                    const addressStr = place.address_name || place.road_address_name || ''
-                    setEditAddress(addressStr)
-                    setEditLat(parseFloat(place.y) || 0)
-                    setEditLng(parseFloat(place.x) || 0)
+                        // 주소에서 구 추출 (공백 분리 후 '구' 종료 토큰 탐색 — regex backtracking 없음)
+                        const guPart = addressStr.split(' ').find(token => token.endsWith('구'))
 
-                    // 주소에서 구 추출 (공백 분리 후 '구' 종료 토큰 탐색 — regex backtracking 없음)
-                    const guPart = addressStr.split(' ').find(token => token.endsWith('구'))
-
-                    if (guPart) {
-                        setEditDistrict(guPart)
-                        const matched = districts?.find(d => d.displayName === guPart)
-                        if (matched?.districtCategory) {
-                            setEditDistrictCategory(matched.districtCategory)
+                        if (guPart) {
+                            setEditDistrict(guPart)
+                            const matched = districts?.find(d => d.displayName === guPart)
+                            if (matched?.districtCategory) {
+                                setEditDistrictCategory(matched.districtCategory)
+                            }
                         }
-                    }
 
-                    setPlaceSearchOpen(false)
-                }}
-                onClose={() => setPlaceSearchOpen(false)}
-            />
-        </KeyboardAvoidingView>
+                        setPlaceSearchOpen(false)
+                    }}
+                    onClose={() => setPlaceSearchOpen(false)}
+                />
+            </KeyboardAwareScrollView>
         </SafeAreaView>
     )
 }
@@ -655,7 +663,6 @@ const styles = StyleSheet.create({
         width: Dimensions.get('window').width,
         flex: 1,
         backgroundColor: '#F8FAFD',
-        paddingBottom: 100,
     },
 
     noiseOverlay: {
@@ -667,7 +674,7 @@ const styles = StyleSheet.create({
     scrollContent: {
         padding: scaleW(16),
         gap: scaleW(16),
-        paddingBottom: Platform.OS === 'ios' ? scaleW(110) : scaleW(90),
+        paddingBottom: scaleW(65),
         paddingTop: 0,
     },
 
@@ -675,7 +682,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderRadius: scaleW(16),
         padding: scaleW(20),
-        marginTop: Platform.OS === 'ios' ? scaleW(-50) : scaleW(-20),
+        marginTop: 0,
         alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 3, height: 4 },
