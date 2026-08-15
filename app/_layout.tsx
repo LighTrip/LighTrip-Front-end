@@ -20,7 +20,14 @@ export default function RootLayout() {
     if (!fontsLoaded) return;
 
     const checkAuth = async () => {
-      const token = await SecureStore.getItemAsync("accessToken");
+      let token: string | null = null;
+
+      try {
+        token = await SecureStore.getItemAsync("accessToken");
+      } catch (error) {
+        console.error("Failed to read access token from SecureStore", error);
+      }
+
       if (token) {
         router.replace("/(tabs)");
       } else {
