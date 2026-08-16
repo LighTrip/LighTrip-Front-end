@@ -1,5 +1,5 @@
 // app/_layout.tsx
-import { getValidAccessToken, setAuthExpiredHandler } from "@/src/api/authToken";
+import { getValidAccessToken, isTokenExpired, setAuthExpiredHandler } from "@/src/api/authToken";
 import { useFonts } from "expo-font";
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -48,7 +48,9 @@ export default function RootLayout() {
         console.error("Failed to read access token from SecureStore", error);
       }
 
-      if (token) {
+      // 재발급이 네트워크 오류로 실패하면 getValidAccessToken이 만료된 토큰을 그대로
+      // 돌려줄 수 있다. 그 토큰으로는 메인에 들어가면 안 되므로 여기서 다시 검증한다.
+      if (token && !isTokenExpired(token)) {
         router.replace("/(tabs)");
       } else {
         router.replace("/(auth)");
