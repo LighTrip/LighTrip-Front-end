@@ -41,6 +41,7 @@ export default function ProfileView() {
         isLocationSharing,
         isLocationSharingLoading,
         setLocationSharing,
+        clearTeamMode,
     } = useTeamMode();
     const [user, setUser] = useState<ProfileUser>(profileUserDummy);
     const [isLoading, setIsLoading] = useState(true);
@@ -114,6 +115,7 @@ export default function ProfileView() {
                     }
 
                     await clearTokens();
+                    clearTeamMode();
                     router.replace("/(auth)" as any);
                 },
             },
