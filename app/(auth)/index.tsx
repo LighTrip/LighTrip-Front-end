@@ -1,10 +1,14 @@
+import { loginWithApple } from "@/src/api/authApi";
 import { saveTokens } from "@/src/api/authToken";
 import { BASE_URL } from "@/src/api/config";
 import LighTripLogo from "@/src/constant/LighTrip.svg";
+import * as AppleAuthentication from "expo-apple-authentication";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import {
+  Alert,
+  Platform,
   StatusBar,
   StyleSheet,
   Text,
@@ -52,6 +56,42 @@ export default function LoginScreen() {
     await Linking.openURL(KAKAO_AUTH_URL);
   };
 
+  const handleAppleLogin = async () => {
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      const { identityToken, authorizationCode, fullName } = credential;
+      if (!identityToken) return;
+
+      // Apple은 최초 로그인 1회에만 fullName을 내려준다. 이후에는 다시 못 받으므로 여기서 캡처해 서버로 넘긴다.
+      const nickname = fullName?.givenName
+        ? `${fullName.givenName} ${fullName.familyName ?? ""}`.trim()
+        : undefined;
+
+      const { accessToken, refreshToken, isNewUser } = await loginWithApple({
+        identityToken,
+        authorizationCode: authorizationCode ?? undefined,
+        nickname,
+      });
+
+      await saveTokens(accessToken, refreshToken);
+
+      if (isNewUser) {
+        router.replace("/signup");
+      } else {
+        router.replace("/(tabs)");
+      }
+    } catch (e: any) {
+      if (e.code === "ERR_REQUEST_CANCELED") return;
+      Alert.alert("오류", e.message ?? "애플 로그인에 실패했어요.");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -68,6 +108,16 @@ export default function LoginScreen() {
         >
           <Text style={styles.kakaoButtonText}>카카오 로그인</Text>
         </TouchableOpacity>
+
+        {Platform.OS === "ios" && (
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+            cornerRadius={16}
+            style={styles.appleButton}
+            onPress={handleAppleLogin}
+          />
+        )}
       </View>
     </SafeAreaView>
   );
@@ -89,24 +139,21 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     gap: 12,
   },
+  appleButton: {
+    height: 50,
+  },
   kakaoButton: {
     backgroundColor: "#FEE500",
     borderRadius: 16,
-    paddingVertical: 16,
+    height: 50,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   kakaoButtonText: {
     color: "#1B2D6B",
-    fontSize: 15,
-    fontWeight: "700",
-    letterSpacing: 0.5,
+    fontSize: 18,
+    fontWeight: "600",
   },
 });
