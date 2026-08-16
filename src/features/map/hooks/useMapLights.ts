@@ -31,7 +31,7 @@ export function useMapLights() {
       const lat = event?.latitude;
       const lng = event?.longitude;
 
-      if (pickingLocation) return undefined;
+      if (pickingLocation) return { latitude: lat, longitude: lng };
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
       debounceTimer.current = setTimeout(() => {
         const bbox = cameraToBBox(event);

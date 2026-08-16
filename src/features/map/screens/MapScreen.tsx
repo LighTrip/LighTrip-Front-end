@@ -90,7 +90,7 @@ export default function MapScreen() {
   const mapRef = useRef<any>(null);
   // 사용자가 이미 지도를 움직였다면 위치가 늦게 도착해도 화면을 뺏지 않는다.
   const userMovedCameraRef = useRef(false);
-  const baseBottom = 68 + Math.max(safeBottom, 12) + 4 + 8;
+  const baseBottom = 68 + Math.max(safeBottom, 12) - 8;
   const frontClusters = clusterSingleMarkers(lights, currentBBox);
 
   useEffect(() => {
