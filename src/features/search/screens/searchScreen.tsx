@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import AllSearchContent from "../components/AllSearchContent";
 import RankingContent from "../components/RankingContent";
 import SearchToggle from "../components/SearchToggle";
+import { subscribeSearchTabPress } from "../searchTabBus";
 import { SearchTab } from "../types/search.types";
 
 export type RankingMode = "total" | "district";
@@ -41,6 +42,14 @@ export default function SearchView() {
             useNativeDriver: true,
         }).start();
     }, [selectedTab, contentOpacity]);
+
+    // 둘러보기 탭을 다시 누르면 랭킹 탭/드롭다운을 접고 둘러보기 탭 메인으로 복귀
+    useEffect(() => {
+        return subscribeSearchTabPress(() => {
+            setSelectedTab("all");
+            setIsRankingDropdownOpen(false);
+        });
+    }, []);
 
     const rankingTitle = 
         rankingMode === "total" ? "이번 주 랭킹" : "구별 랭킹";

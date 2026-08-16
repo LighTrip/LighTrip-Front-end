@@ -5,7 +5,7 @@ import TopToast from "@/src/components/common/TopToast";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -25,6 +25,7 @@ import {
     profileUserDummy,
     settingMenuDummy,
 } from "../data/profileDummy";
+import { subscribeProfileTabPress } from "../profileTabBus";
 import { ProfileMenuItem, ProfileUser } from "../types/profile.types";
 
 const TAB_BAR_HEIGHT = 90;
@@ -141,22 +142,31 @@ export default function ProfileView() {
         }
     };
 
+    const fetchMyProfile = useCallback(async () => {
+        try {
+            const profile = await getMyProfile();
+            setUser(profile);
+        } catch (error) {
+            console.log("내 프로필 조회 에러:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
     useFocusEffect(
         useCallback(() => {
-            const fetchMyProfile = async () => {
-                try {
-                    const profile = await getMyProfile();
-                    setUser(profile);
-                } catch (error) {
-                    console.log("내 프로필 조회 에러:", error);
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-
             fetchMyProfile();
-        }, []),
+        }, [fetchMyProfile]),
     );
+
+    // 마이페이지 탭을 다시 누르면 열려 있던 모달을 닫고, 새로고침하며 마이페이지 탭 메인으로 복귀
+    useEffect(() => {
+        return subscribeProfileTabPress(() => {
+            setIsTeamModalOpen(false);
+            setIsFriendModalOpen(false);
+            fetchMyProfile();
+        });
+    }, [fetchMyProfile]);
 
     if (isLoading) {
         return (
