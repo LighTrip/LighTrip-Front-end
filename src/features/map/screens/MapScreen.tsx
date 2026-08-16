@@ -88,7 +88,7 @@ export default function MapScreen() {
   } | null>(null);
 
   const mapRef = useRef<any>(null);
-  const baseBottom = 68 + Math.max(safeBottom, 12) + 4 + 8;
+  const baseBottom = 68 + Math.max(safeBottom, 12) - 8;
   const frontClusters = clusterSingleMarkers(lights, currentBBox);
 
   useEffect(() => {
