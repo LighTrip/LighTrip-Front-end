@@ -18,6 +18,7 @@ type FriendDetailModalProps = {
     friend: Friend | null;
     refreshVersion: number;
     onClose: () => void;
+    onRequestDelete: () => void;
 };
 
 export default function FriendDetailModal({
@@ -25,6 +26,7 @@ export default function FriendDetailModal({
     friend,
     refreshVersion,
     onClose,
+    onRequestDelete,
 }: FriendDetailModalProps) {
     const [selectedTab, setSelectedTab] = useState<"passport" | "map">("passport");
     const [latestDistrict, setLatestDistrict] = useState<string | null>(null);
@@ -96,6 +98,20 @@ export default function FriendDetailModal({
                             </Text>
                                 </View>
                             </View>
+
+                            {/* 기존에는 친구 카드를 길게 눌러야만 삭제할 수 있어 찾기 어려웠다. */}
+                            <TouchableOpacity
+                                activeOpacity={0.7}
+                                style={styles.deleteFriendButton}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                onPress={onRequestDelete}
+                            >
+                                <Ionicons
+                                    name="person-remove-outline"
+                                    size={18}
+                                    color="#8A93A2"
+                                />
+                            </TouchableOpacity>
                         </View>
 
                         <View style={styles.tabArea}>
@@ -195,6 +211,16 @@ const styles = StyleSheet.create({
     },
     profileTextArea: {
         flex: 1,
+    },
+    deleteFriendButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: "#E3E8EF",
+        backgroundColor: "#FFFFFF",
+        alignItems: "center",
+        justifyContent: "center",
     },
     name: {
         fontSize: 24,

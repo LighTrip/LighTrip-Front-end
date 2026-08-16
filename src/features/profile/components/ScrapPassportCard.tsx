@@ -1,10 +1,14 @@
 import type { ScrapPassport } from "@/src/api/list/scrap.api";
+import ProgressiveImage from "@/src/components/common/ProgressiveImage";
 import { Ionicons } from "@expo/vector-icons";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type ScrapPassportCardProps = {
     item: ScrapPassport;
+    isScrapped: boolean;
+    isScrapping: boolean;
     onPress: (passportId: number) => void;
+    onToggleScrap: (passportId: number) => void;
 };
 
 // 날짜 추출
@@ -24,7 +28,10 @@ const formatDate = (dateString: string) => {
 
 export default function ScrapPassportCard({
     item,
-    onPress
+    isScrapped,
+    isScrapping,
+    onPress,
+    onToggleScrap
 }: ScrapPassportCardProps) {
     return (
         <TouchableOpacity
@@ -34,7 +41,7 @@ export default function ScrapPassportCard({
         >
             <View style={styles.thumbnailBox}>
                 {item.thumbnailUrl ? (
-                    <Image
+                    <ProgressiveImage
                         source={{uri: item.thumbnailUrl}}
                         style={styles.thumbnail}
                         resizeMode="cover"
@@ -75,10 +82,21 @@ export default function ScrapPassportCard({
                         <Ionicons name="heart" size={20} color="#FF7A8A" />
                         <Text style={styles.countText}>{item.likeCount}</Text>
                     </View>
-                    <View style={styles.countBox}>
-                        <Ionicons name="bookmark" size={20} color="#1A3A6B" />
+                    {/* 둘러보기 피드와 같은 아이콘·색을 쓰고, 눌러서 스크랩을 취소할 수 있다. */}
+                    <TouchableOpacity
+                        style={styles.countBox}
+                        activeOpacity={0.7}
+                        disabled={isScrapping}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        onPress={() => onToggleScrap(item.passportId)}
+                    >
+                        <Ionicons
+                            name={isScrapped ? "bookmark" : "bookmark-outline"}
+                            size={20}
+                            color={isScrapped ? "#FFD233" : "#333333"}
+                        />
                         <Text style={styles.countText}>{item.scrapCount}</Text>
-                    </View>
+                    </TouchableOpacity>
 
                     <Ionicons
                         name="chevron-forward"

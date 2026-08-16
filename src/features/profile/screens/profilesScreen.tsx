@@ -1,15 +1,16 @@
+import { clearTokens } from "@/src/api/authToken";
 import { getMyProfile, logout } from "@/src/api/profileApi";
 import { useTeamMode } from "@/src/components/common/TeamModeContext";
+import TopToast from "@/src/components/common/TopToast";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
-import * as Securestore from "expo-secure-store";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    Animated,
     Image,
-    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -45,15 +46,36 @@ export default function ProfileView() {
     const [isLoading, setIsLoading] = useState(true);
     const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
     const [isFriendModalOpen, setIsFriendModalOpen] = useState(false);
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+    // 스크롤을 내렸을 때만 헤더 아래 페이드를 보여 준다.
+    // 항상 켜 두면 최상단에서 첫 카드까지 흐려지므로, 실제로 잘리기 시작할 때만 나타나게 한다.
+    const scrollY = useRef(new Animated.Value(0)).current;
+    const headerFadeOpacity = scrollY.interpolate({
+        inputRange: [0, 24],
+        outputRange: [0, 1],
+        extrapolate: "clamp",
+    });
+
+    // 아래쪽 페이드는 반대로, 끝까지 내리면 사라져야 마지막 항목이 또렷하게 보인다.
+    const [contentHeight, setContentHeight] = useState(0);
+    const [viewportHeight, setViewportHeight] = useState(0);
+    const maxScroll = Math.max(0, contentHeight - viewportHeight);
+    const bottomFadeOpacity =
+        maxScroll > 0
+            ? scrollY.interpolate({
+                  inputRange: [Math.max(0, maxScroll - 24), maxScroll],
+                  outputRange: [1, 0],
+                  extrapolate: "clamp",
+              })
+            : 0;
 
     const handleToggleTeamMode = async () => {
         const isToggled = await toggleTeamMode();
 
+        // 팀이 없으면 전환되지 않는다. 팝업 대신 상단에 잠깐 안내만 띄운다.
         if (!isToggled && !isTeamMode) {
-            Alert.alert(
-                "팀 정보 없음",
-                "가입된 팀이 없습니다. 먼저 팀을 만들거나 초대 코드로 가입해주세요.",
-            );
+            setToastMessage("팀에 먼저 가입해야 팀 모드로 바꿀 수 있어요");
         }
     };
 
@@ -85,19 +107,14 @@ export default function ProfileView() {
                 onPress: async () => {
                     try {
                         await logout();
-                        await Securestore.deleteItemAsync("accessToken");
-                        await Securestore.deleteItemAsync("refreshToken");
-                        router.replace("/(auth)" as any);
                     } catch (error) {
+                        // 토큰이 이미 만료된 상태면 서버 로그아웃은 실패한다.
+                        // 그래도 로컬 토큰은 지워야 로그인 화면으로 빠져나갈 수 있으므로 막지 않는다.
                         console.log("로그아웃 에러:", error);
-
-                        Alert.alert(
-                            "로그아웃 실패",
-                            error instanceof Error
-                                ? error.message
-                                : "로그아웃 중 문제가 발생했습니다.",
-                        );
                     }
+
+                    await clearTokens();
+                    router.replace("/(auth)" as any);
                 },
             },
         ]);
@@ -245,14 +262,23 @@ export default function ProfileView() {
                     </View>
                 </View>
 
-                <LinearGradient
-                    colors={["#F8FAFD", "rgba(248, 250, 253, 0)"]}
-                    style={styles.headerFade}
+                <Animated.View
+                    style={[styles.headerFade, { opacity: headerFadeOpacity }]}
                     pointerEvents="none"
-                />
+                >
+                    <LinearGradient
+                        colors={[
+                            "#F8FAFD",
+                            "rgba(248, 250, 253, 0.92)",
+                            "rgba(248, 250, 253, 0)",
+                        ]}
+                        locations={[0, 0.45, 1]}
+                        style={StyleSheet.absoluteFill}
+                    />
+                </Animated.View>
             </View>
 
-            <ScrollView
+            <Animated.ScrollView
                 style={styles.scrollArea}
                 contentContainerStyle={[
                     styles.scrollContent,
@@ -260,6 +286,15 @@ export default function ProfileView() {
                 ]}
                 showsVerticalScrollIndicator={false}
                 contentInsetAdjustmentBehavior="never"
+                scrollEventThrottle={16}
+                onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                    { useNativeDriver: true },
+                )}
+                onLayout={(event) =>
+                    setViewportHeight(event.nativeEvent.layout.height)
+                }
+                onContentSizeChange={(_, height) => setContentHeight(height)}
             >
                 <View style={styles.sectionSet}>
                     <View style={styles.menuBox}>
@@ -458,7 +493,28 @@ export default function ProfileView() {
                         ))}
                     </View>
                 </View>
-            </ScrollView>
+            </Animated.ScrollView>
+
+            {/* 탭바와 맞닿는 아래쪽 경계도 위쪽과 같은 방식으로 흐린다. */}
+            <Animated.View
+                style={[styles.bottomFade, { opacity: bottomFadeOpacity }]}
+                pointerEvents="none"
+            >
+                <LinearGradient
+                    colors={[
+                        "rgba(248, 250, 253, 0)",
+                        "rgba(248, 250, 253, 0.92)",
+                        "#F8FAFD",
+                    ]}
+                    locations={[0, 0.55, 1]}
+                    style={StyleSheet.absoluteFill}
+                />
+            </Animated.View>
+
+            <TopToast
+                message={toastMessage}
+                onHide={() => setToastMessage(null)}
+            />
 
             <TeamManageModal
                 visible={isTeamModalOpen}
@@ -484,12 +540,22 @@ const styles = StyleSheet.create({
         backgroundColor: "#F8FAFD",
         zIndex: 1,
     },
+    // 스크롤 내용이 헤더 아래에서 잘릴 때 그 경계를 가려 주는 그라데이션.
+    // 메뉴 행 높이(약 67)에 비해 짧으면 아이콘이 반만 남아 얼룩처럼 보이므로 넉넉히 잡는다.
     headerFade: {
         position: "absolute",
-        bottom: -24,
+        bottom: -56,
         left: 0,
         right: 0,
-        height: 24,
+        height: 56,
+    },
+    // 스크롤 영역이 끝나는 지점(탭바 바로 위)을 덮는다.
+    bottomFade: {
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: TAB_BAR_HEIGHT,
+        height: 56,
     },
     scrollArea: {
         flex: 1,
@@ -498,7 +564,7 @@ const styles = StyleSheet.create({
     scrollContent: {
         paddingHorizontal: 20,
         paddingTop: 10,
-        paddingBottom: 20,
+        paddingBottom: 18,
     },
     sectionAccount: {
         marginBottom: 0,

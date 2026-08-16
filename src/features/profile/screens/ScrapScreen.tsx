@@ -1,4 +1,9 @@
-import { getMyScraps, ScrapPassport } from "@/src/api/list/scrap.api";
+import {
+    getMyScraps,
+    ScrapPassport,
+    scrapPassport,
+    unscrapPassport,
+} from "@/src/api/list/scrap.api";
 import { getPassportDetail } from "@/src/api/passport/passport.api";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -27,6 +32,11 @@ export default function ScrapScreen() {
     const [scraps, setScraps] = useState<ScrapPassport[]>([]);
     const [cursor, setCursor] = useState<number | null>(null);
     const [hasNext, setHasNext] = useState(true);
+
+    // 목록에 있는 항목은 기본적으로 스크랩된 상태다.
+    // 이 화면에서 취소한 항목만 따로 기억해 두고, 다시 누르면 되돌릴 수 있게 한다.
+    const [unscrappedIds, setUnscrappedIds] = useState<number[]>([]);
+    const [scrappingIds, setScrappingIds] = useState<number[]>([]);
 
     // 스크랩한 여권 중 하나 열람
     const [selectedPassport, setSelectedPassport] = useState<any | null>(null);
@@ -100,6 +110,8 @@ export default function ScrapScreen() {
             setScraps(result.data.content);
             setCursor(result.data.nextCursor);
             setHasNext(result.data.hasNext);
+            // 새로 받은 목록은 전부 스크랩된 상태이므로 취소 표시를 비운다.
+            setUnscrappedIds([]);
         } catch(error) {
             console.log("스크랩 목록 조회 에러:", error);
 
@@ -150,6 +162,60 @@ export default function ScrapScreen() {
     useEffect(() => {
         fetchScraps({isInitial: true});
     }, []);
+
+    // 스크랩 아이콘을 눌러 취소/재등록
+    const handleToggleScrap = async (passportId: number) => {
+        if(scrappingIds.includes(passportId)) return;
+
+        const wasScrapped = !unscrappedIds.includes(passportId);
+
+        const applyScrapState = (scrapped: boolean) => {
+            setUnscrappedIds((prev) =>
+                scrapped
+                    ? prev.filter((id) => id !== passportId)
+                    : [...prev, passportId],
+            );
+            setScraps((prev) =>
+                prev.map((item) =>
+                    item.passportId === passportId
+                        ? {
+                            ...item,
+                            scrapCount: scrapped
+                                ? item.scrapCount + 1
+                                : Math.max(item.scrapCount - 1, 0),
+                        }
+                        : item,
+                ),
+            );
+        };
+
+        try {
+            setScrappingIds((prev) => [...prev, passportId]);
+
+            // 화면에 먼저 반영
+            applyScrapState(!wasScrapped);
+
+            if(wasScrapped) {
+                await unscrapPassport(passportId);
+            } else {
+                await scrapPassport(passportId);
+            }
+        } catch(error) {
+            console.log("스크랩 처리 에러:", error);
+
+            // 실패하면 원래 상태로 복구
+            applyScrapState(wasScrapped);
+
+            Alert.alert(
+                wasScrapped ? "스크랩 취소 실패" : "스크랩 실패",
+                error instanceof Error
+                    ? error.message
+                    : "스크랩을 처리하는 중 문제가 발생했습니다.",
+            );
+        } finally {
+            setScrappingIds((prev) => prev.filter((id) => id !== passportId));
+        }
+    };
 
     // 스크랩한 목록 중 여권 하나 호출
     const handlePressCard = async(passportId: number) => {
@@ -221,7 +287,10 @@ export default function ScrapScreen() {
                 renderItem={({item}) => (
                     <ScrapPassportCard
                         item={item}
+                        isScrapped={!unscrappedIds.includes(item.passportId)}
+                        isScrapping={scrappingIds.includes(item.passportId)}
                         onPress={handlePressCard}
+                        onToggleScrap={handleToggleScrap}
                     />
                 )}
                 contentContainerStyle={styles.content}
