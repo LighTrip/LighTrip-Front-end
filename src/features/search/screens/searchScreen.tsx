@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
 import {
     Animated,
+    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -60,7 +61,7 @@ export default function SearchView() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView edges={['left', 'right', 'bottom']} style={styles.container}>
             <View style={styles.header}>
                 <Animated.View
                     style={[styles.titleArea, { opacity: contentOpacity }]}
@@ -176,6 +177,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "#F8FAFD",
         overflow: "visible",
+        paddingTop: StatusBar.currentHeight || 50,
     },
     header: {
         flexDirection: "row",
@@ -183,7 +185,7 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         marginBottom: 10,
         paddingHorizontal: 20,
-        paddingTop: 12,
+        paddingTop: 13,
         zIndex: 100,
         elevation: 100,
     },

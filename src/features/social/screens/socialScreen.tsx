@@ -2,7 +2,7 @@ import { deleteFriend, getFriends } from "@/src/api/socialApi";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Modal, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AddFriendModal from "../components/AddFriendModal";
 import FriendDetailModal from "../components/FriendDetailModal";
@@ -109,7 +109,7 @@ export default function SocialView() {
     }, [keyword, friends]);
 
     return(
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView edges={['left', 'right', 'bottom']} style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>소셜</Text>
 
@@ -216,6 +216,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#F8FAFD",
+        paddingTop: StatusBar.currentHeight || 50,
     },
     header: {
         flexDirection: "row",

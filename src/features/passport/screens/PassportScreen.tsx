@@ -1,5 +1,6 @@
+import * as SecureStore from 'expo-secure-store';
 import { useRouter, useFocusEffect } from "expo-router";
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 import {
     View,
@@ -7,6 +8,8 @@ import {
     StyleSheet,
     TouchableOpacity,
     StatusBar,
+    Modal,
+    Pressable,
 } from 'react-native';
 
 import PassportList from "../components/PassportList";
@@ -28,6 +31,18 @@ export default function PassportView() {
     const [selectedIndex, setSelectedIndex] = useState(0)
     const [activeTab, setActiveTab] = useState<'passport' | 'like' | 'scrap'>('passport');
     const [passportTab, setPassportTab] = useState<'cover' | 'list'>('cover')
+    const [showTutorial, setShowTutorial] = useState(false)
+
+    useEffect(() => {
+        SecureStore.getItemAsync('passport_tutorial_seen').then(val => {
+            if (!val) setShowTutorial(true)
+        })
+    }, [])
+
+    const dismissTutorial = async () => {
+        await SecureStore.setItemAsync('passport_tutorial_seen', '1')
+        setShowTutorial(false)
+    }
 
     // 여권 통계 조회 연결
     const [stats, setStats] = useState({ passportCount: 0, likeCount: 0, scrapCount: 0 })
@@ -97,6 +112,18 @@ export default function PassportView() {
 
     return (
         <View style={styles.container}>
+            <Modal visible={showTutorial} transparent animationType="fade">
+                <Pressable style={styles.tutorialOverlay} onPress={dismissTutorial}>
+                    <View style={styles.tutorialBox}>
+                        <Text style={styles.tutorialEmoji}>👆</Text>
+                        <Text style={styles.tutorialTitle}>여권 둘러보기</Text>
+                        <Text style={styles.tutorialText}>
+                            오른쪽으로 스크롤하면{'\n'}더 많은 여권을 확인할 수 있어요!
+                        </Text>
+                        <Text style={styles.tutorialDismiss}>화면을 탭해서 닫기</Text>
+                    </View>
+                </Pressable>
+            </Modal>
             
             {selectedPlaces.length > 0 ? (
                 <View style={{ flex: 1 }}>
@@ -362,5 +389,45 @@ const styles = StyleSheet.create({
         borderRadius: 2,
         backgroundColor: '#FFFFFF',
         opacity: 0.6,
+    },
+
+    tutorialOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    tutorialBox: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        paddingVertical: 32,
+        paddingHorizontal: 28,
+        alignItems: 'center',
+        width: '78%',
+        gap: 10,
+    },
+
+    tutorialEmoji: {
+        fontSize: 36,
+    },
+
+    tutorialTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#1A3A6B',
+    },
+
+    tutorialText: {
+        fontSize: 15,
+        color: '#333',
+        textAlign: 'center',
+        lineHeight: 22,
+    },
+
+    tutorialDismiss: {
+        marginTop: 8,
+        fontSize: 13,
+        color: '#aaa',
     },
 });

@@ -197,7 +197,26 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
             const dest = `${FileSystem.documentDirectory}photo_${Date.now()}_0.jpg`
             await FileSystem.copyAsync({ from: compressed, to: dest })
             setPhotos(prev => [...prev, dest])
-            if (asset.exif) await extractFromExif(asset.exif)
+            setVisitDate(new Date())
+            try {
+                const locPermission = await Location.requestForegroundPermissionsAsync()
+                if (locPermission.granted) {
+                    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+                    const { latitude, longitude } = loc.coords
+                    setLatitude(latitude)
+                    setLongitude(longitude)
+                    const [place] = await Location.reverseGeocodeAsync({ latitude, longitude })
+                    if (place) {
+                        setLocationAddress([place.city, place.district, place.street].filter(Boolean).join(' '))
+                        const geoAddress = [place.region, place.city, place.district].filter(Boolean).join(' ')
+                        const matched = matchDistrictFromAddress(geoAddress)
+                        if (matched) setLocationRegion(matched)
+                    }
+                    await fetchPlaceNameFromCoords(latitude, longitude)
+                }
+            } catch (e) {
+                console.error('카메라 위치 추출 실패:', e)
+            }
         }
     }
 
@@ -318,9 +337,9 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                             ) : (
                                 <TouchableOpacity style={[styles.albumButtonEmpty, { flex: 1, gap: scaleW(8) }]} onPress={openAlbum}>
                                     <Svg width={scaleW(50)} height={scaleW(50)} viewBox="0 0 24 24" fill="none">
-                                        <Rect x="2" y="2" width="20" height="20" rx="5" stroke="#aaa" strokeWidth="1" />
-                                        <Path d="M2.5 17.5L4.7592 15.8863C5.47521 15.3749 6.45603 15.456 7.07822 16.0782L8.15147 17.1515C8.6201 17.6201 9.3799 17.6201 9.84853 17.1515L14.8377 12.1623C15.496 11.504 16.5476 11.4563 17.2628 12.0523L22 16" stroke="#aaa" strokeWidth="1" strokeLinecap="round" />
-                                        <Circle cx="8" cy="8" r="2" stroke="#aaa" strokeWidth="1" />
+                                        <Rect x="2" y="2" width="20" height="20" rx="5" stroke="#aaa" strokeWidth="0.8" />
+                                        <Path d="M2.5 17.5L4.7592 15.8863C5.47521 15.3749 6.45603 15.456 7.07822 16.0782L8.15147 17.1515C8.6201 17.6201 9.3799 17.6201 9.84853 17.1515L14.8377 12.1623C15.496 11.504 16.5476 11.4563 17.2628 12.0523L22 16" stroke="#aaa" strokeWidth="0.8" strokeLinecap="round" />
+                                        <Circle cx="8" cy="8" r="2" stroke="#aaa" strokeWidth="0.8" />
                                     </Svg>
                                     <Text style={{ color: '#aaa', fontSize: scaleFont(15) }}>앨범에서 선택하기</Text>
                                 </TouchableOpacity>
@@ -330,7 +349,7 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                                 style={[styles.cameraButton, { height: scaleH(35) }]}
                                 onPress={openCamera}
                             >
-                                <Text style={[styles.clickText, { fontSize: scaleFont(12) }]}>카메라로 촬영</Text>
+                                <Text style={[styles.clickText, { fontSize: scaleFont(14) }]}>카메라로 촬영</Text>
                             </TouchableOpacity>
                         </View>
                     </Shadow>
@@ -352,8 +371,8 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
                         <View style={[styles.infoTypeBox, { height: scaleH(109) }]}>
                             <TextInput
                                 style={[styles.infoTypeText, { lineHeight: scaleW(17), color: '#000' }]}
-                                placeholder={descFocused ? '' : '카페에 가서 커피를 마셨다!'}
-                                placeholderTextColor="#666666"
+                                placeholder={descFocused ? '' : '여기에 내용을 입력하세요.'}
+                                placeholderTextColor="#aaa"
                                 value={description}
                                 onChangeText={setDescription}
                                 onFocus={() => setDescFocused(true)}

@@ -6,7 +6,7 @@ import {
     Image,
 } from 'react-native';
 import React from 'react'
-import { passportStyles as styles, LIST_STAMP_SIZE, LIST_STAMP_ICON_SIZE } from './passportStyles';
+import { passportStyles as styles, LIST_STAMP_SIZE, LIST_STAMP_ICON_SIZE, COVER_HEIGHT } from './passportStyles';
 import { MyPassport, getPassportDetail } from '@/src/api/passport/passport.api'
 
 const STAMP_MAP: Record<string, any> = {
@@ -47,7 +47,7 @@ const PlaceListView = ({ data, onSelectPlace }: Props) => {
                 keyExtractor={(item) => item.passportId.toString()}
                 contentContainerStyle={styles.listContainer}
                 ListEmptyComponent={
-                    <View style={{ alignItems: 'center', marginTop: 60 }}>
+                    <View style={{ height: COVER_HEIGHT * 1.96 + 32, alignItems: 'center', justifyContent: 'center' }}>
                         <Text style={{ color: '#aaa', fontSize: 15 }}>아직 등록된 장소가 없어요 🗺️</Text>
                     </View>
                 }

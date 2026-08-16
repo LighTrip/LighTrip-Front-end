@@ -373,6 +373,7 @@ const EditPlaceScreen = ({
                                 <TextInput
                                     style={styles.contentInput}
                                     multiline
+                                    scrollEnabled
                                     placeholder='내용을 입력하세요'
                                     placeholderTextColor="#aaa"
                                     value={content}

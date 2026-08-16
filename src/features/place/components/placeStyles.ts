@@ -59,7 +59,7 @@ export const editStyles = StyleSheet.create({
     },
 
     headerTitle: {
-        fontSize: scaleFont(14),
+        fontSize: scaleFont(16),
         fontWeight: '600',
         color: '#222',
     },
@@ -209,8 +209,9 @@ export const editStyles = StyleSheet.create({
         color: '#222',
         borderBottomWidth: 1,
         borderBottomColor: '#C0C0C0',
-        paddingBottom: scaleW(15),
+        paddingBottom: scaleW(8),
         lineHeight: scaleW(23),
+        height: scaleW(26) * 3 + scaleW(8),
     },
 
     musicCard: {
@@ -382,7 +383,7 @@ export const addStyles = StyleSheet.create({
     },
 
     photoText: {
-        fontSize: scaleFont(15),
+        fontSize: scaleFont(16),
         fontWeight: 'bold',
         marginTop: scaleW(14),
         marginLeft: scaleW(30),
@@ -457,7 +458,7 @@ export const addStyles = StyleSheet.create({
     },
 
     infotitleText: {
-        fontSize: scaleFont(14),
+        fontSize: scaleFont(16),
         fontWeight: 'bold',
         marginLeft: scaleW(5),
         marginTop: scaleW(5),
@@ -476,7 +477,7 @@ export const addStyles = StyleSheet.create({
     infoTypeText: {
         width: '100%',
         textAlign: 'center',
-        fontSize: scaleFont(12),
+        fontSize: scaleFont(13),
         color: '#A0A0A0',
         paddingHorizontal: scaleW(10),
         paddingTop: Platform.OS === 'ios' ? scaleW(5) : scaleW(10),

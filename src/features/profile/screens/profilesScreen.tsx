@@ -11,6 +11,7 @@ import {
     Alert,
     Animated,
     Image,
+    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -177,7 +178,7 @@ export default function ProfileView() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView edges={['left', 'right', 'bottom']} style={styles.container}>
             <View
                 style={[
                     styles.fixedHeader,
@@ -545,10 +546,11 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#F8FAFD",
+        paddingTop: StatusBar.currentHeight || 50,
     },
     fixedHeader: {
         paddingHorizontal: 20,
-        paddingTop: 11,
+        paddingTop: 13,
         backgroundColor: "#F8FAFD",
         zIndex: 1,
     },

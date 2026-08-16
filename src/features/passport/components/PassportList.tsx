@@ -157,6 +157,10 @@ const PassportList = ({ onSelectPlace, initialTab = 'cover', onTabChange, refres
             data={sortedPassports}
             onSelectPlace={onSelectPlace}
         />
+    ) : filteredDistricts.length === 0 ? (
+        <View style={{ height: COVER_HEIGHT * 1.96 + 42, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ color: '#aaa', fontSize: 15 }}>아직 등록된 장소가 없어요 🗺️</Text>
+        </View>
     ) : (
         <FlatList
             style={{ height: COVER_HEIGHT * 1.96 + 32, overflow: 'hidden' }}
