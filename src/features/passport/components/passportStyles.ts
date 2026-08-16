@@ -1,3 +1,5 @@
+import { scaleFont, scaleW } from '@/src/utils/scale'
+import { scale } from '@shopify/react-native-skia'
 import { Dimensions, StyleSheet } from 'react-native'
 
 const { width } = Dimensions.get('window')
@@ -12,17 +14,17 @@ export const passportStyles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'flex-end',
         marginHorizontal: 13,
-        gap: 5,
+        gap: scaleW(10),
         marginTop: 5,
-        marginLeft: 20,
+        marginLeft: scaleW(24),
     },
     
     iconButton: {
-        width: 39,
-        height: 39,
-        borderRadius: 10,
+        width: scaleW(35),
+        height: scaleW(35),
+        borderRadius: scaleW(10),
         backgroundColor: '#ffffff',
-        borderWidth: 1,
+        borderWidth: scaleW(1),
         borderColor: '#1A3A6B',
         alignItems: 'center',
         justifyContent: 'center',
@@ -30,21 +32,20 @@ export const passportStyles = StyleSheet.create({
     },
 
     iconButtonActive: {
-        width: 39,
-        height: 39,
+        width: scaleW(35),
+        height: scaleW(35),
         backgroundColor: '#1A3A6B',
     },
     
     searchInput: {
         width: Dimensions.get('window').width - 80,
-        height: 39,
+        height: scaleW(35),
         backgroundColor: '#ffffff',
-        borderRadius: 10,
-        borderWidth: 1,
+        borderRadius: scaleW(10),
+        borderWidth: scaleW(1),
         borderColor: '#1A3A6B',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        fontSize: 14,
+        paddingHorizontal: scaleW(10),
+        fontSize: scaleFont(14),
         fontWeight: 'bold',
     },
     
@@ -119,8 +120,8 @@ export const passportStyles = StyleSheet.create({
 
     dropdown: {
         position: 'absolute',
-        top: 44,
-        right: 0,
+        top: 36,
+        left: -5,
         backgroundColor: '#fff',
         borderRadius: 10,
         borderWidth: 2,
