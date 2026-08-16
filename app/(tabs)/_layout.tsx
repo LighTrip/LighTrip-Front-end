@@ -5,6 +5,11 @@ import {
   useTeamMode,
 } from "@/src/components/common/TeamModeContext";
 import colors from "@/src/constant/colors";
+import { emitMapTabPress } from "@/src/features/map/mapTabBus";
+import { emitPassportTabPress } from "@/src/features/passport/passportTabBus";
+import { emitProfileTabPress } from "@/src/features/profile/profileTabBus";
+import { emitSearchTabPress } from "@/src/features/search/searchTabBus";
+import { emitSocialTabPress } from "@/src/features/social/socialTabBus";
 import { Ionicons } from "@expo/vector-icons";
 import {
   BottomTabBarProps,
@@ -227,10 +232,42 @@ function TabsLayoutContent() {
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
-      <Tabs.Screen name="passport" options={{ title: "여권" }} />
-      <Tabs.Screen name="profile" options={{ title: "프로필" }} />
-      <Tabs.Screen name="index" options={{ title: "지도" }} />
-      <Tabs.Screen name="social" options={{ title: "소셜" }} />
+      <Tabs.Screen
+        name="passport"
+        options={{ title: "여권" }}
+        listeners={{
+          tabPress: () => {
+            emitPassportTabPress();
+          },
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{ title: "프로필" }}
+        listeners={{
+          tabPress: () => {
+            emitProfileTabPress();
+          },
+        }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{ title: "지도" }}
+        listeners={{
+          tabPress: () => {
+            emitMapTabPress();
+          },
+        }}
+      />
+      <Tabs.Screen
+        name="social"
+        options={{ title: "소셜" }}
+        listeners={{
+          tabPress: () => {
+            emitSocialTabPress();
+          },
+        }}
+      />
       <Tabs.Screen
         name="search"
         options={{ title: isTeamMode ? "팀" : "둘러보기" }}
@@ -239,6 +276,8 @@ function TabsLayoutContent() {
             if (isTeamMode) {
               e.preventDefault();
               router.push("/team");
+            } else {
+              emitSearchTabPress();
             }
           },
         }}

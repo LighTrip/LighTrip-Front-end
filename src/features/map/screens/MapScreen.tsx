@@ -39,6 +39,7 @@ import {
   INITIAL_BBOX
 } from "../constants/mapConstants";
 import { useMapLights } from "../hooks/useMapLights";
+import { subscribeMapTabPress } from "../mapTabBus";
 import {
   FrontCluster,
   PassportPreview,
@@ -386,6 +387,28 @@ export default function MapScreen() {
       alert("현재 위치를 가져올 수 없습니다.");
     }
   };
+
+  // 지도 탭을 다시 누르면 열려 있던 오버레이/모드를 닫고, 새로고침하며 지도 탭 메인으로 복귀
+  useEffect(() => {
+    return subscribeMapTabPress(() => {
+      setShowAddPlace(false);
+      setPreviewVisible(false);
+      setPreviewData(null);
+      setPreviewLoading(false);
+      setPreviewError(null);
+      setDetailItem(null);
+      setDetailLoading(false);
+      setPickingLocation(false);
+      setShowLocationConfirm(false);
+      setPickedLocation(null);
+      setAddressLoading(false);
+      setActiveClusterItems(null);
+      setShowRegisterBtn(true);
+      userMovedCameraRef.current = false;
+      handleLocationPress();
+      loadLights(INITIAL_BBOX);
+    });
+  }, [loadLights]);
 
   return (
     <View style={styles.container}>

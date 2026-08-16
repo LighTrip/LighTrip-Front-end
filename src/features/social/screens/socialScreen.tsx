@@ -1,13 +1,14 @@
 import { deleteFriend, getFriends } from "@/src/api/socialApi";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AddFriendModal from "../components/AddFriendModal";
 import FriendDetailModal from "../components/FriendDetailModal";
 import FriendGrid from "../components/FriendGrid";
 import SocialSearchBar from "../components/SocialSearchBar";
+import { subscribeSocialTabPress } from "../socialTabBus";
 import { Friend } from "../types/social.types";
 
 export default function SocialView() {
@@ -84,6 +85,16 @@ export default function SocialView() {
             fetchFriends();
         }, [fetchFriends])
     );
+
+    // 소셜 탭을 다시 누르면 열려 있던 모달을 닫고, 새로고침하며 소셜 탭 메인으로 복귀
+    useEffect(() => {
+        return subscribeSocialTabPress(() => {
+            setSelectedFriend(null);
+            setIsAddFriendOpen(false);
+            setDeleteTargetFriend(null);
+            fetchFriends();
+        });
+    }, [fetchFriends]);
 
     const filteredFriends = useMemo(() => {
         const trimmedKeyword = keyword.trim();

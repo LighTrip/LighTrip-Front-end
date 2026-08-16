@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { getMyPassportStats, getPassportDetail, getMyPassportDistricts } from '@/src/api/passport/passport.api'
 import { useTeamMode } from '@/src/components/common/TeamModeContext'
+import { subscribePassportTabPress } from '../passportTabBus'
 
 
 export default function PassportView() {
@@ -64,6 +65,19 @@ export default function PassportView() {
         selectedPlacesRef.current = places
         setSelectedPlaces(places)
     }
+
+    // 여권 탭을 다시 누르면 상세 화면에서 여권 탭 메인으로 복귀
+    React.useEffect(() => {
+        return subscribePassportTabPress(() => {
+            if (selectedPlacesRef.current.length === 0) return
+            updateSelectedPlaces([])
+            setSelectedIndex(0)
+            selectedIndexRef.current = 0
+            setActiveTab('passport')
+            refetchStats()
+            setListRefreshKey(k => k + 1)
+        })
+    }, [])
 
     const changePage = (newIndex: number) => {
         if (newIndex < 0 || newIndex >= selectedPlacesRef.current.length) return
