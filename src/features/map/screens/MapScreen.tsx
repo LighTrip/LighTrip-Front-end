@@ -1,6 +1,9 @@
 import CurrentLocationIcon from "@/assets/icons/current-location.svg";
 import { ClusterDetailItem, getClusterDetail } from "@/src/api/lights.api";
 import { getPassportDetail } from "@/src/api/passport/passport.api";
+import { getTeamMembers } from "@/src/api/teamApi";
+import { useTeamMode } from "@/src/components/common/TeamModeContext";
+import type { TeamMember } from "@/src/features/team/types/team.types";
 import PassportDetail from "@/src/features/passport/screens/PassportDetail";
 import AddPlaceScreen from "@/src/features/place/screens/AddPlaceScreen";
 import {
@@ -11,6 +14,7 @@ import * as Location from "expo-location";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   LogBox,
   StyleSheet,
   Text,
@@ -30,6 +34,7 @@ import {
   UserLocationMarker,
 } from "../components/markers/MapMarkers";
 import {
+  GREEN,
   GREEN_MID,
   INITIAL_BBOX
 } from "../constants/mapConstants";
@@ -53,6 +58,9 @@ export default function MapScreen() {
   const { bottom: safeBottom, top: safeTop } = useSafeAreaInsets();
   const { lights, currentBBox, loadLights, handleCameraChanged } =
     useMapLights();
+  const { isTeamMode, teamId, currentUserId, teamLiveLocations } = useTeamMode();
+
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
   const [showRegisterBtn, setShowRegisterBtn] = useState(true);
   const [showAddPlace, setShowAddPlace] = useState(false);
@@ -92,6 +100,35 @@ export default function MapScreen() {
   const userMovedCameraRef = useRef(false);
   const baseBottom = 68 + Math.max(safeBottom, 12) - 8;
   const frontClusters = clusterSingleMarkers(lights, currentBBox);
+
+  // 팀 모드로 전환했을 때만 팀원 실시간 위치를 메인 지도에 표시한다.
+  // 내 위치는 기존 초록색 원형 마커(UserLocationMarker)로 표시되므로 여기서는 제외한다.
+  const visibleTeamLocations = isTeamMode
+    ? teamLiveLocations.filter((location) => location.userId !== currentUserId)
+    : [];
+  const getTeamMemberProfileImg = (userId: number) =>
+    teamMembers.find((member) => member.userId === userId)?.profileImg;
+  const myProfileImg =
+    currentUserId !== null ? getTeamMemberProfileImg(currentUserId) : undefined;
+
+  useEffect(() => {
+    if (!isTeamMode || !teamId) {
+      setTeamMembers([]);
+      return;
+    }
+
+    let isMounted = true;
+
+    getTeamMembers(Number(teamId))
+      .then((members) => {
+        if (isMounted) setTeamMembers(members);
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isTeamMode, teamId]);
 
   useEffect(() => {
     // 기본값(서울시청)에 머물지 않고 현재 위치에서 지도가 시작되게 한다.
@@ -369,7 +406,15 @@ export default function MapScreen() {
             width={40}
             height={40}
           >
-            <UserLocationMarker />
+            <View style={styles.userLocationMarkerWrapper}>
+              <UserLocationMarker />
+              {isTeamMode && myProfileImg && (
+                <Image
+                  source={{ uri: myProfileImg }}
+                  style={styles.userLocationProfileImage}
+                />
+              )}
+            </View>
           </NaverMapMarkerOverlay>
         )}
 
@@ -425,6 +470,32 @@ export default function MapScreen() {
             </NaverMapMarkerOverlay>
           ),
         )}
+
+        {visibleTeamLocations.map((location) => (
+          <NaverMapMarkerOverlay
+            key={`team-live-${location.userId}`}
+            latitude={location.latitude}
+            longitude={location.longitude}
+            anchor={{ x: 0.5, y: 0.5 }}
+            width={46}
+            height={46}
+          >
+            <View style={styles.teamLiveMarker}>
+              {getTeamMemberProfileImg(location.userId) ? (
+                <Image
+                  source={{ uri: getTeamMemberProfileImg(location.userId) ?? "" }}
+                  style={styles.teamLiveMarkerImage}
+                />
+              ) : (
+                <View style={styles.teamLiveMarkerAvatar}>
+                  <Text style={styles.teamLiveMarkerInitial}>
+                    {location.nickname.charAt(0)}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </NaverMapMarkerOverlay>
+        ))}
       </NaverMapView>
 
       {pickingLocation && <CenterPin />}
@@ -669,5 +740,46 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 16,
     right: 16,
+  },
+  userLocationMarkerWrapper: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  userLocationProfileImage: {
+    position: "absolute",
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 3,
+    borderColor: GREEN,
+  },
+  teamLiveMarker: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  teamLiveMarkerAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 3,
+    borderColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFE06E",
+  },
+  teamLiveMarkerImage: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 3,
+    borderColor: "#FFFFFF",
+    backgroundColor: "#E5ECFC",
+  },
+  teamLiveMarkerInitial: {
+    color: "#111111",
+    fontSize: 16,
+    fontWeight: "800",
   },
 });

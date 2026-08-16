@@ -5,6 +5,7 @@ import {
     uploadProfileImage,
     withdrawMember
 } from "@/src/api/profileApi";
+import { useTeamMode } from "@/src/components/common/TeamModeContext";
 import { REGIONS, matchDistrictFromAddress } from "@/src/constant/regions";
 import { CenterPin } from "@/src/features/map/components/CenterPin";
 import { naverReverseGeocode } from "@/src/features/map/utils/mapUtils";
@@ -124,6 +125,7 @@ const resolveActivityLocation = (value: string) => {
 
 export default function ProfileEditView() {
     const router = useRouter();
+    const { clearTeamMode } = useTeamMode();
 
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -366,6 +368,7 @@ export default function ProfileEditView() {
                             await withdrawMember();
 
                             await clearTokens();
+                            clearTeamMode();
 
                             Alert.alert(
                                 "탈퇴 완료",
