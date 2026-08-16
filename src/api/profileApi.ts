@@ -15,11 +15,12 @@ import {
     UpdateLiveLocationSharingRequest,
     UpdateProfileRequest
 } from "../features/profile/types/profile.types";
+import { getValidAccessToken } from "./authToken";
 import { BASE_URL } from "./config";
 
-// 로그인 토큰 얻기
+// 로그인 토큰 얻기 (만료됐으면 자동으로 재발급된다)
 const getAccessToken = async () => {
-    const accessToken = await Securestore.getItemAsync("accessToken");
+    const accessToken = await getValidAccessToken();
 
     if (!accessToken) {
         throw new Error("로그인 토큰이 없습니다.");

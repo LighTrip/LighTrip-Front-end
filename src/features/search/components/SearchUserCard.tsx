@@ -37,15 +37,19 @@ export default function SearchUserCard({item, onAddFriend, isRequested}: SearchU
             
             {!item.isFriend && (
                 isRequested ? (
+                    // 아이콘만 있으면 친구가 된 건지 요청만 보낸 건지 알 수 없어서 글자를 함께 둔다.
                     <View style={styles.requestedButton}>
-                        <Ionicons name="checkmark" size={22} color="#1A3A6B" />
+                        <Ionicons name="checkmark" size={13} color="#8A93A2" />
+                        <Text style={styles.requestedButtonText}>요청 보냄</Text>
                     </View>
                 ) : (
-                    <TouchableOpacity 
-                        style={styles.addButton} 
+                    <TouchableOpacity
+                        activeOpacity={0.85}
+                        style={styles.addButton}
                         onPress={() => onAddFriend(item.writerFriendCode)}
                     >
-                        <Ionicons name="person-add-outline" size={15} color="#000000" />
+                        <Ionicons name="person-add" size={13} color="#FFFFFF" />
+                        <Text style={styles.addButtonText}>친구추가</Text>
                     </TouchableOpacity>
                 )
             )}
@@ -101,12 +105,35 @@ const styles=StyleSheet.create({
         fontSize: 10,
         color: "#666667",
     },
+    // 두 상태의 크기를 같게 맞춰야 눌렀을 때 버튼이 튀지 않는다.
     addButton: {
-        marginTop: 35,
-        marginRight: -5,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        height: 32,
+        paddingHorizontal: 12,
+        borderRadius: 16,
+        backgroundColor: "#1A3A6B",
+    },
+    addButtonText: {
+        color: "#FFFFFF",
+        fontSize: 12,
+        fontWeight: "700",
     },
     requestedButton: {
-        marginTop: 35,
-        marginRight: -5,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        height: 32,
+        paddingHorizontal: 12,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: "#DDE3EC",
+        backgroundColor: "#F2F5F9",
+    },
+    requestedButtonText: {
+        color: "#8A93A2",
+        fontSize: 12,
+        fontWeight: "600",
     }
 })

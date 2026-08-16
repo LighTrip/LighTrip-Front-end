@@ -16,8 +16,6 @@ type PassportPreviewProps = {
     onLatestDistrictChange?: (district: string | null) => void;
 }
 
-const defaultPassportImage = require("../../../../assets/images/default_profile.png");
-
 export default function PassportPreview(
     {
         userId,
@@ -93,15 +91,17 @@ export default function PassportPreview(
                         activeOpacity={0.8}
                         style={styles.passportCover}
                     >
-                        <Image 
-                            source={
-                                imageUrl
-                                    ? {uri: imageUrl}
-                                    : defaultPassportImage
-                            }
-                            style={styles.coverImage}
-                            resizeMode="cover"
-                        />
+                        {imageUrl ? (
+                            <Image
+                                source={{uri: imageUrl}}
+                                style={styles.coverImage}
+                                resizeMode="cover"
+                            />
+                        ) : (
+                            // 커버가 없을 때 쓰던 default_profile 은 사람 실루엣이라
+                            // 여권 커버 자리에는 맞지 않는다. 단색 배경으로 둔다.
+                            <View style={[styles.coverImage, styles.coverPlaceholder]} />
+                        )}
                     
                         <View style={styles.overlay} />
 
@@ -151,6 +151,9 @@ const styles = StyleSheet.create({
     coverImage: {
         width: "120%",
         height: "120%",
+    },
+    coverPlaceholder: {
+        backgroundColor: "#D9DEE6",
     },
     districtName: {
         position: "absolute",

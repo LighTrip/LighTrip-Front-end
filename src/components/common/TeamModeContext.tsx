@@ -413,23 +413,17 @@ export function TeamModeProvider({ children }: { children: ReactNode }) {
 
     const toggleTeamMode = async () => {
         if (!isTeamMode) {
-            let id = await SecureStore.getItemAsync("teamId").catch(() => null);
-            let name = await SecureStore.getItemAsync("teamName").catch(() => null);
-
-            if (!id) {
-                try {
-                    const teamInfo = await getMyTeam();
-                    id = String(teamInfo.teamId);
-                    name = teamInfo.teamName;
-                } catch (error) {
-                    console.log("팀 모드 전환 중 팀 정보 조회 실패:", error);
-                    clearTeamMode();
-                    return false;
-                }
+            // 캐시된 teamId 를 믿으면 안 된다. 팀에서 나갔거나 팀이 사라져도 캐시는 남아 있어서,
+            // 팀이 없는데도 팀 모드로 전환되는 문제가 있었다. 켤 때는 항상 서버에 확인한다.
+            try {
+                const teamInfo = await getMyTeam();
+                setTeamId(String(teamInfo.teamId));
+                setTeamName(teamInfo.teamName);
+            } catch (error) {
+                console.log("팀 모드 전환 중 팀 정보 조회 실패:", error);
+                clearTeamMode();
+                return false;
             }
-
-            setTeamId(id);
-            setTeamName(name);
         }
 
         const nextTeamMode = !isTeamMode;
@@ -477,6 +471,10 @@ export function TeamModeProvider({ children }: { children: ReactNode }) {
         setTeamLiveLocations([]);
         SecureStore.deleteItemAsync(TEAM_MODE_ENABLED_KEY).catch(() => {});
         SecureStore.deleteItemAsync(LIVE_LOCATION_SHARING_KEY).catch(() => {});
+        // 남아 있는 팀 캐시도 함께 지운다. 그대로 두면 다음 전환 때 잘못된 팀으로 붙는다.
+        SecureStore.deleteItemAsync("teamId").catch(() => {});
+        SecureStore.deleteItemAsync("teamCode").catch(() => {});
+        SecureStore.deleteItemAsync("teamName").catch(() => {});
     };
 
     return (

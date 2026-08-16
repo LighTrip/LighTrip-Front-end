@@ -1,8 +1,8 @@
+import { saveTokens } from "@/src/api/authToken";
 import { BASE_URL } from "@/src/api/config";
 import LighTripLogo from "@/src/constant/LighTrip.svg";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
-import * as SecureStore from "expo-secure-store";
 import { useEffect } from "react";
 import {
   StatusBar,
@@ -34,11 +34,12 @@ export default function LoginScreen() {
     if (!parsed.path?.includes("callback")) return;
 
     const accessToken = parsed.queryParams?.accessToken as string | undefined;
+    const refreshToken = parsed.queryParams?.refreshToken as string | undefined;
     const isNewUser = parsed.queryParams?.isNewUser === "true";
 
     if (!accessToken) return;
 
-    await SecureStore.setItemAsync("accessToken", accessToken);
+    await saveTokens(accessToken, refreshToken);
 
     if (isNewUser) {
       router.replace("/signup");

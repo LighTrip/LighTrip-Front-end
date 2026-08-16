@@ -1,9 +1,9 @@
-import * as SecureStore from 'expo-secure-store'
+import { getValidAccessToken } from '@/src/api/authToken'
 import { BASE_URL, API_ENDPOINTS } from '@/src/api/config'
 
 // 초안 생성 - imageUrl은 S3 CDN URL이어야 함 (백엔드가 직접 다운로드)
 export const generateAIDraft = async (imageUrl: string, description: string) => {
-    const token = await SecureStore.getItemAsync('accessToken')
+    const token = await getValidAccessToken()
 
     const params = new URLSearchParams({ imageUrl })
     if (description) params.append('text', description)

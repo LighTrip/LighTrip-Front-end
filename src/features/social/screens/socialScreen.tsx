@@ -188,6 +188,7 @@ export default function SocialView() {
                 friend={selectedFriend}
                 refreshVersion={detailRefreshVersion}
                 onClose={()=>setSelectedFriend(null)}
+                onRequestDelete={() => setDeleteTargetFriend(selectedFriend)}
             />
 
             {/*친구 추가 바텀시트*/}

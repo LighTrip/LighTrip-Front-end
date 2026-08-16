@@ -88,30 +88,63 @@ export default function MapScreen() {
   } | null>(null);
 
   const mapRef = useRef<any>(null);
+  // 사용자가 이미 지도를 움직였다면 위치가 늦게 도착해도 화면을 뺏지 않는다.
+  const userMovedCameraRef = useRef(false);
   const baseBottom = 68 + Math.max(safeBottom, 12) - 8;
   const frontClusters = clusterSingleMarkers(lights, currentBBox);
 
   useEffect(() => {
+    // 기본값(서울시청)에 머물지 않고 현재 위치에서 지도가 시작되게 한다.
+    const showPosition = async (coords: {
+      latitude: number;
+      longitude: number;
+    }) => {
+      const { latitude, longitude } = coords;
+      setUserLocation({ latitude, longitude });
+
+      if (!userMovedCameraRef.current) {
+        mapRef.current?.animateCameraTo({
+          latitude,
+          longitude,
+          zoom: 16,
+          duration: 500,
+        });
+      }
+
+      setDiscoverBanner({ address: null });
+      const address = await naverReverseGeocode(latitude, longitude);
+      setDiscoverBanner({ address });
+    };
+
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") return;
-        const location = await Location.getCurrentPositionAsync({
+
+        // GPS 콜드 스타트는 수십 초가 걸리기도 하고, 에뮬레이터에선 아예 응답이 없다.
+        // 마지막으로 알려진 위치가 있으면 그걸로 먼저 옮겨 두고, 정확한 좌표가 오면 보정한다.
+        const lastKnown = await Location.getLastKnownPositionAsync();
+        if (lastKnown) {
+          await showPosition(lastKnown.coords);
+        }
+
+        const current = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
-        const { latitude, longitude } = location.coords;
-        setUserLocation({ latitude, longitude });
-        setDiscoverBanner({ address: null });
-        const address = await naverReverseGeocode(latitude, longitude);
-        setDiscoverBanner({ address });
+        await showPosition(current.coords);
       } catch {
-        // 에뮬레이터 등 위치 사용 불가 환경에서는 무시
+        // 위치를 아예 쓸 수 없는 환경에서는 기본 카메라 위치를 유지한다.
       }
     })();
   }, []);
 
   const onCameraChanged = useCallback(
     (event: any) => {
+      // 사용자가 직접 지도를 움직였는지 기록해 둔다 (프로그램 이동과 구분).
+      if (event?.reason === "Gesture") {
+        userMovedCameraRef.current = true;
+      }
+
       const result = handleCameraChanged(event, pickingLocation);
       if (result?.latitude && result?.longitude) {
         setCameraCenter({
