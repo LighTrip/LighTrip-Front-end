@@ -8,7 +8,7 @@ import {
     PublicUserProfile,
     RecommendedFriend,
 } from "@/src/features/social/types/social.types";
-import * as Securestore from "expo-secure-store";
+import { getValidAccessToken } from "./authToken";
 import { BASE_URL } from "./config";
 
 // 친구 타입
@@ -109,9 +109,9 @@ type FriendLightClusterResponse = {
     data: FriendLightClusterPage;
 };
 
-// 1. 토큰 발급
+// 1. 토큰 발급 (만료됐으면 자동으로 재발급된다)
 const getAccessToken = async () => {
-    const accessToken = await Securestore.getItemAsync("accessToken");
+    const accessToken = await getValidAccessToken();
 
     if(!accessToken) {
         throw new Error("로그인 토큰이 없습니다.");

@@ -1,15 +1,15 @@
-import * as Securestore from "expo-secure-store";
 import type {
     GetPassportFeedParams,
     PassportFeedResponse,
 } from "../features/search/types/passport.types";
 import type { RankingResponse } from "../features/search/types/ranking.types";
+import { getValidAccessToken } from "./authToken";
 import { BASE_URL } from "./config";
 
 
 // 1. 릴스 피드 조회 API
 export async function getPassportFeed(params: GetPassportFeedParams = {}) {
-    const token = await Securestore.getItemAsync("accessToken");
+    const token = await getValidAccessToken();
 
     const queryParams = new URLSearchParams();
 
@@ -68,7 +68,7 @@ export async function getPassportFeed(params: GetPassportFeedParams = {}) {
 
 // 2. 랭킹 조회 API
 export async function getTotalRanking() {
-    const token = await Securestore.getItemAsync("accessToken");
+    const token = await getValidAccessToken();
 
     const url = `${BASE_URL}/api/v1/rankings/total`;
 
@@ -95,7 +95,7 @@ export async function getTotalRanking() {
 
 // 3. 친구 추가 요청 API
 export async function requestFriend(friendCode: string) {
-    const token = await Securestore.getItemAsync("accessToken");
+    const token = await getValidAccessToken();
 
     const url = `${BASE_URL}/api/v1/friends/request`;
 
@@ -128,7 +128,7 @@ export async function requestFriend(friendCode: string) {
 
 // 4. 구 별 랭킹 조회 API 연결
 export async function getDistrictRanking (district: string) {
-    const token = await Securestore.getItemAsync("accessToken");
+    const token = await getValidAccessToken();
 
     const url = `${BASE_URL}/api/v1/rankings/districts/${district}`;
 
