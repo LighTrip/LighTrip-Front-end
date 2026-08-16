@@ -1,3 +1,4 @@
+import { clearTokens } from "@/src/api/authToken";
 import {
     getMyProfileEditForm,
     updateMyProfile,
@@ -12,7 +13,6 @@ import { NaverMapView } from "@mj-studio/react-native-naver-map";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
-import * as Securestore from "expo-secure-store";
 import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -29,6 +29,8 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { compressImageForUpload } from "@/src/utils/imageUpload";
 import { UpdateProfileRequest } from "../types/profile.types";
 
 const DEFAULT_LOCATION_CAMERA = {
@@ -127,6 +129,10 @@ export default function ProfileEditView() {
     const [isSaving, setIsSaving] = useState(false);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [isWithdrawing, setIsWithdrawing] = useState(false);
+    // 지금 입력 중인 칸을 강조하기 위한 상태
+    const [focusedField, setFocusedField] = useState<string | null>(null);
+    // 탭바 없이 전체 화면으로 뜨는 화면이라 상태바 높이를 직접 확보해야 한다.
+    const insets = useSafeAreaInsets();
 
     const[profileImg, setProfileImg] = useState<string | null>(null);
     const [email, setEmail] = useState("");
@@ -203,8 +209,9 @@ export default function ProfileEditView() {
 
             const selectedAsset = result.assets[0];
 
-            const imageUri = selectedAsset.uri;
-            const contentType = selectedAsset.mimeType || "image/jpeg";
+            // 원본 그대로 올리면 파일이 커서 나중에 불러올 때 느리다.
+            const imageUri = await compressImageForUpload(selectedAsset.uri);
+            const contentType = "image/jpeg";
 
             console.log("선택한 이미지 URI:", imageUri);
             console.log("선택한 이미지 contentType:", contentType);
@@ -358,8 +365,7 @@ export default function ProfileEditView() {
                         try {
                             await withdrawMember();
 
-                            await Securestore.deleteItemAsync("accessToken");
-                            await Securestore.deleteItemAsync("refreshToken");
+                            await clearTokens();
 
                             Alert.alert(
                                 "탈퇴 완료",
@@ -405,40 +411,53 @@ export default function ProfileEditView() {
             behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
             <ScrollView
-                contentContainerStyle={styles.content}
+                contentContainerStyle={[
+                    styles.content,
+                    {
+                        paddingTop: insets.top + 8,
+                        paddingBottom: insets.bottom + 32,
+                    },
+                ]}
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
             >
                 <View style={styles.header}>
                     <TouchableOpacity
-                        activeOpacity={0.8}
-                        onPress={handleSaveProfile}
+                        activeOpacity={0.7}
+                        onPress={() => router.back()}
                         style={styles.backButton}
                     >
-                        <Ionicons name="chevron-back" size={24} color="#000000" />
+                        <Ionicons name="chevron-back" size={24} color="#111827" />
                     </TouchableOpacity>
+
+                    <Text style={styles.headerTitle}>프로필 수정</Text>
 
                     <View style={styles.headerRightSpace} />
                 </View>
 
                 {/*프로필 이미지 수정*/}
                 <View style={styles.profileImageSection}>
-                    <Image
-                        source ={ 
-                            profileImg
-                                ? {uri: profileImg}
-                                : require ("@/assets/images/default_profile.png")
-                        }
-                        style={styles.profileImage}
-                    />
-                    
+                    <View style={styles.profileImageRing}>
+                        <Image
+                            source ={
+                                profileImg
+                                    ? {uri: profileImg}
+                                    : require ("@/assets/images/default_profile.png")
+                            }
+                            style={styles.profileImage}
+                        />
+                    </View>
+
                     <TouchableOpacity
-                        activeOpacity={0.8}
+                        activeOpacity={0.85}
                         style={styles.cameraButton}
                         onPress={handlePickImage}
                     >
-                        <Ionicons name="camera-outline" size={20} color="#FFFFFF" />
+                        <Ionicons name="camera" size={18} color="#FFFFFF" />
                     </TouchableOpacity>
                 </View>
+
+                <Text style={styles.sectionTitle}>계정 정보</Text>
 
                 <View style={styles.infoCard}>
                     {/*연동 계정*/}
@@ -453,95 +472,149 @@ export default function ProfileEditView() {
                         </View>
                     </View>
 
+                    <View style={styles.infoDivider} />
+
                     {/*이메일*/}
                     <View style={styles.infoRow}>
                         <Text style={styles.infoLabel}>이메일</Text>
-                        <Text style={styles.infoValue}>{email}</Text>
+                        <Text style={styles.infoValue} numberOfLines={1}>
+                            {email}
+                        </Text>
                     </View>
+
+                    <View style={styles.infoDivider} />
 
                     {/*사용자 번호*/}
                     <View style={styles.infoRow}>
                         <Text style={styles.infoLabel}>사용자번호</Text>
-                        <Text style={styles.userCode}>{userId}</Text>
+                        <View style={styles.userCodeBadge}>
+                            <Text style={styles.userCode}>{userId}</Text>
+                        </View>
                     </View>
                 </View>
 
-                {/*닉네임 변경*/}
+                <Text style={styles.sectionTitle}>내 정보</Text>
+
+                {/* 입력 항목은 한 장의 카드로 묶는다.
+                    항목마다 카드를 띄우면 그림자 상자가 여러 겹 쌓여 산만해진다. */}
                 <View style={styles.editCard}>
-                    <View style={styles.cardHeader}>
-                        <Text style={styles.cardLabel}>닉네임</Text>
-                        <Text style={styles.countText}>{nickname.length}/10</Text>
-                    </View>
+                    {/*닉네임 변경*/}
+                    <View style={styles.fieldGroup}>
+                        <View style={styles.cardHeader}>
+                            <Text style={styles.cardLabel}>닉네임</Text>
+                            <Text style={styles.countText}>
+                                {nickname.length}/10
+                            </Text>
+                        </View>
 
-                    <View style={styles.nicknameInputBox}>
-                        <TextInput
-                            style={styles.nicknameInput}
-                            value={nickname}
-                            onChangeText={(text) => {
-                                if (text.length <= 10) {
-                                    setNickname(text)
-                                }
-                            }}
-                            placeholder="닉네임을 입력해주세요"
-                            placeholderTextColor="#A0A0A0"
-                        />
-                    </View>
-                </View>
-
-                {/*지역 변경*/}
-                <View style={styles.editCard}>
-                    <Text style={styles.cardLabel}>활동 지역</Text>
-
-                    <View style={styles.locationInputRow}>
-                        <TextInput
-                            style={styles.locationInput}
-                            value={location}
-                            onChangeText={(text) => {
-                                if (text.length <= LOCATION_MAX_LENGTH) {
-                                    setLocation(text);
-                                }
-                            }}
-                            placeholder="예: 서울시 용산구"
-                            placeholderTextColor="#A0A0A0"
-                            maxLength={LOCATION_MAX_LENGTH}
-                        />
-
-                        <TouchableOpacity
-                            activeOpacity={0.8}
-                            onPress={handleOpenLocationPicker}
+                        <View
+                            style={[
+                                styles.field,
+                                focusedField === "nickname" && styles.fieldFocused,
+                            ]}
                         >
-                            <Ionicons name="map-outline" size={24} color="#A0A0A0" />
-                        </TouchableOpacity>
+                            <TextInput
+                                style={styles.fieldInput}
+                                value={nickname}
+                                onChangeText={(text) => {
+                                    if (text.length <= 10) {
+                                        setNickname(text)
+                                    }
+                                }}
+                                onFocus={() => setFocusedField("nickname")}
+                                onBlur={() => setFocusedField(null)}
+                                placeholder="닉네임을 입력해주세요"
+                                placeholderTextColor="#9CA3AF"
+                            />
+                        </View>
                     </View>
-                    <Text style={styles.locationHelpText}>
-                        시/군/구 단위로 입력해 주세요. 예: 서울시 용산구, 용산구
-                    </Text>
-                </View>
 
-                {/*한 줄 소개*/}
-                <View style={styles.editCard}>
-                    <Text style={styles.cardLabel}>한 줄 소개</Text>
+                    <View style={styles.infoDivider} />
 
-                    <TextInput
-                        style={styles.bioInput}
-                        value={bio}
-                        onChangeText={setBio}
-                        placeholder="자신을 소개하는 문구를 입력하세요."
-                        placeholderTextColor="#777777"
-                        multiline
-                        textAlignVertical="top"
-                    />
+                    {/*지역 변경*/}
+                    <View style={styles.fieldGroup}>
+                        <Text style={styles.cardLabel}>활동 지역</Text>
+
+                        <View style={styles.locationInputRow}>
+                            <View
+                                style={[
+                                    styles.field,
+                                    styles.locationField,
+                                    focusedField === "location" &&
+                                        styles.fieldFocused,
+                                ]}
+                            >
+                                <TextInput
+                                    style={styles.fieldInput}
+                                    value={location}
+                                    onChangeText={(text) => {
+                                        if (text.length <= LOCATION_MAX_LENGTH) {
+                                            setLocation(text);
+                                        }
+                                    }}
+                                    onFocus={() => setFocusedField("location")}
+                                    onBlur={() => setFocusedField(null)}
+                                    placeholder="예: 서울시 용산구"
+                                    placeholderTextColor="#9CA3AF"
+                                    maxLength={LOCATION_MAX_LENGTH}
+                                />
+                            </View>
+
+                            <TouchableOpacity
+                                activeOpacity={0.8}
+                                style={styles.mapButton}
+                                onPress={handleOpenLocationPicker}
+                            >
+                                <Ionicons
+                                    name="map-outline"
+                                    size={20}
+                                    color="#1A3A6B"
+                                />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.locationHelpText}>
+                            시/군/구 단위로 입력해 주세요. 예: 서울시 용산구
+                        </Text>
+                    </View>
+
+                    <View style={styles.infoDivider} />
+
+                    {/*한 줄 소개*/}
+                    <View style={styles.fieldGroup}>
+                        <Text style={styles.cardLabel}>한 줄 소개</Text>
+
+                        <View
+                            style={[
+                                styles.field,
+                                styles.bioField,
+                                focusedField === "bio" && styles.fieldFocused,
+                            ]}
+                        >
+                            <TextInput
+                                style={[styles.fieldInput, styles.bioInput]}
+                                value={bio}
+                                onChangeText={setBio}
+                                onFocus={() => setFocusedField("bio")}
+                                onBlur={() => setFocusedField(null)}
+                                placeholder="자신을 소개하는 문구를 입력하세요."
+                                placeholderTextColor="#9CA3AF"
+                                multiline
+                                textAlignVertical="top"
+                            />
+                        </View>
+                    </View>
                 </View>
 
                 {/*변경사항 저장 버튼*/}
                 <TouchableOpacity
-                    activeOpacity={0.8}
+                    activeOpacity={0.85}
                     style={[
                         styles.saveButton,
                         (isSaving || isUploadingImage) && styles.saveButtonDisabled,
                     ]}
                     onPress={handleSaveProfile}
-                    disabled = {isSaving || isUploadingImage} 
+                    disabled = {isSaving || isUploadingImage}
                 >
                     {isSaving || isUploadingImage ? (
                         <ActivityIndicator size="small" color="#FFFFFF" />
@@ -552,16 +625,13 @@ export default function ProfileEditView() {
 
                 {/*회원탈퇴 버튼*/}
                 <TouchableOpacity
-                    activeOpacity={0.8}
-                    style={[
-                        styles.withdrawButton,
-                        isWithdrawing && styles.withdrawButtonDisabled,
-                    ]}
+                    activeOpacity={0.7}
+                    style={styles.withdrawButton}
                     onPress={handleWithdraw}
                     disabled={isWithdrawing}
                 >
                     {isWithdrawing ? (
-                        <ActivityIndicator size="small" color="#D64545" />
+                        <ActivityIndicator size="small" color="#9CA3AF" />
                     ) : (
                         <Text style={styles.withdrawButtonText}>회원탈퇴</Text>
                     )}
@@ -631,9 +701,9 @@ const styles= StyleSheet.create({
         backgroundColor: "#F8FAFD"
     },
     content: {
-        paddingHorizontal: 22,
-        paddingTop: 35,
-        paddingBottom: 130,
+        paddingHorizontal: 20,
+        paddingTop: 12,
+        paddingBottom: 48,
     },
     loadingContainer: {
         flex: 1,
@@ -642,17 +712,23 @@ const styles= StyleSheet.create({
         alignItems: "center",
     },
     header: {
-        height: 40,
+        height: 44,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        marginBottom: 10,
+        marginBottom: 8,
     },
     backButton: {
         width: 34,
         height: 34,
         justifyContent: "center",
         alignItems: "center",
+        marginLeft: -6,
+    },
+    headerTitle: {
+        color: "#111827",
+        fontSize: 18,
+        fontWeight: "700",
     },
     headerRightSpace: {
         width: 34,
@@ -660,25 +736,40 @@ const styles= StyleSheet.create({
     },
     profileImageSection: {
         alignSelf: "center",
-        marginTop: 4,
-        marginBottom: 32,
+        marginTop: 8,
+        marginBottom: 28,
+    },
+    // 검은 테두리 대신 흰 링 + 그림자로 배경에서 떠 보이게 한다.
+    profileImageRing: {
+        padding: 4,
+        borderRadius: 64,
+        backgroundColor: "#FFFFFF",
+
+        shadowColor: "#1A3A6B",
+        shadowOffset: {
+            width: 0,
+            height: 5,
+        },
+        shadowOpacity: 0.12,
+        shadowRadius: 14,
+        elevation: 4,
     },
     profileImage: {
-        width: 128,
-        height: 128,
-        borderRadius: 64,
-        borderWidth: 3.5,
-        borderColor: "#000000",
-        backgroundColor: "#d9d9d9",
+        width: 112,
+        height: 112,
+        borderRadius: 56,
+        backgroundColor: "#E5E7EB",
     },
     cameraButton: {
         position: "absolute",
-        right: 0,
-        bottom: 4,
-        width: 40,
-        height: 40,
-        borderRadius: 24,
+        right: 2,
+        bottom: 2,
+        width: 38,
+        height: 38,
+        borderRadius: 19,
         backgroundColor: "#1A3A6B",
+        borderWidth: 3,
+        borderColor: "#F8FAFD",
         justifyContent: "center",
         alignItems: "center",
 
@@ -687,40 +778,54 @@ const styles= StyleSheet.create({
             width: 0,
             height: 3,
         },
-        shadowOpacity: 0.18,
+        shadowOpacity: 0.2,
         shadowRadius: 5,
-        elevation: 5,
+        elevation: 6,
+    },
+    sectionTitle: {
+        color: "#6B7280",
+        fontSize: 13,
+        fontWeight: "700",
+        marginBottom: 10,
+        marginLeft: 4,
     },
     infoCard: {
         backgroundColor: "#FFFFFF",
         borderRadius: 18,
         paddingHorizontal: 18,
-        paddingVertical: 16,
-        marginBottom: 18,
+        paddingVertical: 4,
+        marginBottom: 24,
 
         shadowColor: "#4c4c4c",
         shadowOffset: {
             width: 0,
             height: 4,
         },
-        shadowOpacity: 0.14,
-        shadowRadius: 10,
-        elevation: 5,
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 3,
     },
     infoRow: {
-        minHeight: 30,
+        minHeight: 48,
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
+        gap: 12,
+    },
+    infoDivider: {
+        height: 1,
+        backgroundColor: "#EEF1F5",
     },
     infoLabel: {
-        color: "#99A1AF",
-        fontSize: 14,
+        color: "#9CA3AF",
+        fontSize: 13,
+        fontWeight: "500",
     },
     infoValue: {
-        color: "#6A7282",
+        flexShrink: 1,
+        color: "#374151",
         fontSize: 14,
-        fontWeight: "500",
+        fontWeight: "600",
     },
     kakaoBox: {
         flexDirection: "row",
@@ -740,71 +845,93 @@ const styles= StyleSheet.create({
         fontSize: 6.5,
         fontWeight: "500",
     },
+    userCodeBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
+        backgroundColor: "#EEF3FA",
+    },
     userCode: {
         color: "#1A3A6B",
-        fontSize: 14,   
+        fontSize: 13,
+        fontWeight: "700",
     },
     editCard: {
         backgroundColor: "#FFFFFF",
-        borderRadius: 24,
+        borderRadius: 18,
         paddingHorizontal: 18,
-        paddingVertical: 16,
-        marginBottom: 16,
+        marginBottom: 8,
 
         shadowColor: "#4c4c4c",
         shadowOffset: {
             width: 0,
             height: 4,
         },
-        shadowOpacity: 0.14,
-        shadowRadius: 10,
-        elevation: 5,
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 3,
+    },
+    fieldGroup: {
+        paddingVertical: 16,
     },
     cardHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 8,
     },
     cardLabel: {
-        color: "#99A1AF",
-        fontSize: 14,
-        fontWeight: "500",
+        color: "#6B7280",
+        fontSize: 13,
+        fontWeight: "600",
     },
     countText: {
-        color: "#6A7282",
+        color: "#9CA3AF",
         fontSize: 12,
-        fontWeight: "500",
+        fontWeight: "600",
     },
-    nicknameInputBox: {
-        minHeight: 28,
+    // 세 입력칸이 모두 같은 모양을 쓰도록 공통 필드로 뺐다.
+    // (기존에는 한 줄 소개만 테두리가 있어서 나머지가 입력칸으로 보이지 않았다.)
+    field: {
+        minHeight: 48,
         justifyContent: "center",
+        marginTop: 10,
+        paddingHorizontal: 14,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#E5EAF2",
+        backgroundColor: "#F7F9FC",
     },
-    nicknameInput: {
-        color: "#000000",
-        fontSize: 18,
-        fontWeight: "500",
+    fieldFocused: {
+        borderColor: "#1A3A6B",
+        backgroundColor: "#FFFFFF",
+    },
+    fieldInput: {
+        color: "#111827",
+        fontSize: 15,
+        fontWeight: "600",
         paddingVertical: 0,
-        paddingHorizontal: 0,
         margin: 0,
         includeFontPadding: false,
     },
     locationInputRow: {
-        minHeight: 28,
         flexDirection: "row",
-        alignItems: "center",  
+        alignItems: "center",
+        gap: 10,
     },
-    locationInput: {
+    locationField: {
         flex: 1,
-        fontSize: 14,
-        color: "#000000",
-        fontWeight: "600",
-        paddingVertical: 0,
-        marginLeft: -3,
-        marginTop: 3,
+    },
+    mapButton: {
+        width: 48,
+        height: 48,
+        marginTop: 10,
+        borderRadius: 12,
+        backgroundColor: "#EEF3FA",
+        justifyContent: "center",
+        alignItems: "center",
     },
     locationHelpText: {
-        color: "#8A8A8A",
+        color: "#9CA3AF",
         fontSize: 11,
         marginTop: 8,
         lineHeight: 15,
@@ -879,60 +1006,55 @@ const styles= StyleSheet.create({
         fontSize: 15,
         fontWeight: "700",
     },
+    bioField: {
+        height: 96,
+        justifyContent: "flex-start",
+        paddingVertical: 12,
+    },
     bioInput: {
-        height: 80,
-        borderWidth: 1,
-        borderColor: "#585858",
-        borderRadius: 10,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        color: "#000000",
-        fontSize: 12,
-        lineHeight: 18,
-        marginTop: 10,
+        flex: 1,
+        fontSize: 14,
+        fontWeight: "500",
+        lineHeight: 20,
     },
     saveButton: {
-        height: 56,
-        borderRadius: 18,
+        height: 54,
+        borderRadius: 16,
         backgroundColor: "#1A3A6B",
         justifyContent: "center",
         alignItems: "center",
-        marginTop: 6,
-        
+        marginTop: 10,
+
         shadowColor: "#1A3A6B",
         shadowOffset: {
             width: 0,
-            height: 5,
+            height: 6,
         },
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
-        elevation: 5,
+        shadowOpacity: 0.28,
+        shadowRadius: 12,
+        elevation: 6,
     },
     saveButtonDisabled: {
-        backgroundColor: "#A7B3C4"
+        backgroundColor: "#A7B3C4",
+        shadowOpacity: 0,
+        elevation: 0,
     },
     saveButtonText: {
         color: "#FFFFFF",
         fontSize: 16,
-        fontWeight: "600",
+        fontWeight: "700",
     },
+    // 되돌릴 수 없는 동작이라 눈에 덜 띄는 텍스트 버튼으로 둔다.
     withdrawButton: {
-        height: 52,
-        borderRadius: 18,
-        backgroundColor: "#FFFFFF",
-        borderWidth: 1.2,
-        borderColor: "#D64545",
+        height: 44,
         justifyContent: "center",
         alignItems: "center",
-        marginTop: 25,
-    },
-    withdrawButtonDisabled: {
-        borderColor: "#E3A5A5",
-        backgroundColor: "#FFF7F7",
+        marginTop: 14,
     },
     withdrawButtonText: {
-        color: "#D64545",
-        fontSize: 16,
-        fontWeight: "600"
+        color: "#9CA3AF",
+        fontSize: 13,
+        fontWeight: "600",
+        textDecorationLine: "underline",
     }
 })

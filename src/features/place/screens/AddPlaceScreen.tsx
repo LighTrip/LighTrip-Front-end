@@ -17,6 +17,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { Shadow } from 'react-native-shadow-2'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { compressImageForUpload } from '@/src/utils/imageUpload'
 
 import { generateAIDraft } from '@/src/api/passport/ai.api'
 import { getPresignedUrl, uploadToS3 } from '@/src/api/passport/image.api'
@@ -173,8 +174,11 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
         if (!result.canceled) {
             const persistentUris = await Promise.all(
                 result.assets.map(async (a, i) => {
+                    // 원본은 한 장에 3MB 가 넘어 업로드·재조회가 느리다. 줄인 뒤 보관한다.
+                    // (위치 정보는 아래에서 picker 가 준 exif 로 읽으므로 영향 없음)
+                    const compressed = await compressImageForUpload(a.uri)
                     const dest = `${FileSystem.documentDirectory}photo_${Date.now()}_${i}.jpg`
-                    await FileSystem.copyAsync({ from: a.uri, to: dest })
+                    await FileSystem.copyAsync({ from: compressed, to: dest })
                     return dest
                 })
             )
@@ -189,8 +193,9 @@ const AddPlaceScreen = ({ onClose, initialLatitude, initialLongitude, initialAdd
         const result = await ImagePicker.launchCameraAsync({ allowsEditing: false, aspect: [4, 3], quality: 1, exif: true })
         if (!result.canceled) {
             const asset = result.assets[0]
+            const compressed = await compressImageForUpload(asset.uri)
             const dest = `${FileSystem.documentDirectory}photo_${Date.now()}_0.jpg`
-            await FileSystem.copyAsync({ from: asset.uri, to: dest })
+            await FileSystem.copyAsync({ from: compressed, to: dest })
             setPhotos(prev => [...prev, dest])
             if (asset.exif) await extractFromExif(asset.exif)
         }

@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
 import {
     Animated,
@@ -138,6 +139,24 @@ export default function SearchView() {
                 ) : (
                     <RankingContent rankingMode={rankingMode} />
                 )}
+
+                {/* 카드가 화면 위아래 경계를 넘나들 때 그대로 잘려 보이는 걸 막는다. */}
+                <LinearGradient
+                    colors={["#F8FAFD", "rgba(248, 250, 253, 0)"]}
+                    style={styles.contentTopFade}
+                    pointerEvents="none"
+                />
+
+                <LinearGradient
+                    colors={[
+                        "rgba(248, 250, 253, 0)",
+                        "rgba(248, 250, 253, 0.9)",
+                        "#F8FAFD",
+                    ]}
+                    locations={[0, 0.6, 1]}
+                    style={styles.contentBottomFade}
+                    pointerEvents="none"
+                />
             </Animated.View>
         </SafeAreaView>
     );
@@ -161,6 +180,21 @@ const styles = StyleSheet.create({
     },
     contentArea: {
         flex: 1,
+    },
+    contentTopFade: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 40,
+    },
+    // 탭바가 콘텐츠 위에 떠 있어서, 탭바에 닿기 전에 카드가 사라지도록 넉넉히 잡는다.
+    contentBottomFade: {
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 120,
     },
     titleArea: {
         zIndex: 200,

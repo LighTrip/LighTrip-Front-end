@@ -61,6 +61,9 @@ function getTabRoutes(isTeamMode: boolean): TabRoute[] {
   ];
 }
 
+// 탭바 없이 전체 화면으로 보여 줄 하위 라우트
+const FULL_SCREEN_ROUTES = ["profile/profileEdit"];
+
 function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { bottom } = useSafeAreaInsets();
   const router = useRouter();
@@ -98,6 +101,11 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const itemWidth = barWidth > 0 ? barWidth / tabCount : 0;
   const pillW = itemWidth * 0.82 + 4;
   const pillH = 46;
+
+  // 전체 화면으로 쓰는 하위 페이지에서는 탭바를 감춘다.
+  if (FULL_SCREEN_ROUTES.includes(currentRouteName)) {
+    return null;
+  }
 
   return (
     <View style={[styles.wrapper, { paddingBottom: Platform.OS === 'ios' ? bottom - 12 : bottom + 12 }]}>

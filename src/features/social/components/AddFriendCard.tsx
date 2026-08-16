@@ -101,7 +101,7 @@ export default function AddFriendCard({ friend, onAdd, onPress }: AddFriendProps
                         requestPending && styles.pendingButtonText,
                     ]}
                 >
-                    {requestPending ? "요청됨" : "추가"}
+                    {requestPending ? "요청 보냄" : "친구추가"}
                 </Text>
             </TouchableOpacity>
         </TouchableOpacity>
@@ -143,7 +143,9 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     addButton: {
-        width: 58,
+        // 고정 폭(58)이면 "친구추가"/"요청 보냄" 이 잘린다. 글자에 맞춰 늘어나게 둔다.
+        minWidth: 58,
+        paddingHorizontal: 14,
         height: 35,
         borderRadius: 30,
         backgroundColor: "#1A3A6B",

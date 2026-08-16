@@ -18,6 +18,8 @@ import {
     ScrollView,
 } from 'react-native'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
+import { compressImagesForUpload } from '@/src/utils/imageUpload'
+import MarqueeText from '@/src/components/common/MarqueeText'
 import Svg, { Path } from 'react-native-svg'
 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -115,22 +117,32 @@ const rgbToHex = (rgb: string): string => {
 type MusicDisplayItem = { title: string; artist: string; artwork: string } | null
 
 const MusicBox = ({ music, onPress, styles }: { music: MusicDisplayItem; onPress?: () => void; styles: any }) => {
-    const content = music ? (
+    // 음악이 없을 때도 앨범아트 자리를 그대로 두어야 카드 모양이 흐트러지지 않는다.
+    const content = (
         <>
-            {music.artwork ? (
+            {music?.artwork ? (
                 <Image source={{ uri: music.artwork }} style={styles.musicImage} />
             ) : (
-                <View style={[styles.musicImage, { backgroundColor: '#ddd' }]} />
+                <View style={[styles.musicImage, styles.musicImagePlaceholder]}>
+                    <Ionicons name="musical-notes" size={22} color="#B6BDC7" />
+                </View>
             )}
-            <View>
-                <Text style={styles.musicTitle}>{music.title}</Text>
-                <Text style={styles.artist}>{music.artist}</Text>
+
+            <View style={styles.musicTextArea}>
+                {music ? (
+                    <>
+                        <MarqueeText style={styles.musicTitle}>{music.title}</MarqueeText>
+
+                        {/* 아티스트가 없으면 빈 줄이 남지 않도록 그리지 않는다. */}
+                        {!!music.artist && (
+                            <MarqueeText style={styles.artist}>{music.artist}</MarqueeText>
+                        )}
+                    </>
+                ) : (
+                    <Text style={styles.musicEmptyText}>음악 없음</Text>
+                )}
             </View>
         </>
-    ) : (
-        <View style={{ marginLeft: 20 }}>
-            <Text style={styles.musicTitle}>음악 없음</Text>
-        </View>
     )
 
     return onPress ? (
@@ -223,7 +235,8 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
         })
 
         if (!result.canceled) {
-            setEditImageUris(result.assets.map(a => a.uri))
+            // 원본 그대로 두면 한 장에 3MB 가 넘어 나중에 불러올 때 느리다.
+            setEditImageUris(await compressImagesForUpload(result.assets.map(a => a.uri)))
         }
     }
 
@@ -922,6 +935,25 @@ const styles = StyleSheet.create({
         height: scaleW(50),
         borderRadius: scaleW(25),
         marginLeft: scaleW(20),
+    },
+
+    // 제목이 길면 카드를 넘치므로 남는 폭 안에서만 흐르게 한다.
+    musicTextArea: {
+        flex: 1,
+        marginRight: scaleW(10),
+    },
+
+    musicImagePlaceholder: {
+        backgroundColor: '#EEF1F5',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    musicEmptyText: {
+        fontSize: scaleFont(15),
+        fontWeight: '600',
+        color: '#9CA3AF',
+        marginLeft: scaleW(10),
     },
 
     musicTitle: {

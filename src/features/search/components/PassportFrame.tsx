@@ -1,3 +1,5 @@
+import MarqueeText from "@/src/components/common/MarqueeText";
+import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { Dimensions, Image, StyleSheet, Text, View } from "react-native";
 import type { PassportFeedItem } from "../types/passport.types";
@@ -123,22 +125,33 @@ export default function PassportFrame({item}: PassportFrameProps) {
           </View>
 
           <View style={styles.musicBox}>
-            <Image 
-              source={
-                musicArtwork
-                  ? {uri:musicArtwork}
-                  : require("@/assets/images/default_profile.png")
-              }
-              style={styles.musicImage}
-            />
+            {/* 예전엔 default_profile 로 대체했는데, 그 에셋이 사람 실루엣이라
+                앨범아트 자리에 사람 얼굴이 뜬다. 음표 자리표시자로 둔다. */}
+            {musicArtwork ? (
+              <Image source={{uri: musicArtwork}} style={styles.musicImage} />
+            ) : (
+              <View style={[styles.musicImage, styles.musicImagePlaceholder]}>
+                <Ionicons name="musical-notes" size={20} color="#B6BDC7" />
+              </View>
+            )}
 
             <View style={styles.musicText}>
-              <Text style={styles.musicTitle}>
-                {item.musicTitle || "음악 정보 없음"}
-              </Text>
-              <Text style={styles.musicArtist}>
-                {item.musicArtist || ""}
-              </Text>
+              {item.musicTitle ? (
+                <>
+                  <MarqueeText style={styles.musicTitle}>
+                    {item.musicTitle}
+                  </MarqueeText>
+
+                  {/* 아티스트가 없을 때 빈 줄이 남지 않도록 아예 그리지 않는다. */}
+                  {!!item.musicArtist && (
+                    <MarqueeText style={styles.musicArtist}>
+                      {item.musicArtist}
+                    </MarqueeText>
+                  )}
+                </>
+              ) : (
+                <Text style={styles.musicEmptyText}>음악 없음</Text>
+              )}
             </View>
           </View>
 
@@ -308,10 +321,22 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    marginRight: 65,
+    // marginRight: 65 는 글자를 가운데 정렬로 쓰던 시절의 여백이었다.
+    // 이제 글자가 왼쪽부터 흐르므로 남겨 두면 시작점이 오른쪽으로 밀린다. (gap: 14 로 충분)
+  },
+  musicImagePlaceholder: {
+    backgroundColor: "#EEF1F5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  musicEmptyText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#9CA3AF",
   },
   musicText: {
-    alignItems: "center",
+    // 흘러갈 폭을 정해 줘야 마퀴가 동작한다. 없으면 글자만큼 늘어나 카드를 넘친다.
+    flex: 1,
   },
   musicTitle: {
     fontSize: 13,
