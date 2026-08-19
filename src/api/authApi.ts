@@ -15,6 +15,9 @@ export interface AppleLoginResponse {
 export const loginWithApple = async (
     payload: AppleLoginRequest,
 ): Promise<AppleLoginResponse> => {
+    console.log("[Apple Login] request body:", JSON.stringify(payload));
+    console.log("[Apple Login] identityToken length:", payload.identityToken?.length);
+
     const response = await fetch(`${BASE_URL}/auth/apple/login`, {
         method: "POST",
         headers: {
@@ -28,6 +31,7 @@ export const loginWithApple = async (
 
         try {
             const result = await response.json();
+            console.log("[Apple Login] error response:", JSON.stringify(result));
             errorMessage = result.message || errorMessage;
         } catch {}
 
