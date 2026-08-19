@@ -65,8 +65,13 @@ export default function LoginScreen() {
         ],
       });
 
+      console.log("[Apple Login] raw credential:", JSON.stringify(credential));
+
       const { identityToken, authorizationCode, fullName } = credential;
-      if (!identityToken) return;
+      if (!identityToken) {
+        console.log("[Apple Login] identityToken missing, aborting");
+        return;
+      }
 
       // Apple은 최초 로그인 1회에만 fullName을 내려준다. 이후에는 다시 못 받으므로 여기서 캡처해 서버로 넘긴다.
       const nickname = fullName?.givenName
