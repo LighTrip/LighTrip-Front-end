@@ -231,6 +231,10 @@ function TabsLayoutContent() {
     <Tabs
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
+      // 기본값(firstRoute)이면 뒤로가기가 항상 첫 탭(여권)으로 간다.
+      // 하위 페이지(프로필 수정·스크랩 등)도 탭 라우트라 같은 문제를 겪는다.
+      // history 로 두면 직전에 보던 화면으로 돌아간다.
+      backBehavior="history"
     >
       <Tabs.Screen
         name="passport"
