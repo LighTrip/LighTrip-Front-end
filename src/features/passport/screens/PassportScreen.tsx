@@ -132,6 +132,8 @@ export default function PassportView() {
                         item={selectedPlaces[selectedIndex]}
                         districts={districts}
                         sourceLabel={activeTab === 'like' ? '좋아요' : activeTab === 'scrap' ? '스크랩' : undefined}
+                        // 좋아요/스크랩 탭은 남의 여권이다. 편집 UI 가 뜨면 안 된다.
+                        editable={activeTab === 'passport'}
                         onBack={() => {
                             updateSelectedPlaces([])
                             setSelectedIndex(0)

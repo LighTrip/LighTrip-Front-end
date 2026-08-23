@@ -98,30 +98,8 @@ export default function RankingContent({rankingMode}: RankingContentProps) {
 
     const topThree = rankingList.slice(0, 3);
 
-    if (isLoading) {
-        return (
-            <View style={styles.centerBox}>
-                <ActivityIndicator size="large" color="#1A3A6B" />
-            </View>
-        )
-    }
-
-    if (errorMessage) {
-        return (
-            <View style={styles.centerBox}>
-                <Text style={styles.errorText}>{errorMessage}</Text>
-            </View>
-        )
-    }
-
-    if(rankingList.length === 0) {
-        return(
-            <View style={styles.centerBox}>
-                <Text style={styles.emptyText}>아직 랭킹 데이터가 없습니다.</Text>
-            </View>
-        )
-    }
-
+    // 로딩·에러·빈 상태는 아래 본문에서 이미 처리한다.
+    // 여기서 조기 반환하면 구 선택 칩까지 사라져 다른 구를 고를 수 없게 된다.
     return (
         <View style={styles.container}>
             {rankingMode === "district" && (

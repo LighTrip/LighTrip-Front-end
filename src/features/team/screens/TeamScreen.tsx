@@ -8,10 +8,7 @@
 import { useTeamMode } from "@/src/components/common/TeamModeContext";
 import { naverReverseGeocode } from "@/src/features/map/utils/mapUtils";
 import { Ionicons } from "@expo/vector-icons";
-import {
-    NaverMapMarkerOverlay,
-    NaverMapView,
-} from "@mj-studio/react-native-naver-map";
+import { useRouter } from "expo-router";
 import * as Securestore from "expo-secure-store";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -34,6 +31,7 @@ import type {
 const LIVE_LOCATION_POLL_INTERVAL_MS = 30 * 1000;
 
 export default function TeamView() {
+    const router = useRouter();
     const {
         clearTeamMode,
         currentUserId,
@@ -120,23 +118,49 @@ export default function TeamView() {
         }
     };
 
-    const handleLeaveTeam = () => {
+    const handleLeaveTeam = async () => {
         if (!team) return;
 
-        Alert.alert("팀 탈퇴", "정말로 팀에서 탈퇴하시겠어요?", [
+        // 팀장이 나가면 서버가 팀을 해산하고 팀 여권까지 전부 삭제한다
+        // (TeamService.leave -> disbandTeam). 같은 문구로 물으면 안 된다.
+        let isLeader = false;
+
+        try {
+            const memberList = members.length > 0
+                ? members
+                : await getTeamMembers(team.teamId);
+
+            isLeader = memberList.some(
+                (member) => member.userId === currentUserId && member.role === "LEADER",
+            );
+        } catch (error) {
+            console.log("팀 역할 확인 실패:", error);
+        }
+
+        const title = isLeader ? "팀 해산" : "팀 탈퇴";
+        const message = isLeader
+            ? "팀장이 나가면 팀이 해산됩니다.\n팀원 전원의 팀 여권이 모두 삭제되며 되돌릴 수 없습니다.\n계속할까요?"
+            : "정말로 팀에서 탈퇴하시겠어요?";
+
+        Alert.alert(title, message, [
             {
                 text: "취소",
                 style: "cancel",
             },
             {
-                text: "탈퇴하기",
+                text: isLeader ? "해산하기" : "탈퇴하기",
                 style: "destructive",
                 onPress: async () => {
                     try {
                         await leaveTeam(team.teamId);
                         clearTeamMode();
 
-                        Alert.alert("완료", "팀에서 탈퇴했습니다.");
+                        Alert.alert(
+                            "완료",
+                            isLeader
+                                ? "팀이 해산되었습니다."
+                                : "팀에서 탈퇴했습니다.",
+                        );
 
                         setTeam(null);
                         setMembers([]);
@@ -333,7 +357,7 @@ export default function TeamView() {
 
             <View style={styles.teamCard}>
                 <View style={styles.teamImage}>
-                    <Ionicons name="airplane" size={36} color="#1A3A6B" />
+                    <Ionicons name="people" size={34} color="#FFFFFF" />
                 </View>
 
                 <Text style={styles.teamName}>{team.teamName}</Text>
@@ -349,7 +373,7 @@ export default function TeamView() {
                         style={styles.codeActionButton}
                         onPress={handleCopyTeamCode}
                     >
-                        <Ionicons name="copy-outline" size={16} color="#1A3A6B" />
+                        <Ionicons name="copy-outline" size={16} color="#FFFFFF" />
                         <Text style={styles.codeActionText}>복사</Text>
                     </TouchableOpacity>
 
@@ -358,14 +382,9 @@ export default function TeamView() {
                         style={styles.codeActionButton}
                         onPress={handleShareTeamCode}
                     >
-                        <Ionicons name="share-social-outline" size={16} color="#1A3A6B" />
+                        <Ionicons name="share-social-outline" size={16} color="#FFFFFF" />
                         <Text style={styles.codeActionText}>공유</Text>
                     </TouchableOpacity>
-                </View>
-
-                <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>팀 ID</Text>
-                    <Text style={styles.infoValue}>{team.teamId}</Text>
                 </View>
 
                 <View style={styles.infoRow}>
@@ -380,18 +399,22 @@ export default function TeamView() {
                 style={styles.menuItem}
                 onPress={handlePressMembers}
             >
-                <View style={styles.menuTitleRow}>
-                    <Text style={styles.menuTitle}>팀원 목록</Text>
-                    <Ionicons
-                        name={isMemberOpen ? "caret-up" : "caret-down"}
-                        size={18}
-                        color="#888888"
-                    />
+                <View style={styles.menuIconBox}>
+                    <Ionicons name="people-outline" size={22} color="#FFFFFF" />
                 </View>
 
-                <Text style={styles.menuDescription}>
-                    팀원들의 정보를 확인해요
-                </Text>
+                <View style={styles.menuTextArea}>
+                    <Text style={styles.menuTitle}>팀원 목록</Text>
+                    <Text style={styles.menuDescription}>
+                        팀원들의 정보를 확인해요
+                    </Text>
+                </View>
+
+                <Ionicons
+                    name={isMemberOpen ? "chevron-up" : "chevron-down"}
+                    size={20}
+                    color="#9CA3AF"
+                />
             </TouchableOpacity>
 
             {isMemberOpen && (
@@ -469,18 +492,22 @@ export default function TeamView() {
                 style={styles.menuItem}
                 onPress={handlePressLiveLocations}
             >
-                <View style={styles.menuTitleRow}>
-                    <Text style={styles.menuTitle}>실시간 위치</Text>
-                    <Ionicons
-                        name={isLocationOpen ? "caret-up" : "caret-down"}
-                        size={18}
-                        color="#888888"
-                    />
+                <View style={styles.menuIconBox}>
+                    <Ionicons name="location-outline" size={22} color="#FFFFFF" />
                 </View>
 
-                <Text style={styles.menuDescription}>
-                    지도에서 팀원들의 현재 위치를 확인해요
-                </Text>
+                <View style={styles.menuTextArea}>
+                    <Text style={styles.menuTitle}>실시간 위치</Text>
+                    <Text style={styles.menuDescription}>
+                        지도에서 팀원들의 현재 위치를 확인해요
+                    </Text>
+                </View>
+
+                <Ionicons
+                    name={isLocationOpen ? "chevron-up" : "chevron-down"}
+                    size={20}
+                    color="#9CA3AF"
+                />
             </TouchableOpacity>
 
             {isLocationOpen && (
@@ -513,53 +540,20 @@ export default function TeamView() {
                         </Text>
                     ) : (
                         <>
-                            <View style={styles.mapContainer}>
-                                <NaverMapView
-                                    style={styles.map}
-                                    initialCamera={{
-                                        latitude: visibleLiveLocations[0].latitude,
-                                        longitude: visibleLiveLocations[0].longitude,
-                                        zoom: 14,
-                                    }}
-                                    isNightModeEnabled={true}
-                                    lightness={-0.2}
-                                    isShowZoomControls={false}
-                                >
-                                    {visibleLiveLocations.map((location) => (
-                                        <NaverMapMarkerOverlay
-                                            key={location.userId}
-                                            latitude={location.latitude}
-                                            longitude={location.longitude}
-                                            anchor={{ x: 0.5, y: 1 }}
-                                            width={82}
-                                            height={84}
-                                        >
-                                            <View style={styles.liveMarker}>
-                                                {getLocationMember(location)?.profileImg ? (
-                                                    <Image
-                                                        source={{
-                                                            uri: getLocationMember(location)?.profileImg ?? "",
-                                                        }}
-                                                        style={styles.liveMarkerImage}
-                                                    />
-                                                ) : (
-                                                    <View style={styles.liveMarkerAvatar}>
-                                                        <Text style={styles.liveMarkerInitial}>
-                                                            {location.nickname.charAt(0)}
-                                                        </Text>
-                                                    </View>
-                                                )}
-                                                <Text
-                                                    style={styles.liveMarkerLabel}
-                                                    numberOfLines={1}
-                                                >
-                                                    {location.nickname}
-                                                </Text>
-                                            </View>
-                                        </NaverMapMarkerOverlay>
-                                    ))}
-                                </NaverMapView>
-                            </View>
+                            <TouchableOpacity
+                                activeOpacity={0.85}
+                                style={styles.openMapButton}
+                                onPress={() => router.push("/(tabs)")}
+                            >
+                                <Ionicons
+                                    name="map-outline"
+                                    size={17}
+                                    color="#FFFFFF"
+                                />
+                                <Text style={styles.openMapButtonText}>
+                                    지도에서 보기
+                                </Text>
+                            </TouchableOpacity>
 
                             <View style={styles.locationSummaryBox}>
                                 {visibleLiveLocations.map((location) => (
@@ -609,7 +603,7 @@ export default function TeamView() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#F8FAFD",
     },
     scrollContent: {
         paddingHorizontal: 20,
@@ -650,17 +644,26 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     teamCard: {
-        borderRadius: 24,
-        padding: 24,
-        backgroundColor: "#E5ECFC",
+        borderRadius: 18,
+        padding: 22,
+        backgroundColor: "#1A3A6B",
         alignItems: "center",
-        marginBottom: 20,
+        marginBottom: 22,
+
+        shadowColor: "#1A3A6B",
+        shadowOffset: {
+            width: 0,
+            height: 6,
+        },
+        shadowOpacity: 0.22,
+        shadowRadius: 14,
+        elevation: 5,
     },
     teamImage: {
-        width: 82,
-        height: 82,
-        borderRadius: 41,
-        backgroundColor: "#B2CAFF",
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: "rgba(255, 255, 255, 0.16)",
         alignItems: "center",
         justifyContent: "center",
         marginBottom: 14,
@@ -673,28 +676,31 @@ const styles = StyleSheet.create({
     teamName: {
         fontSize: 22,
         fontWeight: "700",
-        color: "#111111",
-        marginBottom: 16,
+        color: "#FFFFFF",
+        marginBottom: 18,
+        textAlign: "center",
     },
     codeRow: {
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: "#FFFFFF",
-        borderRadius: 16,
+        borderRadius: 14,
         paddingHorizontal: 16,
-        paddingVertical: 12,
-        marginBottom: 12,
+        paddingVertical: 14,
+        marginBottom: 10,
         width: "100%",
         justifyContent: "space-between",
     },
     codeLabel: {
-        fontSize: 14,
-        color: "#777777",
+        fontSize: 13,
+        fontWeight: "600",
+        color: "#6B7280",
     },
     codeValue: {
-        fontSize: 15,
-        fontWeight: "700",
-        color: "#2DC59F",
+        fontSize: 16,
+        fontWeight: "800",
+        color: "#1A3A6B",
+        letterSpacing: 1,
     },
     codeActionRow: {
         flexDirection: "row",
@@ -705,17 +711,15 @@ const styles = StyleSheet.create({
     codeActionButton: {
         flex: 1,
         height: 42,
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: "#D7E0ED",
-        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+        backgroundColor: "rgba(255, 255, 255, 0.14)",
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
         gap: 6,
     },
     codeActionText: {
-        color: "#1A3A6B",
+        color: "#FFFFFF",
         fontSize: 13,
         fontWeight: "700",
     },
@@ -723,24 +727,45 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         width: "100%",
-        paddingVertical: 8,
+        paddingTop: 12,
     },
     infoLabel: {
-        fontSize: 14,
-        color: "#777777",
+        fontSize: 13,
+        color: "rgba(255, 255, 255, 0.7)",
     },
     infoValue: {
-        fontSize: 14,
-        color: "#222222",
-        fontWeight: "500",
+        fontSize: 13,
+        color: "#FFFFFF",
+        fontWeight: "600",
     },
     menuItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 14,
         padding: 18,
         borderRadius: 18,
-        borderWidth: 1,
-        borderColor: "#EEEEEE",
         marginBottom: 12,
         backgroundColor: "#FFFFFF",
+
+        shadowColor: "#4c4c4c",
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 3,
+    },
+    menuIconBox: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        backgroundColor: "#1A3A6B",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    menuTextArea: {
+        flex: 1,
     },
     menuTitleRow: {
         flexDirection: "row",
@@ -750,12 +775,12 @@ const styles = StyleSheet.create({
     menuTitle: {
         fontSize: 16,
         fontWeight: "700",
-        color: "#222222",
+        color: "#111827",
     },
     menuDescription: {
-        marginTop: 4,
+        marginTop: 3,
         fontSize: 13,
-        color: "#888888",
+        color: "#6B7280",
     },
     menuArrow: {
         fontSize: 13,
@@ -765,11 +790,18 @@ const styles = StyleSheet.create({
     memberListBox: {
         padding: 16,
         borderRadius: 18,
-        borderWidth: 1,
-        borderColor: "#EEEEEE",
         backgroundColor: "#FFFFFF",
         marginTop: -4,
         marginBottom: 12,
+
+        shadowColor: "#4c4c4c",
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 2,
     },
     memberLoadingBox: {
         flexDirection: "row",
@@ -882,55 +914,20 @@ const styles = StyleSheet.create({
         color: "#5D6F89",
         lineHeight: 16,
     },
-    mapContainer: {
-        height: 240,
-        borderRadius: 16,
-        overflow: "hidden",
-        backgroundColor: "#101820",
-    },
-    map: {
-        width: "100%",
-        height: "100%",
-    },
-    liveMarker: {
+    // 팀원 실시간 위치는 메인 지도에 표시되므로 여기서는 그쪽으로 보낸다.
+    openMapButton: {
+        flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-    },
-    liveMarkerAvatar: {
-        width: 46,
+        gap: 6,
         height: 46,
-        borderRadius: 23,
-        borderWidth: 3,
-        borderColor: "#FFFFFF",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#FFE06E",
+        borderRadius: 14,
+        backgroundColor: "#1A3A6B",
+        marginBottom: 12,
     },
-    liveMarkerImage: {
-        width: 46,
-        height: 46,
-        borderRadius: 23,
-        borderWidth: 3,
-        borderColor: "#FFFFFF",
-        backgroundColor: "#E5ECFC",
-    },
-    liveMarkerInitial: {
-        color: "#111111",
-        fontSize: 16,
-        fontWeight: "800",
-    },
-    liveMarkerLabel: {
-        maxWidth: 70,
-        marginTop: 2,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 8,
-        overflow: "hidden",
-        borderWidth: 1,
-        borderColor: "#FFFFFF",
-        backgroundColor: "#FFE06E",
-        color: "#1A3A6B",
-        fontSize: 10,
+    openMapButtonText: {
+        color: "#FFFFFF",
+        fontSize: 14,
         fontWeight: "700",
     },
     locationSummaryBox: {
@@ -958,16 +955,15 @@ const styles = StyleSheet.create({
         color: "#999999",
     },
     leaveButton: {
-        height: 52,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: "#FF4D4F",
+        height: 44,
         alignItems: "center",
         justifyContent: "center",
+        marginTop: 4,
     },
     leaveButtonText: {
-        color: "#FF4D4F",
-        fontSize: 15,
-        fontWeight: "700",
+        color: "#9CA3AF",
+        fontSize: 13,
+        fontWeight: "600",
+        textDecorationLine: "underline",
     },
 });

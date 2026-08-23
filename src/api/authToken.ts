@@ -50,11 +50,24 @@ export const saveTokens = async (accessToken: string, refreshToken?: string | nu
     }
 }
 
+// 계정에 종속된 로컬 데이터. 로그아웃·탈퇴·세션 만료 시 함께 지워야 한다.
+// 토큰만 지우면 다음 계정에서 이전 계정의 팀 정보가 그대로 보인다.
+const USER_SCOPED_KEYS = [
+    ACCESS_TOKEN_KEY,
+    REFRESH_TOKEN_KEY,
+    'teamId',
+    'teamCode',
+    'teamName',
+    'teamModeEnabled',
+    'liveLocationSharing',
+]
+
 export const clearTokens = async () => {
-    await Promise.all([
-        SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY).catch(() => undefined),
-        SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY).catch(() => undefined),
-    ])
+    await Promise.all(
+        USER_SCOPED_KEYS.map((key) =>
+            SecureStore.deleteItemAsync(key).catch(() => undefined),
+        ),
+    )
 }
 
 const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'

@@ -327,8 +327,9 @@ export default function MapScreen() {
     try {
       const res = await getPassportDetail(previewData.passportId);
       setDetailItem(res.data.data);
+      // previewData 를 비우면 상세에서 뒤로 왔을 때 내용 없는 빈 카드가 뜬다.
+      // 감추는 건 previewVisible 로만 처리한다.
       setPreviewVisible(false);
-      setPreviewData(null);
     } catch (e) {
       console.error("상세 조회 실패:", e);
     } finally {

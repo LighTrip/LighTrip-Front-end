@@ -9,6 +9,7 @@ import {
     Image,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View,
 } from "react-native";
 import type { PassportFeedItem } from "../types/passport.types";
@@ -39,6 +40,8 @@ export default function AllSearchContent({
     const [feedList, setFeedList] = useState<PassportFeedItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isFetchingMore, setIsFetchingMore] = useState(false);
+    // 다음 페이지 로딩만 실패한 상태. 목록은 그대로 두고 재시도 수단만 띄운다.
+    const [loadMoreFailed, setLoadMoreFailed] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
     const [listHeight, setListHeight] = useState(0);
 
@@ -94,6 +97,8 @@ export default function AllSearchContent({
                 setErrorMessage("");
             }
 
+            setLoadMoreFailed(false);
+
             const result = await getPassportFeed({
                 size: 10,
                 cursor: isNextPage ? nextCursor : null,
@@ -112,6 +117,13 @@ export default function AllSearchContent({
         } catch (error) {
             console.log("피드 조회 에러:", error);
 
+            // 다음 페이지 요청이 실패했다고 보고 있던 목록까지 지우면 안 된다.
+            // 에러 화면으로 갈아치우면 스크롤 위치도 잃고 복구할 방법도 없다.
+            if (isNextPage) {
+                setLoadMoreFailed(true);
+                return;
+            }
+
             if (error instanceof Error) {
                 setErrorMessage(error.message);
             } else {
@@ -128,6 +140,9 @@ export default function AllSearchContent({
     }, []);
 
     const handleEndReached = () => {
+        // 실패 직후 자동 재요청이 반복되지 않게 한다. 사용자가 버튼으로 다시 시도한다.
+        if (loadMoreFailed) return;
+
         if (isLoading || isFetchingMore || !hasNext) {
             return;
         }
@@ -364,6 +379,16 @@ export default function AllSearchContent({
                     ListFooterComponent={
                         isFetchingMore ? (
                             <ActivityIndicator size="small" color="#1A3A6B" />
+                        ) : loadMoreFailed ? (
+                            <TouchableOpacity
+                                activeOpacity={0.8}
+                                style={styles.retryMoreButton}
+                                onPress={() => fetchFeed(true)}
+                            >
+                                <Text style={styles.retryMoreText}>
+                                    불러오지 못했어요. 다시 시도
+                                </Text>
+                            </TouchableOpacity>
                         ) : null
                     }
                 />
@@ -447,6 +472,17 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         overflow: "hidden",
         zIndex: 1,
+    },
+    retryMoreButton: {
+        alignSelf: "center",
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+    },
+    retryMoreText: {
+        color: "#1A3A6B",
+        fontSize: 13,
+        fontWeight: "700",
+        textDecorationLine: "underline",
     },
     addMessageBox: {
         position: "absolute",

@@ -270,17 +270,70 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
             }
 
             if (isNewDistrict) {
+                // 서버에 '여권 이동' API 가 없어서 새로 만들고 원본을 지운다.
+                // 그 과정에서 좋아요·스크랩이 사라지므로 반드시 확인을 받는다.
+                const confirmed = await new Promise<boolean>((resolve) => {
+                    Alert.alert(
+                        '다른 지역으로 옮길까요?',
+                        `이 기록을 ${editDistrict} 로 옮기면 새 여권으로 다시 만들어집니다.` +
+                        `\n지금까지 받은 좋아요와 스크랩은 사라지며 되돌릴 수 없습니다.`,
+                        [
+                            { text: '취소', style: 'cancel', onPress: () => resolve(false) },
+                            { text: '옮기기', style: 'destructive', onPress: () => resolve(true) },
+                        ],
+                        { cancelable: true, onDismiss: () => resolve(false) },
+                    )
+                })
+
+                if (!confirmed) return
+
                 let imageUrls = item.imageUrls
                 if (!imageUrls || imageUrls.length === 0) {
                     const detailRes = await getPassportDetail(item.passportId)
                     imageUrls = detailRes.data?.data?.imageUrls ?? []
                 }
-                await createPassport({ ...passportData, imageUrls })
-                await deletePassport(item.passportId)
+
+                const createRes = await createPassport({ ...passportData, imageUrls })
+                const createdId = createRes?.data?.data?.passportId
+
+                try {
+                    await deletePassport(item.passportId)
+                } catch (deleteError) {
+                    // 원본 삭제가 실패하면 같은 기록이 두 개 남는다. 방금 만든 쪽을 되돌린다.
+                    console.error('원본 삭제 실패, 생성분 롤백:', deleteError)
+
+                    if (createdId) {
+                        await deletePassport(createdId).catch(() => {})
+                    }
+
+                    Alert.alert(
+                        '옮기지 못했어요',
+                        '기존 기록을 정리하지 못해 되돌렸습니다. 잠시 후 다시 시도해 주세요.',
+                    )
+                    return
+                }
+
                 onBack()
             } else {
                 await updatePassport(item.passportId, passportData)
                 await changePassportVisibility(item.passportId, visibility)
+
+                // 서버 수정 API 는 날짜·주소·좌표를 받지 않는다(설계상 수정 불가).
+                // 화면만 바뀐 채로 두면 다시 들어왔을 때 옛 값으로 돌아가 혼란스럽다.
+                const originalDate = (item.visitedAt ?? '').split('T')[0]
+                const isDateChanged =
+                    !!originalDate &&
+                    editDate.toISOString().split('T')[0] !== originalDate
+                const isPlaceChanged =
+                    !!item.address && editAddress !== item.address
+
+                if (isDateChanged || isPlaceChanged) {
+                    Alert.alert(
+                        '일부 항목은 저장되지 않았어요',
+                        '방문 날짜와 장소는 수정할 수 없어 원래 값으로 유지됩니다.',
+                    )
+                }
+
                 if (editDistrict !== originalDistrict) {
                     onBack()
                 } else {
