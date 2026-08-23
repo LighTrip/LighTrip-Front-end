@@ -1,6 +1,7 @@
+import { getValidAccessToken } from "@/src/api/authToken";
+import { BASE_URL } from "@/src/api/config";
 import LighTripLogo from "@/src/constant/LighTrip.svg";
 import { useRouter } from "expo-router";
-import * as SecureStore from "expo-secure-store";
 import { useState } from "react";
 import {
   Alert,
@@ -30,10 +31,13 @@ export default function SignupScreen() {
     if (!isFormValid) return;
     setLoading(true);
     try {
-      const accessToken = await SecureStore.getItemAsync("accessToken");
+      // 이 화면만 EXPO_PUBLIC_API_BASE_URL 이라는 다른 이름의 환경변수를 쓰고 있었는데
+      // 그 변수는 어디에도 정의돼 있지 않아 요청이 "undefined/api/v1/..." 로 나갔다.
+      // 나머지 API 와 동일하게 config 의 BASE_URL 을 쓴다.
+      const accessToken = await getValidAccessToken();
 
       const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_BASE_URL}/api/v1/users/me/onboarding`,
+        `${BASE_URL}/api/v1/users/me/onboarding`,
         {
           method: "PATCH",
           headers: {
