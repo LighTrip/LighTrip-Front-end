@@ -100,8 +100,33 @@ export function TeamModeProvider({ children }: { children: ReactNode }) {
         SecureStore.getItemAsync("teamName")
             .then((name) => setTeamName(name))
             .catch(() => {});
+        // 저장된 플래그만 믿으면 안 된다. 팀에서 나갔거나 팀이 사라져도 플래그는 남아 있어서
+        // "팀에 가입된 것처럼" 보이는 상태가 생긴다. 켜져 있던 경우엔 서버에 실제로 확인한다.
         SecureStore.getItemAsync(TEAM_MODE_ENABLED_KEY)
-            .then((value) => setIsTeamMode(value === "true"))
+            .then(async (value) => {
+                if (value !== "true") {
+                    setIsTeamMode(false);
+                    return;
+                }
+
+                try {
+                    const teamInfo = await getMyTeam();
+
+                    setTeamId(String(teamInfo.teamId));
+                    setTeamName(teamInfo.teamName);
+                    setIsTeamMode(true);
+                } catch (error) {
+                    console.log("팀 모드 복원 중 팀 정보 조회 실패:", error);
+
+                    // 네트워크 문제로 확인이 안 된 것뿐일 수 있으므로 캐시는 지우지 않고,
+                    // 팀 모드만 꺼 둔다. 사용자가 다시 켜면 그때 서버로 확인한다.
+                    setIsTeamMode(false);
+                    SecureStore.setItemAsync(
+                        TEAM_MODE_ENABLED_KEY,
+                        "false",
+                    ).catch(() => {});
+                }
+            })
             .catch(() => {});
         SecureStore.getItemAsync(LIVE_LOCATION_SHARING_KEY)
             .then((value) => setIsLocationSharing(value === "true"))
@@ -429,8 +454,16 @@ export function TeamModeProvider({ children }: { children: ReactNode }) {
         const nextTeamMode = !isTeamMode;
 
         if (!nextTeamMode) {
+            // 끄는 동작은 어떤 이유로도 막히면 안 된다.
+            // 팀이 이미 없으면 setLocationSharing 이 getMyTeam 에서 예외를 던지는데,
+            // 그대로 두면 아래 setIsTeamMode(false) 까지 가지 못해 해제가 불가능해진다.
             if (isLocationSharingRef.current) {
-                await setLocationSharing(false);
+                await setLocationSharing(false).catch((error) => {
+                    console.log("팀 모드 해제 중 위치 공유 정리 실패:", error);
+
+                    isLocationSharingRef.current = false;
+                    setIsLocationSharing(false);
+                });
             } else {
                 const id =
                     teamId ??
