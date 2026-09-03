@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, Pressable, StyleSheet } from 'react-native'
 import React, { useState } from 'react'
 import Ionicons from '@expo/vector-icons/build/Ionicons'
 import Svg, { Path } from 'react-native-svg'
@@ -17,8 +17,20 @@ const SearchBar = ({ label, onSortChange, onSearchChange }: Props) => {
     const [sortVisible, setSortVisible] = useState(false)
     const [sortOption, setSortOption] = useState('최근 등록순')
 
+    const closeAll = () => {
+        setSortVisible(false)
+        if (searchSelected) {
+            setSearchSelected(false)
+            onSearchChange?.('')
+        }
+    }
+
     return (
-        <View style={passportStyles.searchRow}>
+        <>
+        {(sortVisible || searchSelected) && (
+            <Pressable style={[StyleSheet.absoluteFillObject, { zIndex: 100 }]} onPress={closeAll} />
+        )}
+        <View style={[passportStyles.searchRow, { zIndex: 101 }]}>
             {searchSelected ? (
                 <>
                     <TextInput
@@ -76,6 +88,7 @@ const SearchBar = ({ label, onSortChange, onSearchChange }: Props) => {
                 </>
             )}
         </View>
+        </>
     )
 }
 

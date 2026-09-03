@@ -29,7 +29,7 @@ import {
 import { subscribeProfileTabPress } from "../profileTabBus";
 import { ProfileMenuItem, ProfileUser } from "../types/profile.types";
 
-const TAB_BAR_HEIGHT = 90;
+const TAB_BAR_HEIGHT = 60;
 
 export default function ProfileView() {
     const router = useRouter();
