@@ -5,13 +5,11 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icons/app.png",
-    "scheme": [
-      "lightrip"
-    ],
+    "scheme": ["lightrip"],
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/icons/app.png",
+      "image": "./assets/icons/start-logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -27,9 +25,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.seoyeon.lightrip",
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ]
+      "permissions": ["android.permission.RECORD_AUDIO"]
     },
     "web": {
       "bundler": "metro",

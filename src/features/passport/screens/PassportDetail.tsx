@@ -503,7 +503,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
 
                             {isEditing && (
                                 <TouchableOpacity
-                                    style={styles.coverBadge}
+                                    style={[styles.coverBadge, { backgroundColor: TAPE_COLOR_MAP[editCategory] ?? '#FFD9D9' }]}
                                     onPress={handleSetCover}
                                 >
                                     <Ionicons
@@ -520,7 +520,7 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
 
                         <Image
                             source={STAMP_MAP[editCategory] ?? STAMP_MAP['📦 기타']}
-                            style={styles.stampImage}
+                            style={[styles.stampImage, !isEditing && { top: scaleW(30) }]}
                             resizeMode="contain"
                         />
 
@@ -537,8 +537,8 @@ const PassportDetail = ({ item, onBack, onNext, onPrev, districts, editable = tr
                             </View>
 
                             <View style={styles.infoRow}>
-                                <Svg width={scaleW(14)} height={scaleW(14)} viewBox="0 0 21 21" fill="none">
-                                    <Path d="M10.5 10.0625C9.91984 10.0625 9.36344 9.83203 8.9532 9.4218C8.54297 9.01156 8.3125 8.45516 8.3125 7.875C8.3125 7.29484 8.54297 6.73844 8.9532 6.3282C9.36344 5.91797 9.91984 5.6875 10.5 5.6875C11.0802 5.6875 11.6366 5.91797 12.0468 6.3282C12.457 6.73844 12.6875 7.29484 12.6875 7.875C12.6875 8.16227 12.6309 8.44672 12.521 8.71212C12.4111 8.97752 12.2499 9.21867 12.0468 9.4218C11.8437 9.62492 11.6025 9.78605 11.3371 9.89599C11.0717 10.0059 10.7873 10.0625 10.5 10.0625ZM10.5 1.75C8.87555 1.75 7.31763 2.39531 6.16897 3.54397C5.02031 4.69263 4.375 6.25055 4.375 7.875C4.375 12.4688 10.5 19.25 10.5 19.25C10.5 19.25 16.625 12.4688 16.625 7.875C16.625 6.25055 15.9797 4.69263 14.831 3.54397C13.6824 2.39531 12.1245 1.75 10.5 1.75Z" fill={TAPE_COLOR_MAP[editCategory] ?? '#FFD9D9'} />
+                                <Svg width={scaleW(12)} height={scaleW(16)} viewBox="0 0 15 20" fill="none">
+                                    <Path d="M7.22461 9.4126C6.64445 9.4126 6.08805 9.18213 5.67781 8.77189C5.26758 8.36166 5.03711 7.80526 5.03711 7.2251C5.03711 6.64494 5.26758 6.08854 5.67781 5.6783C6.08805 5.26807 6.64445 5.0376 7.22461 5.0376C7.80477 5.0376 8.36117 5.26807 8.77141 5.6783C9.18164 6.08854 9.41211 6.64494 9.41211 7.2251C9.41211 7.51236 9.35553 7.79682 9.2456 8.06222C9.13566 8.32762 8.97453 8.56877 8.77141 8.77189C8.56828 8.97502 8.32713 9.13615 8.06173 9.24608C7.79633 9.35602 7.51188 9.4126 7.22461 9.4126ZM7.22461 1.1001C5.60016 1.1001 4.04224 1.74541 2.89358 2.89407C1.74492 4.04273 1.09961 5.60065 1.09961 7.2251C1.09961 11.8188 7.22461 18.6001 7.22461 18.6001C7.22461 18.6001 13.3496 11.8188 13.3496 7.2251C13.3496 5.60065 12.7043 4.04273 11.5556 2.89407C10.407 1.74541 8.84906 1.1001 7.22461 1.1001Z" fill={TAPE_COLOR_MAP[editCategory] ?? '#FFD9D9'} />
                                 </Svg>
                                 {isEditing ? (
                                     <TouchableOpacity onPress={() => setPlaceSearchOpen(true)} style={styles.infoEditButton}>
@@ -751,7 +751,7 @@ const styles = StyleSheet.create({
         marginTop: 0,
         alignItems: 'center',
         shadowColor: '#000',
-        shadowOffset: { width: 3, height: 4 },
+        shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.15,
         shadowRadius: 4,
         elevation: 3,
@@ -776,7 +776,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderRadius: scaleW(16),
         shadowColor: '#000',
-        shadowOffset: { width: 3, height: 3 },
+        shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.15,
         shadowRadius: 4,
         elevation: 2,
@@ -951,7 +951,7 @@ const styles = StyleSheet.create({
     },
 
     reviewText: {
-        fontSize: scaleFont(13),
+        fontSize: scaleFont(14),
         color: '#333',
         textAlign: 'center',
         lineHeight: scaleW(20),

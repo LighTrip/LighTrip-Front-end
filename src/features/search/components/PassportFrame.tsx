@@ -1,35 +1,47 @@
 import MarqueeText from "@/src/components/common/MarqueeText";
+import { scaleFont, scaleH, scaleW } from "@/src/utils/scale";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { Dimensions, Image, StyleSheet, Text, View } from "react-native";
+import Svg, { Path } from "react-native-svg";
 import type { PassportFeedItem } from "../types/passport.types";
 
 type PassportFrameProps = {
   item: PassportFeedItem;
 };
 
-const { width, height: screenHeight } = Dimensions.get('window')
+const { width, height: screenHeight } = Dimensions.get("window");
 
 const STAMP_MAP: Record<string, any> = {
-  'CAFE': require('@/assets/stamps/cafe.png'),
-  'RESTAURANT': require('@/assets/stamps/restaurant.png'),
-  'BAR': require('@/assets/stamps/bar.png'),
-  'NATURE': require('@/assets/stamps/park.png'),
-  'CULTURE': require('@/assets/stamps/culture.png'),
-  'ACTIVITY': require('@/assets/stamps/fitness.png'),
-  'SHOPPING': require('@/assets/stamps/shopping.png'),
-  'ETC': require('@/assets/stamps/etc.png'),
-}
+  CAFE: require("@/assets/stamps/cafe.png"),
+  RESTAURANT: require("@/assets/stamps/restaurant.png"),
+  BAR: require("@/assets/stamps/bar.png"),
+  NATURE: require("@/assets/stamps/park.png"),
+  CULTURE: require("@/assets/stamps/culture.png"),
+  ACTIVITY: require("@/assets/stamps/fitness.png"),
+  SHOPPING: require("@/assets/stamps/shopping.png"),
+  ETC: require("@/assets/stamps/etc.png"),
+};
 
-export default function PassportFrame({item}: PassportFrameProps) {
+const TAPE_COLOR_MAP: Record<string, string> = {
+  CAFE: "#A9714A",
+  RESTAURANT: "#D65C6B",
+  BAR: "#8E5FA6",
+  NATURE: "#5FA05A",
+  CULTURE: "#F0785A",
+  ACTIVITY: "#4472A8",
+  SHOPPING: "#E8558F",
+  ETC: "#7C8798",
+};
 
+export default function PassportFrame({ item }: PassportFrameProps) {
   const placeImageUrl = item.imageUrls?.[0];
 
   const [musicArtwork, setMusicArtwork] = useState<string | null>(null);
 
   // 음악 사진 불러오기
   useEffect(() => {
-    if(!item.musicTitle || !item.musicArtist) {
+    if (!item.musicTitle || !item.musicArtist) {
       setMusicArtwork(null);
       return;
     }
@@ -44,136 +56,168 @@ export default function PassportFrame({item}: PassportFrameProps) {
 
         const artwork = data.results?.[0]?.artworkUrl100;
 
-        if(artwork) {
+        if (artwork) {
           setMusicArtwork(artwork);
         } else {
           setMusicArtwork(null);
         }
-      } catch(error) {
+      } catch (error) {
         console.log("음악 이미지 조회 실패:", error);
         setMusicArtwork(null);
       }
     };
 
     fetchMusicArtwork();
-  }, [item.musicTitle, item.musicArtist])
+  }, [item.musicTitle, item.musicArtist]);
 
   return (
-    <View style={styles.passportCard}>
-      <Image
-        source={require("@/assets/images/noise.png")}
-        style={styles.noiseBackground}
-        resizeMode="cover"
-      />
+    <View style={styles.passportCardShadow}>
+      <View style={styles.passportCard}>
+        <Image
+          source={require("@/assets/images/noise.png")}
+          style={styles.noiseBackground}
+          resizeMode="cover"
+        />
 
-      <View style={styles.passportContent}>
-        {/*여권 위쪽 부분*/}
-        <View style={styles.topHalf}>
-          <View style={styles.photoArea}>
-            <Image 
-              source={require("@/assets/images/pinktape.png")}
-              style={styles.tape}
-              resizeMode="contain"
-            />
+        <View style={styles.passportContent}>
+          {/*여권 위쪽 부분*/}
+          <View style={styles.topHalf}>
+            <View style={styles.photoArea}>
+              <View style={styles.tape}>
+                <Svg
+                  width={scaleW(100)}
+                  height={scaleH(70)}
+                  viewBox="0 0 90 69"
+                  fill="none"
+                >
+                  <Path
+                    d="M15.0562 0L85.0885 42.785L71.4908 46.833L74.0323 60.3988L3.99995 17.6137L15.0562 0Z"
+                    fill={TAPE_COLOR_MAP[item.category] ?? "#FFD9D9"}
+                  />
+                </Svg>
+              </View>
 
-            <Image 
-              source={
-                placeImageUrl
-                  ? { uri: placeImageUrl}
-                  : require("@/assets/images/default_profile.png")
-              }  
-              style={styles.placeImage}
-              resizeMode="cover"
-            />
-          </View>
+              <View style={styles.placeImageShadow}>
+                <Image
+                  source={
+                    placeImageUrl
+                      ? { uri: placeImageUrl }
+                      : require("@/assets/images/default_profile.png")
+                  }
+                  style={styles.placeImage}
+                  resizeMode="cover"
+                />
+              </View>
+            </View>
 
-          <View style={styles.rightArea}>
-            <Image 
-              source={STAMP_MAP[item.category] ?? STAMP_MAP.ETC}
-              style={styles.stampImage}
-              resizeMode="contain"
-            />
+            <View style={styles.rightArea}>
+              <Image
+                source={STAMP_MAP[item.category] ?? STAMP_MAP.ETC}
+                style={styles.stampImage}
+                resizeMode="contain"
+              />
 
-            <View style={styles.infoArea}>
-              {[
-                { emoji: "🏷", text: item.categoryDisplayName || item.category },
-                { emoji: "📍", text: item.spaceName },
-                { emoji: "🗓", text: item.visitedAt },
-              ].map(({ emoji, text }, i) => (
-                <View key={i} style={styles.infoRow}>
-                  <Text style={styles.infoEmoji}>{emoji}</Text>
-                  <Text style={styles.infoText} numberOfLines={1} ellipsizeMode="tail">{text}</Text>
-                </View>
-              ))}
+              <View style={styles.infoArea}>
+                {[
+                  {
+                    emoji: "🏷",
+                    text: item.categoryDisplayName || item.category,
+                  },
+                  { emoji: "📍", text: item.spaceName },
+                  { emoji: "🗓", text: item.visitedAt },
+                ].map(({ emoji, text }, i) => (
+                  <View key={i} style={styles.infoRow}>
+                    <Text style={styles.infoEmoji}>{emoji}</Text>
+                    <Text
+                      style={styles.infoText}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {text}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             </View>
           </View>
-        </View>
 
-        {/*구분선*/}
-        <View style={styles.dividerRow}>
-          <View style={styles.dividerCircleLeft} />
-          <View style={styles.dividerLine} />
-          <View style={styles.dividerCircleRight} />
-        </View>
+          {/*구분선*/}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerCircleLeft} />
+            <View style={styles.dividerLine} />
+            <View style={styles.dividerCircleRight} />
+          </View>
 
-        {/*여권 아래쪽 부분*/}
-        <View style={styles.bottomHalf}>
-          <View style={styles.reviewBox}>
-            <Text style={styles.reviewText}>
-              {item.content}
+          {/*여권 아래쪽 부분*/}
+          <View style={styles.bottomHalf}>
+            <View style={styles.reviewBox}>
+              <Text style={styles.reviewText}>{item.content}</Text>
+            </View>
+
+            <View style={styles.musicBox}>
+              {musicArtwork ? (
+                <Image
+                  source={{ uri: musicArtwork }}
+                  style={styles.musicImage}
+                />
+              ) : (
+                <View style={[styles.musicImage, styles.musicImagePlaceholder]}>
+                  <Ionicons name="musical-notes" size={20} color="#B6BDC7" />
+                </View>
+              )}
+
+              <View style={styles.musicText}>
+                {item.musicTitle ? (
+                  <>
+                    <MarqueeText style={styles.musicTitle}>
+                      {item.musicTitle}
+                    </MarqueeText>
+
+                    {/* 아티스트가 없을 때 빈 줄이 남지 않도록 아예 그리지 않는다. */}
+                    {!!item.musicArtist && (
+                      <MarqueeText style={styles.musicArtist}>
+                        {item.musicArtist}
+                      </MarqueeText>
+                    )}
+                  </>
+                ) : (
+                  <Text style={styles.musicEmptyText}>음악 없음</Text>
+                )}
+              </View>
+            </View>
+
+            <Text style={styles.scrollText}>
+              {`<<<<<<<<<<<<<<   scroll down   >>>>>>>>>>>>>>`}
             </Text>
           </View>
-
-          <View style={styles.musicBox}>
-            {/* 예전엔 default_profile 로 대체했는데, 그 에셋이 사람 실루엣이라
-                앨범아트 자리에 사람 얼굴이 뜬다. 음표 자리표시자로 둔다. */}
-            {musicArtwork ? (
-              <Image source={{uri: musicArtwork}} style={styles.musicImage} />
-            ) : (
-              <View style={[styles.musicImage, styles.musicImagePlaceholder]}>
-                <Ionicons name="musical-notes" size={20} color="#B6BDC7" />
-              </View>
-            )}
-
-            <View style={styles.musicText}>
-              {item.musicTitle ? (
-                <>
-                  <MarqueeText style={styles.musicTitle}>
-                    {item.musicTitle}
-                  </MarqueeText>
-
-                  {/* 아티스트가 없을 때 빈 줄이 남지 않도록 아예 그리지 않는다. */}
-                  {!!item.musicArtist && (
-                    <MarqueeText style={styles.musicArtist}>
-                      {item.musicArtist}
-                    </MarqueeText>
-                  )}
-                </>
-              ) : (
-                <Text style={styles.musicEmptyText}>음악 없음</Text>
-              )}
-            </View>
-          </View>
-
-          <Text style={styles.scrollText}>
-            {`<<<<<<<<<<<<<<   scroll down   >>>>>>>>>>>>>>`}
-          </Text>
         </View>
       </View>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
+  // overflow: "hidden"인 뷰는 자기 자신의 그림자도 함께 잘라내므로,
+  // 그림자는 overflow가 없는 이 바깥 뷰에 둔다.
+  passportCardShadow: {
+    height: "100%",
+    borderRadius: 16,
+    backgroundColor: "#F8FAFD",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+
   passportCard: {
     width: "100%",
-    height: screenHeight * 0.64,
+    height: "100%",
     position: "relative",
     backgroundColor: "#F8FAFD",
     borderRadius: 16,
     overflow: "hidden",
-    marginBottom: 90,
   },
+
   noiseBackground: {
     position: "absolute",
     width: "100%",
@@ -186,15 +230,15 @@ const styles = StyleSheet.create({
   },
   topHalf: {
     minHeight: 245,
-    flexDirection:"row",
+    flexDirection: "row",
     position: "relative",
     paddingTop: 28,
     paddingHorizontal: 24,
     paddingBottom: 18,
   },
   photoArea: {
-    width: 125,
-    height: 190,
+    width: scaleW(175),
+    height: scaleW(200),
     position: "relative",
   },
   rightArea: {
@@ -205,35 +249,47 @@ const styles = StyleSheet.create({
   },
   tape: {
     position: "absolute",
-    top: 5,
-    left: 70,
-    width: 70,
-    height: 50,
+    top: scaleW(-15),
+    left: scaleW(75),
+    width: scaleW(120),
+    height: scaleH(90),
     zIndex: 10,
-    transform: [{rotate: "5deg"}],
+    transform: [{ rotate: "5deg" }],
   },
-  placeImage: {
+  // Image의 resizeMode="cover"는 프레임에 맞게 자체 레이어를 클리핑하므로,
+  // 그 위에 준 그림자는 함께 잘려서 안 보인다. 그림자는 클리핑 없는
+  // 이 바깥 뷰에 두고, 흰 테두리는 padding으로 표현한다.
+  placeImageShadow: {
     position: "absolute",
     left: 0,
-    top: 18,
-    width: 130,
-    height: 190,
-    transform: [{rotate: "-7deg"}], 
-    borderWidth: 8,
-    borderColor: "#FFFFFF",
+    top: 0,
+    width: scaleW(150),
+    height: scaleW(190),
+    padding: 8,
+    backgroundColor: "#FFFFFF",
+    transform: [{ rotate: "-7deg" }],
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  placeImage: {
+    width: "100%",
+    height: "100%",
   },
   stampImage: {
-    width: 140,
-    height: 140,
-    marginRight: -6,
-    marginBottom: -4,
-    transform: [{rotate: "-10deg"}]
+    width: scaleW(100),
+    height: scaleW(100),
+    bottom: scaleW(90),
+    right: scaleW(30),
+    position: "absolute",
   },
   infoArea: {
     gap: 8,
     alignItems: "flex-start",
-    maxWidth: 140,
-    left: 30,
+    maxWidth: scaleW(140),
+    left: scaleW(10),
+    bottom: scaleW(10),
   },
   infoRow: {
     flexDirection: "row",
@@ -247,10 +303,10 @@ const styles = StyleSheet.create({
   },
   infoText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: scaleFont(13),
     color: "#222222",
     fontWeight: "600",
-    fontFamily: 'Griun_Gellyroll',
+    fontFamily: "Griun_Gellyroll",
     marginLeft: 4,
   },
   dividerRow: {
@@ -262,6 +318,7 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
+    width: "120%",
     borderWidth: 0.5,
     borderColor: "#C8C8C8",
   },
@@ -291,18 +348,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   reviewBox: {
+    width: "100%",
+    height: scaleW(80),
+    borderRadius: scaleW(12),
+    top: scaleW(10),
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 30,
-    marginBottom: 18,
   },
   reviewText: {
-    fontSize: 13,
-    lineHeight: 22,
-    color: "#111111",
+    fontSize: scaleFont(14),
+    color: "#333",
     textAlign: "center",
-    fontWeight: "500",
-    fontFamily: 'Griun_Gellyroll',
+    lineHeight: scaleW(20),
+    width: "90%",
+    fontFamily: "Griun_Gellyroll",
   },
   musicBox: {
     position: "absolute",
@@ -314,13 +373,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 18,
     gap: 14,
-    marginTop: 210,
-    marginBottom: 10,
+    top: scaleH(180),
   },
   musicImage: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: scaleW(46),
+    height: scaleH(46),
+    borderRadius: scaleW(23),
     // marginRight: 65 는 글자를 가운데 정렬로 쓰던 시절의 여백이었다.
     // 이제 글자가 왼쪽부터 흐르므로 남겨 두면 시작점이 오른쪽으로 밀린다. (gap: 14 로 충분)
   },
@@ -350,11 +408,10 @@ const styles = StyleSheet.create({
   },
   scrollText: {
     position: "absolute",
-    fontSize: 11,
+    fontSize: scaleFont(13),
     color: "#333333",
     textAlign: "center",
-    fontFamily: 'Griun_Gellyroll',   
-    marginTop: 298,
-
-  }
-})
+    fontFamily: "Griun_Gellyroll",
+    top: scaleH(263),
+  },
+});
