@@ -81,6 +81,18 @@ export const API_ENDPOINTS = {
     GET_MY_PREMIUM: "/api/v1/payments/me/premium",
   },
 
+  REPORT: {
+    // 게시물(여권) 신고
+    CREATE_PASSPORT_REPORT: (passportId: number) =>
+      `/api/v1/passports/${passportId}/reports`,
+  },
+
+  BLOCK: {
+    BLOCK_USER: (userId: number) => `/api/v1/users/${userId}/block`,
+    UNBLOCK_USER: (userId: number) => `/api/v1/users/${userId}/block`,
+    GET_MY_BLOCKS: "/api/v1/users/me/blocks",
+  },
+
 } as const;
 
 export default API_ENDPOINTS;

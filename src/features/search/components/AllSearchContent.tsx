@@ -1,3 +1,4 @@
+import { blockUser } from "@/src/api/block/block.api";
 import { likePassport, unlikePassport } from "@/src/api/list/like.api";
 import { scrapPassport, unscrapPassport } from "@/src/api/list/scrap.api";
 import { getPassportFeed, requestFriend } from "@/src/api/searchApi";
@@ -5,6 +6,7 @@ import { scaleH } from "@/src/utils/scale";
 import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
+    Alert,
     Dimensions,
     FlatList,
     Image,
@@ -87,6 +89,41 @@ export default function AllSearchContent({
         setShowAddMessage(false);
       }, 2000);
     }
+  };
+
+  // 1-1. 사용자 차단 API 연결
+  const handleBlockUser = (writerUserId: number, writerNickname: string) => {
+    Alert.alert(
+      "차단하기",
+      `${writerNickname}님을 차단하시겠습니까?\n차단하면 서로의 게시물이 보이지 않게 됩니다.`,
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "차단",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await blockUser(writerUserId);
+
+              // 차단한 사용자의 게시물은 피드에서 바로 걷어낸다.
+              setFeedList((prev) =>
+                prev.filter((item) => item.writerUserId !== writerUserId),
+              );
+
+              Alert.alert("차단 완료", `${writerNickname}님을 차단했습니다.`);
+            } catch (error) {
+              console.log("사용자 차단 에러:", error);
+
+              if (error instanceof Error) {
+                Alert.alert("차단 실패", error.message);
+              } else {
+                Alert.alert("차단 실패", "알 수 없는 오류가 발생했습니다.");
+              }
+            }
+          },
+        },
+      ],
+    );
   };
 
   // 2. 릴스 피드 조회 API 연결
@@ -346,6 +383,7 @@ export default function AllSearchContent({
                         isRequested={requestedFriendCodes.includes(
                           item.writerFriendCode,
                         )}
+                        onBlockUser={handleBlockUser}
                       />
                     </View>
 

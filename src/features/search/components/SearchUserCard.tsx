@@ -1,15 +1,37 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useState } from "react";
+import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import type { PassportFeedItem } from "../types/passport.types";
+import ReportModal from "./ReportModal";
 
 type SearchUserCardProps = {
     item: PassportFeedItem;
     onAddFriend: (friendCode: string) => void;
     isRequested: boolean;
+    onBlockUser: (writerUserId: number, writerNickname: string) => void;
 };
 
-export default function SearchUserCard({item, onAddFriend, isRequested}: SearchUserCardProps) {
+export default function SearchUserCard({item, onAddFriend, isRequested, onBlockUser}: SearchUserCardProps) {
+    const [isReportModalVisible, setIsReportModalVisible] = useState(false);
+
+    const handlePressMore = () => {
+        Alert.alert(
+            item.writerNickname,
+            "원하는 작업을 선택해주세요.",
+            [
+                { text: "신고하기", onPress: () => setIsReportModalVisible(true) },
+                {
+                    text: "차단하기",
+                    style: "destructive",
+                    onPress: () => onBlockUser(item.writerUserId, item.writerNickname),
+                },
+                { text: "취소", style: "cancel" },
+            ],
+        );
+    };
+
     return(
+        <>
         <View style={styles.userInfoBox}>
         <View style={styles.userRow}>
             <Image
@@ -20,13 +42,13 @@ export default function SearchUserCard({item, onAddFriend, isRequested}: SearchU
                 }
                 style={styles.profileImage}
             />
-            
+
             <View style={styles.userTextArea}>
                 <View style={styles.nameRow}>
                     <Text style={styles.userName}>{item.writerNickname}</Text>
                     <Text style={styles.userId}>#{item.writerUserId}</Text>
                 </View>
-            
+
                 <View style={styles.locationRow}>
                     <Ionicons name="location-outline" size={12} color="#666667" />
                     <Text style={styles.locationText}>
@@ -34,7 +56,16 @@ export default function SearchUserCard({item, onAddFriend, isRequested}: SearchU
                     </Text>
                 </View>
             </View>
-            
+
+            <TouchableOpacity
+                style={styles.reportButton}
+                activeOpacity={0.7}
+                hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+                onPress={handlePressMore}
+            >
+                <Ionicons name="ellipsis-vertical" size={18} color="#8A93A2" />
+            </TouchableOpacity>
+
             {!item.isFriend && (
                 isRequested ? (
                     // 아이콘만 있으면 친구가 된 건지 요청만 보낸 건지 알 수 없어서 글자를 함께 둔다.
@@ -55,6 +86,14 @@ export default function SearchUserCard({item, onAddFriend, isRequested}: SearchU
             )}
         </View>
     </View>
+
+        <ReportModal
+            visible={isReportModalVisible}
+            onClose={() => setIsReportModalVisible(false)}
+            passportId={item.passportId}
+            targetNickname={item.writerNickname}
+        />
+        </>
     )
 }
 
@@ -104,6 +143,13 @@ const styles=StyleSheet.create({
         marginLeft: 2,
         fontSize: 10,
         color: "#666667",
+    },
+    reportButton: {
+        width: 28,
+        height: 28,
+        alignItems: "center",
+        justifyContent: "center",
+        marginLeft: 4,
     },
     // 두 상태의 크기를 같게 맞춰야 눌렀을 때 버튼이 튀지 않는다.
     addButton: {
