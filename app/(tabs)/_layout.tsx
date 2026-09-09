@@ -288,6 +288,7 @@ function TabsLayoutContent() {
       />
       <Tabs.Screen name="profile/profileEdit" options={{ href: null }} />
       <Tabs.Screen name="profile/scrap" options={{ href: null }} />
+      <Tabs.Screen name="profile/blockList" options={{ href: null }} />
       <Tabs.Screen name="profile/privacy" options={{ href: null }} />
       <Tabs.Screen name="profile/terms" options={{ href: null }} />
       <Tabs.Screen name="profile/subscribe" options={{ href: null }} />

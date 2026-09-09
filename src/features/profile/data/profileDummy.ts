@@ -53,6 +53,13 @@ export const accountMenuDummy: ProfileMenuItem[] = [
         route: "/profile/terms",
     },
     {
+        id: "blockList",
+        title: "차단 목록",
+        description: "차단한 사용자 확인 및 차단 해제",
+        icon: "ban",
+        route: "/profile/blockList",
+    },
+    {
         id: "logout",
         title: "로그아웃",
         icon: "log-out",

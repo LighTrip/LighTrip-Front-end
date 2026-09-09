@@ -20,6 +20,7 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import PassportDetail from "../../passport/screens/PassportDetail";
 import ScrapPassportCard from "../components/ScrapPassportCard";
 
@@ -280,7 +281,7 @@ export default function ScrapScreen() {
     }
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
             <FlatList
                 data={filteredScraps}
                 keyExtractor={(item) => String(item.scrapId)}
@@ -397,7 +398,7 @@ export default function ScrapScreen() {
                     )
                 }
                 />
-        </View>
+        </SafeAreaView>
     )
 }
 
@@ -422,7 +423,6 @@ const styles= StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        marginTop: 20,
         marginBottom: 18,
     },
     backButton: {

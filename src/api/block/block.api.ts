@@ -10,6 +10,18 @@ export type BlockedUser = {
     blockedAt: string
 }
 
+// 내 차단 목록 조회 응답
+export type MyBlocksResponse = {
+    success: boolean
+    code: string
+    message: string
+    data: {
+        content: BlockedUser[]
+        hasNext: boolean
+        nextCursor: number | null
+    }
+}
+
 // 사용자 차단
 export const blockUser = (userId: number) =>
     axiosInstance.post(API_ENDPOINTS.BLOCK.BLOCK_USER(userId))
@@ -20,4 +32,4 @@ export const unblockUser = (userId: number) =>
 
 // 내 차단 목록 조회
 export const getMyBlocks = (params?: { cursor?: number; size?: number }) =>
-    axiosInstance.get(API_ENDPOINTS.BLOCK.GET_MY_BLOCKS, { params })
+    axiosInstance.get<MyBlocksResponse>(API_ENDPOINTS.BLOCK.GET_MY_BLOCKS, { params })
