@@ -3,7 +3,8 @@ import { likePassport, unlikePassport } from "@/src/api/list/like.api";
 import { scrapPassport, unscrapPassport } from "@/src/api/list/scrap.api";
 import { getPassportFeed, requestFriend } from "@/src/api/searchApi";
 import { scaleH } from "@/src/utils/scale";
-import { useEffect, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -15,6 +16,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { subscribeSearchTabPress } from "../searchTabBus";
 import type { PassportFeedItem } from "../types/passport.types";
 import PassportActionButtons from "./PassportActionButtons";
 import PassportFrame from "./PassportFrame";
@@ -50,6 +52,8 @@ export default function AllSearchContent({
   const [hasNext, setHasNext] = useState(false);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
   const [nextCursorScore, setNextCursorScore] = useState<number | null>(null);
+
+  const listRef = useRef<FlatList<PassportFeedItem>>(null);
 
   // 좋아요/스크랩 관련 state
   const [likingPassportIds, setLikingPassportIds] = useState<number[]>([]);
@@ -127,11 +131,13 @@ export default function AllSearchContent({
   };
 
   // 2. 릴스 피드 조회 API 연결
-  const fetchFeed = async (isNextPage = false) => {
+  // isSilent: 탭으로 돌아왔을 때의 갱신. 이미 보고 있는 목록을 로딩 화면으로
+  // 갈아치우지 않고, 실패해도 기존 목록을 그대로 남긴다.
+  const fetchFeed = async (isNextPage = false, isSilent = false) => {
     try {
       if (isNextPage) {
         setIsFetchingMore(true);
-      } else {
+      } else if (!isSilent) {
         setIsLoading(true);
         setErrorMessage("");
       }
@@ -148,6 +154,9 @@ export default function AllSearchContent({
         setFeedList((prev) => [...prev, ...result.content]);
       } else {
         setFeedList(result.content);
+        // 첫 장부터 다시 받았으므로 이전 에러 화면과 스크롤 위치도 같이 되돌린다.
+        setErrorMessage("");
+        listRef.current?.scrollToOffset({ offset: 0, animated: false });
       }
 
       setHasNext(result.hasNext);
@@ -160,6 +169,11 @@ export default function AllSearchContent({
       // 에러 화면으로 갈아치우면 스크롤 위치도 잃고 복구할 방법도 없다.
       if (isNextPage) {
         setLoadMoreFailed(true);
+        return;
+      }
+
+      // 조용한 갱신은 사용자가 요청한 동작이 아니므로, 실패를 화면으로 알리지 않는다.
+      if (isSilent) {
         return;
       }
 
@@ -176,6 +190,33 @@ export default function AllSearchContent({
 
   useEffect(() => {
     fetchFeed();
+  }, []);
+
+  // fetchFeed는 매 렌더 새로 만들어진다. 아래 콜백들이 그때마다 새 함수를 잡으면
+  // 커서가 갱신될 때마다 포커스 효과가 다시 돌아 버리므로 ref로 최신 것만 가리킨다.
+  const fetchFeedRef = useRef(fetchFeed);
+  fetchFeedRef.current = fetchFeed;
+
+  // 탭 화면은 다른 탭으로 넘어가도 언마운트되지 않는다. 그래서 위의 mount effect만으로는
+  // 앱을 껐다 켜기 전까지 새 글이 보이지 않는다. 탭으로 돌아올 때마다 다시 불러온다.
+  const isFirstFocus = useRef(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstFocus.current) {
+        isFirstFocus.current = false;
+        return;
+      }
+
+      fetchFeedRef.current(false, true);
+    }, []),
+  );
+
+  // 이미 둘러보기에 있을 때 탭을 다시 누르면 포커스 이벤트가 없으므로 따로 받아 준다.
+  useEffect(() => {
+    return subscribeSearchTabPress(() => {
+      fetchFeedRef.current(false, true);
+    });
   }, []);
 
   const handleEndReached = () => {
@@ -363,6 +404,7 @@ export default function AllSearchContent({
     >
       {listHeight > 0 && (
         <FlatList
+          ref={listRef}
           data={feedList}
           keyExtractor={(item) => String(item.passportId)}
           renderItem={({ item }) => (
