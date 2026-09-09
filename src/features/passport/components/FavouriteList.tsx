@@ -1,7 +1,7 @@
 // FavouriteList.tsx
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect } from 'expo-router'
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useRef, useState } from 'react'
 import { FlatList, Image, Text, TouchableOpacity, View } from 'react-native'
 import { passportStyles as styles } from './passportStyles'
 
@@ -47,12 +47,17 @@ const FavouriteList = <T,>({
 }: Props<T>) => {
     const [items, setItems] = useState<T[]>([])
 
+    // fetchData는 부모가 매 렌더 새로 만들어 넘긴다. 이걸 그대로 의존성에 두면
+    // 조회 → setItems → 리렌더 → 새 fetchData → 다시 조회로 끝없이 반복된다.
+    const fetchDataRef = useRef(fetchData)
+    fetchDataRef.current = fetchData
+
     useFocusEffect(
         useCallback(() => {
-            fetchData()
+            fetchDataRef.current()
                 .then(setItems)
                 .catch(console.error)
-        }, [fetchData])
+        }, [])
     )
 
     return (

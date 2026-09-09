@@ -19,7 +19,10 @@ import PassportDetail from "./PassportDetail";
 import { Ionicons } from "@expo/vector-icons";
 
 import { getMyPassportStats, getPassportDetail, getMyPassportDistricts } from '@/src/api/passport/passport.api'
+import { getPublicUserProfile } from '@/src/api/socialApi'
+import PassportCardView from '@/src/components/common/PassportCardView'
 import { useTeamMode } from '@/src/components/common/TeamModeContext'
+import type { PublicUserProfile } from '@/src/features/social/types/social.types'
 import { subscribePassportTabPress } from '../passportTabBus'
 
 
@@ -29,6 +32,8 @@ export default function PassportView() {
 
     const [selectedPlaces, setSelectedPlaces] = useState<any[]>([])
     const [selectedIndex, setSelectedIndex] = useState(0)
+    // 좋아요·스크랩으로 연 남의 여권의 작성자 정보
+    const [selectedWriter, setSelectedWriter] = useState<PublicUserProfile | null>(null)
     const [activeTab, setActiveTab] = useState<'passport' | 'like' | 'scrap'>('passport');
     const [passportTab, setPassportTab] = useState<'cover' | 'list'>('cover')
     const [showTutorial, setShowTutorial] = useState(false)
@@ -94,6 +99,16 @@ export default function PassportView() {
         })
     }, [])
 
+    const closeSelectedPassport = () => {
+        updateSelectedPlaces([])
+        setSelectedIndex(0)
+        selectedIndexRef.current = 0
+        setSelectedWriter(null)
+        setActiveTab('passport')
+        refetchStats()
+        setListRefreshKey(k => k + 1)
+    }
+
     const changePage = (newIndex: number) => {
         if (newIndex < 0 || newIndex >= selectedPlacesRef.current.length) return
         selectedIndexRef.current = newIndex
@@ -103,7 +118,20 @@ export default function PassportView() {
     const handleSelectLikeOrScrap = async (passportId: number) => {
         try {
             const res = await getPassportDetail(passportId)
-            updateSelectedPlaces([res.data.data])
+            const detail = res.data.data
+
+            // 여권 상세 응답에는 작성자 닉네임/프로필이 없어서 따로 받아 온다.
+            // 작성자 조회가 실패해도 여권 자체는 보여 준다.
+            let writer: PublicUserProfile | null = null
+
+            try {
+                writer = await getPublicUserProfile(detail.userId)
+            } catch (writerError) {
+                console.log('여권 작성자 프로필 조회 에러:', writerError)
+            }
+
+            setSelectedWriter(writer)
+            updateSelectedPlaces([detail])
             setSelectedIndex(0)
         } catch (e) {
             console.error(e)
@@ -127,24 +155,25 @@ export default function PassportView() {
             
             {selectedPlaces.length > 0 ? (
                 <View style={{ flex: 1 }}>
-                    <PassportDetail
-                        key={selectedPlaces[selectedIndex]?.passportId}
-                        item={selectedPlaces[selectedIndex]}
-                        districts={districts}
-                        sourceLabel={activeTab === 'like' ? '좋아요' : activeTab === 'scrap' ? '스크랩' : undefined}
-                        // 좋아요/스크랩 탭은 남의 여권이다. 편집 UI 가 뜨면 안 된다.
-                        editable={activeTab === 'passport'}
-                        onBack={() => {
-                            updateSelectedPlaces([])
-                            setSelectedIndex(0)
-                            selectedIndexRef.current = 0
-                            setActiveTab('passport')
-                            refetchStats()
-                            setListRefreshKey(k => k + 1)
-                        }}
-                        onPrev={selectedIndex > 0 ? () => changePage(selectedIndex - 1) : undefined}
-                        onNext={selectedIndex < selectedPlaces.length - 1 ? () => changePage(selectedIndex + 1) : undefined}
-                    />
+                    {activeTab === 'passport' ? (
+                        <PassportDetail
+                            key={selectedPlaces[selectedIndex]?.passportId}
+                            item={selectedPlaces[selectedIndex]}
+                            districts={districts}
+                            editable
+                            onBack={closeSelectedPassport}
+                            onPrev={selectedIndex > 0 ? () => changePage(selectedIndex - 1) : undefined}
+                            onNext={selectedIndex < selectedPlaces.length - 1 ? () => changePage(selectedIndex + 1) : undefined}
+                        />
+                    ) : (
+                        // 좋아요·스크랩 탭은 남의 여권이다. 편집 UI가 있는 PassportDetail 대신
+                        // 둘러보기 피드와 같은 카드로 펼쳐 준다.
+                        <PassportCardView
+                            passport={selectedPlaces[selectedIndex]}
+                            writer={selectedWriter}
+                            onClose={closeSelectedPassport}
+                        />
+                    )}
                 </View>
             ) : (
                 <>

@@ -4,10 +4,21 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { Dimensions, Image, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import type { PassportFeedItem } from "../types/passport.types";
+// 둘러보기 피드와 스크랩 상세가 같은 프레임을 쓴다. 두 응답의 형태가 서로 달라서
+// 피드 아이템 전체를 요구하지 않고, 실제로 그리는 데 쓰는 필드만 받는다.
+export type PassportFrameItem = {
+  imageUrls: string[];
+  content: string;
+  spaceName: string;
+  category: string;
+  categoryDisplayName?: string;
+  visitedAt: string;
+  musicTitle: string | null;
+  musicArtist: string | null;
+};
 
 type PassportFrameProps = {
-  item: PassportFeedItem;
+  item: PassportFrameItem;
 };
 
 const { width, height: screenHeight } = Dimensions.get("window");
@@ -21,6 +32,19 @@ const STAMP_MAP: Record<string, any> = {
   ACTIVITY: require("@/assets/stamps/fitness.png"),
   SHOPPING: require("@/assets/stamps/shopping.png"),
   ETC: require("@/assets/stamps/etc.png"),
+};
+
+// 여권 상세 응답에는 categoryDisplayName이 없다. 그때 카테고리 코드가 그대로
+// 노출되지 않도록 여기서 한글 이름으로 되돌린다.
+const CATEGORY_LABEL_MAP: Record<string, string> = {
+  CAFE: "☕ 카페",
+  RESTAURANT: "🍽️ 식당",
+  BAR: "🍶 술집",
+  NATURE: "🏞️ 공원",
+  CULTURE: "🎬 문화",
+  ACTIVITY: "🏋️ 운동",
+  SHOPPING: "🛍️ 쇼핑",
+  ETC: "📦 기타",
 };
 
 const TAPE_COLOR_MAP: Record<string, string> = {
@@ -121,7 +145,10 @@ export default function PassportFrame({ item }: PassportFrameProps) {
                 {[
                   {
                     emoji: "🏷",
-                    text: item.categoryDisplayName || item.category,
+                    text:
+                      item.categoryDisplayName ||
+                      CATEGORY_LABEL_MAP[item.category] ||
+                      item.category,
                   },
                   { emoji: "📍", text: item.spaceName },
                   { emoji: "🗓", text: item.visitedAt },
