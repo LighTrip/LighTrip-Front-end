@@ -19,6 +19,7 @@ export type PassportFrameItem = {
 
 type PassportFrameProps = {
   item: PassportFrameItem;
+  scrollText?: string;
 };
 
 const { width, height: screenHeight } = Dimensions.get("window");
@@ -37,14 +38,14 @@ const STAMP_MAP: Record<string, any> = {
 // 여권 상세 응답에는 categoryDisplayName이 없다. 그때 카테고리 코드가 그대로
 // 노출되지 않도록 여기서 한글 이름으로 되돌린다.
 const CATEGORY_LABEL_MAP: Record<string, string> = {
-  CAFE: "☕ 카페",
-  RESTAURANT: "🍽️ 식당",
-  BAR: "🍶 술집",
-  NATURE: "🏞️ 공원",
-  CULTURE: "🎬 문화",
-  ACTIVITY: "🏋️ 운동",
-  SHOPPING: "🛍️ 쇼핑",
-  ETC: "📦 기타",
+  CAFE: "카페",
+  RESTAURANT: "식당",
+  BAR: "술집",
+  NATURE: "공원",
+  CULTURE: "문화",
+  ACTIVITY: "운동",
+  SHOPPING: "쇼핑",
+  ETC: "기타",
 };
 
 const TAPE_COLOR_MAP: Record<string, string> = {
@@ -58,7 +59,10 @@ const TAPE_COLOR_MAP: Record<string, string> = {
   ETC: "#7C8798",
 };
 
-export default function PassportFrame({ item }: PassportFrameProps) {
+export default function PassportFrame({
+  item,
+  scrollText = "<<<<<<<<<<<<<<   scroll down   >>>>>>>>>>>>>>",
+}: PassportFrameProps) {
   const placeImageUrl = item.imageUrls?.[0];
 
   const [musicArtwork, setMusicArtwork] = useState<string | null>(null);
@@ -213,9 +217,7 @@ export default function PassportFrame({ item }: PassportFrameProps) {
               </View>
             </View>
 
-            <Text style={styles.scrollText}>
-              {`<<<<<<<<<<<<<<   scroll down   >>>>>>>>>>>>>>`}
-            </Text>
+            <Text style={styles.scrollText}>{scrollText}</Text>
           </View>
         </View>
       </View>
@@ -308,7 +310,7 @@ const styles = StyleSheet.create({
     width: scaleW(100),
     height: scaleW(100),
     bottom: scaleW(90),
-    right: scaleW(30),
+    right: scaleW(25),
     position: "absolute",
   },
   infoArea: {

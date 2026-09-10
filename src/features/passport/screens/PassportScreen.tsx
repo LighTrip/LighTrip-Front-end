@@ -168,11 +168,16 @@ export default function PassportView() {
                     ) : (
                         // 좋아요·스크랩 탭은 남의 여권이다. 편집 UI가 있는 PassportDetail 대신
                         // 둘러보기 피드와 같은 카드로 펼쳐 준다.
-                        <PassportCardView
-                            passport={selectedPlaces[selectedIndex]}
-                            writer={selectedWriter}
-                            onClose={closeSelectedPassport}
-                        />
+                        // PassportCardView는 자체 SafeAreaView로 상단 여백을 이미 잡으므로,
+                        // 이 화면의 container가 갖는 paddingTop과 겹치지 않도록 상쇄한다.
+                        <View style={{ flex: 1, marginTop: -(StatusBar.currentHeight || 50) }}>
+                            <PassportCardView
+                                passport={selectedPlaces[selectedIndex]}
+                                writer={selectedWriter}
+                                onClose={closeSelectedPassport}
+                                title={activeTab === 'like' ? '좋아요' : '스크랩'}
+                            />
+                        </View>
                     )}
                 </View>
             ) : (
