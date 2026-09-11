@@ -22,10 +22,7 @@ import {
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import Svg, { Path } from "react-native-svg";
 
-import {
-    SafeAreaView,
-    useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getPresignedUrl, uploadToS3 } from "@/src/api/passport/image.api";
 import NoiseOverlay from "@/src/components/common/NoiseOverlay";
@@ -187,7 +184,6 @@ const PassportDetail = ({
   sourceLabel,
 }: Props) => {
   const { isTeamMode, teamId } = useTeamMode();
-  const insets = useSafeAreaInsets();
   const [isEditing, setIsEditing] = useState(false);
   const [editReview, setEditReview] = useState(item.content ?? "");
   const [editCategory, setEditCategory] = useState(
@@ -474,13 +470,12 @@ const PassportDetail = ({
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["left", "right", "bottom"]}>
+    <SafeAreaView
+      style={styles.safeArea}
+      edges={["top", "left", "right", "bottom"]}
+    >
       <KeyboardAwareScrollView
-        contentContainerStyle={[
-          styles.container,
-          styles.scrollContent,
-          { paddingTop: Math.max(insets.top - scaleW(50), 0) },
-        ]}
+        contentContainerStyle={[styles.container, styles.scrollContent]}
         keyboardShouldPersistTaps="handled"
         enableOnAndroid
         showsVerticalScrollIndicator={false}
@@ -974,7 +969,6 @@ const styles = StyleSheet.create({
     padding: scaleW(16),
     gap: scaleW(16),
     paddingBottom: scaleW(65),
-    paddingTop: 0,
   },
 
   headerCard: {
