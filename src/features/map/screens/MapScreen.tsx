@@ -641,6 +641,10 @@ export default function MapScreen() {
           <PassportDetail
             item={detailItem}
             editable={false}
+            topInsetOffset={0}
+            sourceLabel={detailItem.district ?? detailItem.districtDisplayName}
+            visitLabel="나의 탐험 기록 다시 보기"
+            centerLabel="my place"
             onBack={() => {
               setDetailItem(null);
               setPreviewVisible(true);

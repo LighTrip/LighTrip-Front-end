@@ -6,25 +6,25 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
 import {
-    Alert,
-    Dimensions,
-    FlatList,
-    Image,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import Svg, { Path } from "react-native-svg";
 
 import {
-    SafeAreaView,
-    useSafeAreaInsets,
+  SafeAreaView,
+  useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
 import { getPresignedUrl, uploadToS3 } from "@/src/api/passport/image.api";
@@ -33,18 +33,18 @@ import { useTeamMode } from "@/src/components/common/TeamModeContext";
 import DatePickerModal from "@/src/components/passport/DatePickerModal";
 
 import {
-    CATEGORY_MAP,
-    changeCoverImage,
-    changePassportVisibility,
-    createPassport,
-    CreatePassportRequest,
-    deletePassport,
-    getMyPassportDistricts,
-    getPassportDetail,
-    PassportCategory,
-    textColor,
-    updatePassport,
-    Visibility,
+  CATEGORY_MAP,
+  changeCoverImage,
+  changePassportVisibility,
+  createPassport,
+  CreatePassportRequest,
+  deletePassport,
+  getMyPassportDistricts,
+  getPassportDetail,
+  PassportCategory,
+  textColor,
+  updatePassport,
+  Visibility,
 } from "@/src/api/passport/passport.api";
 import { DISTRICT_CATEGORY_MAP } from "@/src/constant/regions";
 import { scaleFont, scaleH, scaleW } from "@/src/utils/scale";
@@ -58,6 +58,13 @@ type Props = {
   onPrev?: () => void;
   editable?: boolean;
   sourceLabel?: string;
+  // 상단 safe area 여백에서 뺄 값. 부모가 이미 그만큼의 상단 여백을 확보해 둔 경우(PassportScreen 탭)를
+  // 기본값으로 두고, 부모가 여백을 안 주는 경우(MapScreen)는 호출부에서 0을 넘긴다.
+  topInsetOffset?: number;
+  // 이전/다음 화살표 사이 자리. editable일 때는 "edit my passport" 버튼이 대신 뜬다.
+  centerLabel?: string;
+  // "{구}를 N번 탐험했어요" 대신 보여줄 문구. sourceLabel이 있어도 이 값이 있으면 줄 자체는 유지한다.
+  visitLabel?: string;
 };
 
 const STAMP_MAP: Record<string, any> = {
@@ -185,6 +192,9 @@ const PassportDetail = ({
   districts,
   editable = true,
   sourceLabel,
+  topInsetOffset = scaleW(50),
+  centerLabel,
+  visitLabel,
 }: Props) => {
   const { isTeamMode, teamId } = useTeamMode();
   const insets = useSafeAreaInsets();
@@ -479,7 +489,7 @@ const PassportDetail = ({
         contentContainerStyle={[
           styles.container,
           styles.scrollContent,
-          { paddingTop: Math.max(insets.top - scaleW(50), 0) },
+          { paddingTop: Math.max(insets.top - topInsetOffset, 0) },
         ]}
         keyboardShouldPersistTaps="handled"
         enableOnAndroid
@@ -503,9 +513,10 @@ const PassportDetail = ({
           <Text style={styles.districtTitle}>
             {sourceLabel ?? editDistrict}
           </Text>
-          {!sourceLabel && (
+          {(visitLabel || !sourceLabel) && (
             <Text style={styles.visitText}>
-              {editDistrict}를 {districtCount}번 탐험했어요 ♪
+              {visitLabel ??
+                `${editDistrict}를 ${districtCount}번 탐험했어요 ♪`}
             </Text>
           )}
         </View>
@@ -845,10 +856,14 @@ const PassportDetail = ({
                       {"< < < < < < < < < < <"}
                     </Text>
                   </TouchableOpacity>
-                  {editable && (
+                  {editable ? (
                     <TouchableOpacity onPress={() => setIsEditing(true)}>
                       <Text style={styles.editText}>edit my passport</Text>
                     </TouchableOpacity>
+                  ) : (
+                    centerLabel && (
+                      <Text style={styles.editText}>{centerLabel}</Text>
+                    )
                   )}
                   <TouchableOpacity onPress={onNext}>
                     <Text style={styles.editText}>
@@ -1268,9 +1283,9 @@ const styles = StyleSheet.create({
     height: scaleW(20),
     textAlign: "center",
     textAlignVertical: "center",
-    fontSize: scaleFont(10),
+    fontSize: scaleFont(12),
     color: "#757575",
-    fontFamily: "Moneygraphy",
+    fontFamily: "Griun_Gellyroll",
   },
 
   modalBackdrop: {
