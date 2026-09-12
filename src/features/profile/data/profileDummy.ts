@@ -64,4 +64,9 @@ export const accountMenuDummy: ProfileMenuItem[] = [
         title: "로그아웃",
         icon: "log-out",
     },
+    {
+        id: "withdraw",
+        title: "회원탈퇴",
+        icon: "person-remove",
+    },
 ];

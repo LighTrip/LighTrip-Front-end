@@ -39,6 +39,14 @@
       "expo-dev-client",
       "expo-apple-authentication",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "방문한 장소를 지도와 여행 기록(여권)에 자동으로 저장하기 위해 위치 정보를 사용합니다. 예를 들어 합정역을 방문하여 기록을 작성하면 지도에 불빛으로 표시되고 여권에 기록이 쌓입니다.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false
+        }
+      ],
+      [
         "@mj-studio/react-native-naver-map",
         {
           "client_id": "js0oliz8v9"

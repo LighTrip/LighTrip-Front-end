@@ -1055,7 +1055,7 @@ const styles= StyleSheet.create({
         marginTop: 14,
     },
     withdrawButtonText: {
-        color: "#9CA3AF",
+        color: "#9E1B32",
         fontSize: 13,
         fontWeight: "600",
         textDecorationLine: "underline",
