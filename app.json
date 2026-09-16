@@ -8,11 +8,6 @@
     "scheme": ["lightrip"],
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/icons/app.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#F8FAFD"
-    },
     "locales": {
       "ko": "./locales/ko.json",
       "en": "./locales/en.json"
@@ -64,7 +59,16 @@
       ],
       "@react-native-community/datetimepicker",
       "./plugin/withNaverMapMaven",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icons/start-logo.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#F8FAFD",
+          "imageWidth": 100
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
