@@ -1,72 +1,81 @@
 import { ProfileMenuItem, ProfileUser } from "../types/profile.types";
 
 export const profileUserDummy: ProfileUser = {
-    id: "#2026",
-    name: "라이트립 사용자",
-    location: "위치 미설정",
-    passportCount: 0,
-    districtCount: 0,
-    totallike: 0,
-    profileImage: null,
+  id: "#2026",
+  name: "라이트립 사용자",
+  location: "위치 미설정",
+  passportCount: 0,
+  districtCount: 0,
+  totallike: 0,
+  profileImage: null,
 };
 
 export const settingMenuDummy: ProfileMenuItem[] = [
-    {
-        id: "edit-profile",
-        title: "프로필 수정",
-        description: "프로필 및 프로필 사진 수정",
-        icon: "pencil",
-        route: "/profile/profileEdit",
-    },
-    {
-        id: "team",
-        title: "팀 생성 및 가입하기",
-        description: "팀에 가입되어 있는 경우 생성할 수 없습니다.",
-        icon: "person-add",
-    },
-    {
-        id: "friends",
-        title: "친구 추가 및 친구 관리",
-        description: "친구 요청을 보내고 받은 요청을 확인할 수 있습니다.",
-        icon: "people",
-    },
-    {
-        id: "scrap",
-        title: "스크랩",
-        description: "스크랩한 장소 모아보기",
-        icon: "bookmark",
-        route: "/profile/scrap",
-    },
+  {
+    id: "edit-profile",
+    title: "프로필 수정",
+    description: "프로필 및 프로필 사진 수정",
+    icon: "pencil",
+    route: "/profile/profileEdit",
+  },
+  {
+    id: "team",
+    title: "팀 생성 및 가입하기",
+    description: "팀에 가입되어 있는 경우 생성할 수 없습니다.",
+    icon: "person-add",
+  },
+  {
+    id: "friends",
+    title: "친구 추가 및 친구 관리",
+    description: "친구 요청을 보내고 받은 요청을 확인할 수 있습니다.",
+    icon: "people",
+  },
+  {
+    id: "scrap",
+    title: "스크랩",
+    description: "스크랩한 장소 모아보기",
+    icon: "bookmark",
+    route: "/profile/scrap",
+  },
+];
+
+export const supportMenuDummy: ProfileMenuItem[] = [
+  {
+    id: "support",
+    title: "문의사항 또는 버그 제보",
+    description: "구글 폼으로 문의 및 버그를 제보할 수 있습니다.",
+    icon: "chatbubble-ellipses",
+  },
 ];
 
 export const accountMenuDummy: ProfileMenuItem[] = [
-    {
-        id: "privacy",
-        title: "개인정보처리방침",
-        icon: "lock-closed",
-        route: "/profile/privacy",
-    },
-    {
-        id: "terms",
-        title: "이용약관",
-        icon: "document-text",
-        route: "/profile/terms",
-    },
-    {
-        id: "blockList",
-        title: "차단 목록",
-        description: "차단한 사용자 확인 및 차단 해제",
-        icon: "ban",
-        route: "/profile/blockList",
-    },
-    {
-        id: "logout",
-        title: "로그아웃",
-        icon: "log-out",
-    },
-    {
-        id: "withdraw",
-        title: "회원탈퇴",
-        icon: "person-remove",
-    },
+  {
+    id: "privacy",
+    title: "개인정보처리방침",
+    icon: "lock-closed",
+    route: "/profile/privacy",
+  },
+  {
+    id: "terms",
+    title: "이용약관",
+    icon: "document-text",
+    route: "/profile/terms",
+  },
+  {
+    id: "blockList",
+    title: "차단 목록",
+    description: "차단한 사용자 확인 및 차단 해제",
+    icon: "ban",
+    route: "/profile/blockList",
+  },
+  {
+    id: "logout",
+    title: "로그아웃",
+    icon: "log-out",
+  },
+  {
+    id: "withdraw",
+    title: "회원탈퇴",
+    icon: "person-remove",
+  },
 ];

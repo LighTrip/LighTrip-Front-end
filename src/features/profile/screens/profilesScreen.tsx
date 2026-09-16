@@ -11,6 +11,7 @@ import {
     Alert,
     Animated,
     Image,
+    Modal,
     StatusBar,
     StyleSheet,
     Text,
@@ -19,17 +20,22 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { WebView } from "react-native-webview";
 import FriendManageModal from "../components/FriendManageModal";
 import TeamManageModal from "../components/TeamManageModal";
 import {
     accountMenuDummy,
     profileUserDummy,
     settingMenuDummy,
+    supportMenuDummy,
 } from "../data/profileDummy";
 import { subscribeProfileTabPress } from "../profileTabBus";
 import { ProfileMenuItem, ProfileUser } from "../types/profile.types";
 
 const TAB_BAR_HEIGHT = 60;
+
+const SUPPORT_FORM_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLSdGh7JVbTU8L1S-CG3EH37OhacaVzwnphy_mC5R7Nji6W35cg/viewform";
 
 export default function ProfileView() {
   const router = useRouter();
@@ -51,6 +57,7 @@ export default function ProfileView() {
   const [isFriendModalOpen, setIsFriendModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
 
   // 스크롤을 내렸을 때만 헤더 아래 페이드를 보여 준다.
   // 항상 켜 두면 최상단에서 첫 카드까지 흐려지므로, 실제로 잘리기 시작할 때만 나타나게 한다.
@@ -91,6 +98,11 @@ export default function ProfileView() {
 
     if (item.id === "friends") {
       setIsFriendModalOpen(true);
+      return;
+    }
+
+    if (item.id === "support") {
+      setIsSupportModalOpen(true);
       return;
     }
 
@@ -533,6 +545,52 @@ export default function ProfileView() {
             ))}
           </View>
         </View>
+
+        <View style={styles.sectionSupport}>
+          <View style={styles.menuBox}>
+            {supportMenuDummy.map((item, index) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[
+                  styles.menuItem,
+                  index !== supportMenuDummy.length - 1 &&
+                    styles.menuItemBorder,
+                ]}
+                activeOpacity={0.8}
+                onPress={() => handleMenuPress(item)}
+              >
+                <View style={styles.menuLeft}>
+                  <View style={styles.iconBox}>
+                    <Ionicons
+                      name={item.icon as any}
+                      size={22}
+                      color="#FFFFFF"
+                    />
+                  </View>
+
+                  <View style={styles.menuTextBox}>
+                    <Text
+                      style={styles.menuTitle}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {item.title}
+                    </Text>
+                    {item.description && (
+                      <Text
+                        style={styles.menuDescription}
+                        numberOfLines={2}
+                        ellipsizeMode="tail"
+                      >
+                        {item.description}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
       </Animated.ScrollView>
 
       {/* 탭바와 맞닿는 아래쪽 경계도 위쪽과 같은 방식으로 흐린다. */}
@@ -550,6 +608,22 @@ export default function ProfileView() {
           style={StyleSheet.absoluteFill}
         />
       </Animated.View>
+
+      <Modal
+        visible={isSupportModalOpen}
+        animationType="slide"
+        onRequestClose={() => setIsSupportModalOpen(false)}
+      >
+        <View style={{ flex: 1 }}>
+          <TouchableOpacity
+            onPress={() => setIsSupportModalOpen(false)}
+            style={{ padding: 10, paddingTop: 60, backgroundColor: "#1A3A6B" }}
+          >
+            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <WebView source={{ uri: SUPPORT_FORM_URL }} />
+        </View>
+      </Modal>
 
       <TopToast message={toastMessage} onHide={() => setToastMessage(null)} />
 
@@ -606,6 +680,9 @@ const styles = StyleSheet.create({
   },
   sectionAccount: {
     marginBottom: 0,
+  },
+  sectionSupport: {
+    marginTop: 14,
   },
   headerTitle: {
     color: "#000000",
